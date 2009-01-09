@@ -1,0 +1,26 @@
+This version of the function is still being developed, and as such will almost certainly contain numerous bugs.  If you find one or more (gasp!), or if you have any comments/criticisms/questions about the function, then please feel free to email me at m.denwood@vet.gla.ac.uk.  Thanks!
+
+
+OPEN ISSUES
+
+
+Version 0.9.0
+
+
+BUGS
+
+None known.
+
+
+FEATURES TO BE IMPLEMENTED
+
+None planned.
+
+
+
+
+
+VERSION HISTORY
+
+New to version 0.9; separated from bayescount to form 2 distinct packages.
+For version history of the package before 0.9 see the version_history file for bayescount.
