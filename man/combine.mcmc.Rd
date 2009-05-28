@@ -10,7 +10,7 @@ combine.mcmc(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=FAL
 }
 \arguments{
    \item{mcmc.objects}{a list of MCMC objects, all with the same number of chains, or a single MCMC object or list.  No default.}
-   \item{thin}{an integer to use to thin the (final) MCMC object by.  Ignored if return.samples is specified (!=NA).  Default 1 (no thinning is performed).}
+   \item{thin}{an integer to use to thin the (final) MCMC object by, in addition to any thinning already applied to the objects before being passed to combine.mcmc.  Ignored if return.samples is specified (!=NA).  Default 1 (no additional thinning is performed).}
    \item{return.samples}{the number of samples to return after thinning.  The chains will be thinned to as close to this minimum value as possible.  Supersedes thin if both are specified.  Ignored if niter(mcmc.objects) < return.samples.  Default NA.}
    \item{collapse.chains}{option to combine all MCMC chains into a single MCMC chain with more iterations.  Can be used for combining chains prior to calculating results in order to reduce the Monte Carlo error of estimates.  Default FALSE.}
 }

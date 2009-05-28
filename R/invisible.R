@@ -15,6 +15,7 @@ print.gelman.with.target <- function (x, digits = 3, ...)
 
 print.plotindpages <- function (x, ...) 
 {
+	if(!exists("dev.new")) dev.new <- x11
 	dev.new()
 	class(x) <- "trellis"
 	print(x, ...)
@@ -194,9 +195,8 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 	if(identical(list(), inputlist) | identical(list(list()), inputlist)) inputlist <- list("")
 
 	names <- names(inputlist)
+	value <- vector('list', length=length(parameter))
 
-	value <- vector('list', length=length(names))
-	
 	for(i in 1:length(parameter)){	
 
 		if(any(names==parameter[i])){
@@ -206,8 +206,6 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 				success <- suppressWarnings(try(temp <- temp(chain), silent=TRUE))
 				if(class(success)=="try-error") temp <- temp()
 			}
-			
-			value[[i]] <- temp
 			
 		}else{
 			
@@ -231,16 +229,18 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 			}
 					
 			if(is.null(temp)) stop(paste(parameter[i], "not found (or has/returns value NULL)")) 
-
-			value[[i]] <- temp
 			
 		}
-
+		
+		# necessary to remove compound listing somehow introduced by initlist function or something:
+		while(class(temp)=="list") temp <- temp[[1]]
+		
+		value[[i]] <- temp
 		names(value)[[i]] <- parameter[i]
 
 	}
-
-
+	
+	value <<- value
 	return(value)
 
 }

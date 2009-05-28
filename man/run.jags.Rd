@@ -24,7 +24,7 @@ run.jags(model=stop("No model supplied"),
    \item{monitor}{a character vector of the names of variables to monitor.  For all models, specifying 'deviance' as a monitored variable will calculate the model deviance.  No default.}
    \item{data}{a character string in the R dump format (or a named list) containing the data.  If left as NA, no external data is used in the model.  Default NA.}
    \item{n.chains}{the number of chains to use for the simulation.  Must be a positive integer.  Default 2.}
-   \item{inits}{a character vector with length equal to the number of chains the model will be run using.  Each element of the vector must be a character string in the R dump format representing the initial values for that chain, or NA.  If not all initialisable variables are specified, the unspecified variables are sampled from the prior distribution by JAGS.  Values left as NA result in all initial values for that chain being sampled from the prior distribution.  Default NA.}
+   \item{inits}{a character vector with length equal to the number of chains the model will be run using.  Each element of the vector must be a character string in the R dump format representing the initial values for that chain, or NA.  If not all initialising variables are specified, the unspecified variables are sampled from the prior distribution by JAGS.  Values left as NA result in all initial values for that chain being sampled from the prior distribution.  The special variables '.RNG.seed', '.RNG.name', and '.RNG.state' are allowed for explicit control over random number generators in JAGS.  Default NA.}
    \item{burnin}{the number of burnin iterations (not sampled) to use (numeric).  Default 5000 iterations.}
    \item{sample}{the number of sampling iterations to use (numeric).  Default 10000 iterations.}
    \item{adapt}{advanced option to control the length of the adaptive phase directly, which is otherwise half the length of the burnin period.  Default is 0, unless burnin is less than 200 in which case 100 adapitve iterations are used.}
@@ -40,7 +40,7 @@ run.jags(model=stop("No model supplied"),
    \item{monitor.deviance}{option to monitor the deviance of each monitored variable using the DIC module for JAGS.  If TRUE, a 'deviance' element is returned representing this value for each monitored variable at each iteration.  For more information see the JAGS user manual section 4.4.  Default FALSE.}
    \item{monitor.pd}{option to monitor the effective number of parameters using the DIC module for JAGS.  If TRUE, a 'pd' element is returned representing this value at each iteration.  For more information see the JAGS user manual section 4.4.  Default FALSE.}
    \item{monitor.popt}{option to monitor the optimism of the expected deviance using the DIC module for JAGS.  If TRUE, a 'popt' element is returned representing this value at each iteration.  For more information see the JAGS user manual section 4.4.  Default FALSE.}
-   \item{keep.jags.files}{option to keep the folder with files needed to call JAGS, rather than deleting it.  Could be useful for attempting to bug fix models.  Default FALSE.}
+   \item{keep.jags.files}{option to keep the folder with files needed to call JAGS, rather than deleting it.  May be useful for attempting to bug fix models.  Default FALSE.}
 }
 
 \value{The results of the simulation are returned as list including the following items (omitting the last 3 items if check.conv==FALSE):
@@ -90,10 +90,10 @@ c ~ dunif(-1000,1000);
 precision ~ dexp(1);
 }"
 
-# Use dump.format to convert the data and initial values files into the R dump format
+# Use dump.format to convert the data and initial values files into the R dump format, with explicit control over the random number generator used for each chain (optional):
 data <- dump.format(list(X=X, Y=Y, N=length(X)))
-inits1 <- dump.format(list(m=1, c=1, precision=1))
-inits2 <- dump.format(list(m=0.1, c=10, precision=1))
+inits1 <- dump.format(list(m=1, c=1, precision=1, .RNG.name="base::Super-Duper", .RNG.seed=1))
+inits2 <- dump.format(list(m=0.1, c=10, precision=1, .RNG.name="base::Wichmann-Hill", .RNG.seed=2))
 
 # Run the model and produce plots
 results <- run.jags(model=model, monitor=c("m", "c", "precision"), data=data, n.chains=2, inits=c(inits1,

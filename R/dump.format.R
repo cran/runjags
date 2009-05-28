@@ -12,6 +12,15 @@ dump.format <- function(data=list()){
 	variable = names(data)
 	value <- data
 	
+	if(any(variable==".RNG.name")){
+		n <- which(variable==".RNG.name")
+		split <- strsplit(value[[n]], split="")[[1]]
+		if(split[1]!="\"" & split[length(split)]!="\""){
+			split <- c("\"", split, "\"")
+			value[[n]] <- paste(split, collapse="")
+		}
+	}
+	
 	output.string <- ""
 	for(i in 1:length(variable)){
 		if(length(value[[i]])==1 && length(dim(value[[i]]))==0){
@@ -30,7 +39,6 @@ dump.format <- function(data=list()){
 		}
 		output.string <- paste(output.string, "\"", variable[[i]], "\" <- ", value.string, "\n", sep="")
 	}
-	
-	
+		
 	return(output.string)
 }

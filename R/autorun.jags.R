@@ -202,8 +202,8 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 			
 				time.taken <- timestring(pre.time, Sys.time(), units="secs", show.units=FALSE)
 				availableupdates <- updatesdone / time.taken * (max.time - time.taken)
-				neededupdates <- updatesdone / time.taken * 600
-				neededupdates <- as.numeric(round(min(neededupdates, availableupdates, startsample)))
+				neededupdates <- as.numeric(round(min(availableupdates, startsample)))
+				# if less updates are available than startsample, then some of the last run are used to make the total up to startsample using window() in about 35 lines time
 				
 				if(neededupdates > 0){
 					

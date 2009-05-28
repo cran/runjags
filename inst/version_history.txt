@@ -19,6 +19,34 @@ None planned.
 VERSION HISTORY
 
 
+Version 0.9.4
+
+NEW FEATURES
+
+dump.format now checks for '.RNG.name' and double quotes the value if not already double quoted
+
+Help files updated to explain how to explicitly control the random number generators in JAGS
+
+
+BUG FIXES
+
+Hideous bug fixed in combine.mcmc that prevented 3 or more objects being combined correctly
+
+timestring now rounds the time in seconds to 0.1 seconds (more consistent with other units)
+
+Bug fixed in combine.mcmc that prevented thinning being applied correctly if the objects were already thinned; help page updated to better explain the results of thinning chains that are already thinned
+
+Bug fixed that could cause autorun.jags to update only a small number of iterations to improve convergence if the model ran very slowly the first time
+
+Bug fixed in find.parameters that could cause problems when an init/data list with more parameters than needed was provided
+
+Bug fixed in find.parameters that could result in the output list being formatted wrongly causing dump.format to return an error
+
+Bug fixed that could prevent re-use of existing chains in run.jags
+
+Check added to make sure dev.new exists before calling it for compatibility with older (Linux) versions of R
+
+
 Version 0.9.3
 
 NEW FEATURES

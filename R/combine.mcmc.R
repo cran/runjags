@@ -55,20 +55,30 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 		n.params <- n.params[[1]][1]
 	
 		newobjects <- vector("list", length=n.chains)
-
-		start.points <- c(1, (rowlengths+1))
-	
+		
+		start.points <- numeric(no.objects)
+		start.points[1] <- 1
+		if(no.objects>2){
+		for(i in 2:no.objects){
+			start.points[i] <- start.points[i-1] + rowlengths[i-1]
+		}
+		}
+		
 		for(i in 1:n.chains){
 		
-			newobjects[[i]] <- matrix(NA, nrow=sum(rowlengths), ncol=n.params, dimnames=list(NULL, dimnames(mcmc.objects[[1]][[1]])[[2]]))
+			newobjects[[i]] <- matrix(NA, nrow=0, ncol=n.params, dimnames=list(NULL, dimnames(mcmc.objects[[1]][[1]])[[2]]))
 		
 			for(j in 1:no.objects){
 			
-				newobjects[[i]][start.points[j]:(sum(rowlengths[1:j])),] <- as.matrix(window(mcmc.objects[[j]][[i]]))
+				newobjects[[i]] <- rbind(newobjects[[i]], mcmc.objects[[j]][[i]])
+				#newobjects[[i]][start.points[j]:(sum(rowlengths[1:j])),] <- as.matrix(window(mcmc.objects[[j]][[i]]))
 			
 			}
 			
+			dimnames(newobjects[[i]])[[1]] <-  1:nrow(newobjects[[i]])
+			
 			newobjects[[i]] <- as.mcmc(newobjects[[i]])
+
 		}
 		
 		if(returnlist) newobjects <- as.mcmc.list(newobjects) else newobjects <- newobjects[[1]]
@@ -89,11 +99,13 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 		if(return.samples > rowlengths){
 			thin <- 1
 		}else{
-			thin <- rowlengths / return.samples
+			thin <- rowlengths / (return.samples-1)
 		}
 	}
+	
+	currentthin <- thin(newobjects)
+	thin <- floor(thin)*currentthin
 
-	thin <- round(thin, digits=0)
 	suppressWarnings(newobjects <- window(newobjects, thin=thin))
 
 	

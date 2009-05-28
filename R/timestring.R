@@ -3,7 +3,8 @@ timestring <- function(time1, time2=NA, units=NA, show.units=TRUE){
 	time <- na.omit(c(time1, time2))
 	
 	if(length(time)==2){
-		time <- as.integer(difftime(time[2], time[1], units="secs"))
+		time <- as.integer(difftime(time[2], time[1], units="secs")*10)
+		time <- time/10
 	}else{	
 		if(length(time)==1){
 			time <- as.integer(time)
