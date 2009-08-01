@@ -15,8 +15,7 @@ ask(prompt="?", type="logical", bounds=c(-Inf, Inf),
    \item{na.allow}{if TRUE, allows the user to input "NA" for any type, which is returned as NA}
 }
 \seealso{
-   \code{\link[base]{readline}}
-   \code{\link[utils]{menu}}
+   \code{\link[base]{readline}}, \code{\link[utils]{menu}}
 }
 
 \author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk} funded as part of the DEFRA VTRI project 0101.}

@@ -1,6 +1,17 @@
-run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000, sample = 10000, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = FALSE, psrf.target = 1.05, normalise.mcmc = TRUE){
+run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000*thin, sample = 10000*thin, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE){
 
 updates <- sample
+
+if(any(c(monitor.pd, monitor.popt)) & n.chains < 2){
+	warning("The pD and popt cannot be assessed with only 1 chain")
+	monitor.pd <- FALSE
+	monitor.popt <- FALSE
+}
+if(any(c(monitor.deviance, monitor.pd, monitor.popt))) modules <- c(modules, "dic")
+modules <- unique(modules)
+modules <- na.omit(modules[modules!=""])
+
+if(as.integer(thin)!=thin | thin < 1) stop("The value supplied for thin must be a positive integer")
 
 real.runs <- as.integer(updates)
 ini.runs <- as.integer(burnin)
@@ -32,7 +43,7 @@ if(!is.na(n.chains)){
 		temp <- inits
 		inits <- character(n.chains)
 		
-		suppressWarnings(inits <- temp)
+		suppressWarnings(inits[] <- temp)
 		warning("The number of chains specified did not match the number of initial value strings supplied.  Some initial value strings will be recycled or ignored")
 	}
 }
@@ -69,8 +80,8 @@ if(check.conv==TRUE & chains==1){
 }
 
 modelstring <- paste(model, "\n", sep="")
-
-monitors <- paste("monitor set <", paste(monitor, collapse=">\nmonitor set <"), ">\n", sep="")
+monitorcollapse <- paste(">, thin(", thin, ")\nmonitor set <", sep="")
+monitors <- paste("monitor set <", paste(monitor, collapse=monitorcollapse), ">, thin(", thin, ")\n", sep="")
 n.params <- length(monitor)
 params.names <- monitor
 	
@@ -107,7 +118,15 @@ output <- file("data.txt", 'w')
 cat(datastring, file=output,sep="")  
 close(output)
 
-scriptstring <- "model in <\"model.txt\">\n"
+scriptstring <- ""
+
+if(any(modules!="")){
+	for(i in 1:length(modules)){
+		scriptstring <- paste(scriptstring, "load <", modules[i], ">\n", sep="")
+	}
+}
+
+scriptstring <- paste(scriptstring, "model in <\"model.txt\">\n", sep="")
 if(!is.na(data)) scriptstring <- paste(scriptstring, "data in <\"data.txt\">\n", sep="")
 
 scriptstring <- paste(scriptstring, "compile, nchains(<", as.integer(chains), ">)\n", sep="")
@@ -121,11 +140,15 @@ if(adapt > 0){
 if(burnin > 0 | adapt <= 0){
 	scriptstring <- paste(scriptstring, "update <", ini.runs, ">\n", sep="")
 }
-scriptstring <- paste(scriptstring, monitors, "update <", real.runs, ">
+scriptstring <- paste(scriptstring, monitors, if(monitor.deviance) paste("monitor, type(deviance) thin(", thin, ")\n", sep=""), if(monitor.pd) paste("monitor, type(pD) thin(", thin, ")\n", sep=""), if(monitor.popt) paste("monitor, type(popt) thin(", thin, ")\n", sep=""), "update <", real.runs, ">
 coda <*>\n", sep="")
 for(i in 1:chains){
 scriptstring <- paste(scriptstring, "parameters to <\"out", i, ".Rdump\">, chain(<", i, ">)\n", sep="")
 }
+if(monitor.deviance) scriptstring <- paste(scriptstring, "monitors to <\"deviance.Rdump\">, type(deviance)\n", sep="")
+if(monitor.pd) scriptstring <- paste(scriptstring, "monitors to <\"pd.Rdump\">, type(pD)\n", sep="")
+if(monitor.popt) scriptstring <- paste(scriptstring, "monitors to <\"popt.Rdump\">, type(popt)\n", sep="")
+
 scriptstring <- paste(scriptstring, "exit\n", sep="")
 
 output <- file("script.cmd", 'w')
@@ -173,7 +196,7 @@ if (file.exists("CODAindex.txt") == FALSE){
    		cat("ERROR:  The coda files were not found\n")
    		suppressWarnings(try(cat(success, "\n", sep=""), silent=TRUE))
    		setwd(save.directory)
-		unlink(temp.directory, recursive = TRUE)
+		if(!keep.jags.files) unlink(temp.directory, recursive = TRUE)
 		results <- c("Unable to load coda files")
 		return(results)
    	}
@@ -202,7 +225,7 @@ if((class(inputsuccess)=="try-error")){
 	if(class(inputsuccess)=="try-error"){
 		
 		setwd(save.directory)
-		unlink(temp.directory, recursive = TRUE)
+		if(!keep.jags.files) unlink(temp.directory, recursive = TRUE)
 		cat("Unable to load coda files or output of a crashed model.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given are valid and do not conflict with the data.\n")
 		results <- c("Unable to load coda files")
 		return(results)
@@ -216,8 +239,51 @@ if((class(inputsuccess)=="try-error")){
 	achieved <- niter(input.data)
 }	
 
+otheroutputs <- vector("list")
+
+suppressWarnings({
+if(monitor.deviance){
+	deviance <- try(dget("deviance.Rdump"), silent=TRUE)
+	if(class(deviance)=="try-error"){
+		warning("There was an error reading the individual parameter deviance")
+		deviance <- "There was an error reading the individual parameter deviance"
+	}else{
+		for(i in 1:length(deviance)){
+			dimnames(deviance[[i]]) <- list(1:nrow(deviance[[i]]), paste("chain_", 1:chains, sep=""))
+		}
+	}
+	otheroutputs <- c(otheroutputs, deviance=list(deviance))
+}
+if(monitor.pd){
+	pd <- try(dget("pd.Rdump"), silent=TRUE)
+	if(class(pd)=="try-error"){
+		warning("There was an error reading the pD")
+		pd <- "There was an error reading the pD"
+	}else{
+	#	for(i in 1:length(deviance)){
+	#		dimnames(deviance[[i]]) <- list(1:nrow(deviance[[i]]), paste("chain_", 1:chains, sep=""))
+	#	}
+	}
+	otheroutputs <- c(otheroutputs, pd=list(pd))
+}
+if(monitor.popt){
+	popt <- try(dget("popt.Rdump"), silent=TRUE)
+	if(class(popt)=="try-error"){
+		warning("There was an error reading the popt")
+		popt <- "There was an error reading the popt"
+	}else{
+	#	for(i in 1:length(deviance)){
+	#		dimnames(deviance[[i]]) <- list(1:nrow(deviance[[i]]), paste("chain_", 1:chains, sep=""))
+	#	}
+	}
+	otheroutputs <- c(otheroutputs, popt=list(popt))
+}
+
+})
+
 # stuff removed from here for unequal chain lengths
 
+achieved <- achieved * thin
 	
 if(achieved!=updates){
 	crashed <- TRUE
@@ -260,7 +326,7 @@ if(achieved!=updates){
 
 
 setwd(save.directory)
-unlink(temp.directory, recursive = TRUE)
+if(!keep.jags.files) unlink(temp.directory, recursive = TRUE)
 
 if(any(is.na(unlist(input.data)))){
 	
@@ -288,12 +354,13 @@ if(any(is.na(unlist(input.data)))){
 }
 
 if(plots==TRUE & achieved!=0){
+	success <- try({
 	final.mcmc <- input.data
 	plot1 = plot2 = vector('list', length=length(varnames(final.mcmc)))
 	names(plot1) = names(plot2) <- varnames(final.mcmc)
 	thinned.mcmc <- combine.mcmc(list(final.mcmc), return.samples=1000)
 
-	startdev <- dev.list()
+	#startdev <- dev.list()
 
 	#a <- dev.new()
 	#if(options("device")$device=="x11") x11()
@@ -302,19 +369,25 @@ if(plots==TRUE & achieved!=0){
 
 		plotdata <- thinned.mcmc[,c(i,i)]
 		varnames(plotdata)[1] <- ""		
-		plot1[[i]] <- xyplot(plotdata, layout=c(1,1), ylab="Value", xlab="Iteration", lattice.options=list(par.settings=plot.new()))
+		plot1[[i]] <- xyplot(plotdata, layout=c(1,1), ylab="Value", xlab="Iteration")
 		class(plot1[[i]]) <- "plotindpages"
 		plot2[[i]] <- densityplot(plotdata, layout=c(1,1), ylab="Density", xlab="Value")
 		class(plot2[[i]]) <- "plotindpages"
 
 	}
 
-	if(!is.null(startdev)){
-		for(i in dev.list()){
-			if(!any(startdev==i)) dev.off(i)
-		}
-	}else{
-		try(a <- dev.off(), silent=TRUE)
+	#if(!is.null(startdev)){
+	#	for(i in dev.list()){
+	#		if(!any(startdev==i)) dev.off(i)
+	#	}
+	#}else{
+	#	try(a <- dev.off(), silent=TRUE)
+	#}
+	
+	})
+	if(class(success)=="try-error"){
+		plot1 = plot2 <- "An unexpected error occured while attempting to plot graphs"
+		warning("An unexpected error occured while attempting to plot graphs")
 	}
 }else{
 	plot1 = plot2 <- "Plots not produced when plots==FALSE"
@@ -326,7 +399,7 @@ if(check.conv==TRUE & achieved!=0){
 		
 	
 	if(chains > 1){
-		convergence <- safe.gelman.diag(normalise.mcmc(input.data, normalise = normalise.mcmc, warn=TRUE), transform=FALSE, autoburnin=TRUE)
+		convergence <- safe.gelman.diag(normalise.mcmc(input.data, normalise = normalise.mcmc, warn=TRUE, check.stochastic = check.stochastic), transform=FALSE, autoburnin=TRUE)
 		
 		convergence <- c(convergence, psrf.target=psrf.target)
 		class(convergence) <- "gelman.with.target"
@@ -339,7 +412,7 @@ if(check.conv==TRUE & achieved!=0){
 		param.conv <- 1
 		n.params <- 1
 	}
-	autocorrelation <- autocorr.diag(normalise.mcmc(input.data, normalise = FALSE, warn = FALSE))
+	autocorrelation <- autocorr.diag(normalise.mcmc(input.data, normalise = FALSE, warn = FALSE, check.stochastic = check.stochastic))
 
 	autocorrelated <- 0
 	unconverged <- 0
@@ -366,9 +439,15 @@ if(check.conv==TRUE & achieved!=0){
 	
 	}
 	
+	if(class(convergence$mpsrf)!="numeric"){
+		mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
+	}else{
+		mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
+	}
+	
 	if(!is.na(param.conv)){
 		if(unconverged > 0){
-			if(n.params==1) cat("Convergence failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else cat("Convergence failed for this run for ", unconverged, " parameter(s) after ", updates, " iterations (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")\n", sep="")
+			if(n.params==1) cat("Convergence failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else cat("Convergence failed for this run for ", unconverged, " parameter(s) after ", updates, " iterations", mpsrfstring, "\n", sep="")
 		}else{
 			if(n.chains > 1) cat("The Gelman-Rubin statistic is below 1.05 for all parameters\n")
 			if(n.chains==0) cat("The Gelman-Rubin statistic could not be calculated for these chains\n")
@@ -395,21 +474,21 @@ if(check.conv==TRUE & achieved!=0){
 	}
 
 	options(show.error.messages = FALSE)
-	suppressWarnings(tsummary <- summary(input.data))
+	suppressWarnings(tsummary <- summary(combine.mcmc(input.data, collapse.chains=TRUE)))
 	options(show.error.messages = TRUE)	
 	
 	if(crashed==TRUE){
-		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2))
+		return(c(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, thin=thin,  summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2), otheroutputs))
 	}else{
-		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2))
+		return(c(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, thin=thin, summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2), otheroutputs))
 	}
 	
 }else{
 
 	if(crashed==TRUE){
-		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, trace=plot1, density=plot2))
+		return(c(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, thin=thin, summary="Summary not produced when check.conv==FALSE", psrf="Potential scale reductionf factors not produced when check.conv==FALSE", autocorr="Autocorrelation statistics not produced when check.conv==FALSE", trace=plot1, density=plot2), otheroutputs))
 	}else{
-		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, trace=plot1, density=plot2))
+		return(c(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, thin=thin, summary="Summary not produced when check.conv==FALSE", psrf="Potential scale reductionf factors not produced when check.conv==FALSE", autocorr="Autocorrelation statistics not produced when check.conv==FALSE", trace=plot1, density=plot2), otheroutputs))
 	}
 
 }

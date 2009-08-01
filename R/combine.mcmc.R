@@ -1,4 +1,4 @@
-combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA){
+combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=FALSE){
 	
 	if(class(mcmc.objects)!="list"){
 		if(any(class(mcmc.objects)==c("mcmc.list", "mcmc"))){
@@ -78,6 +78,11 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA){
 		newobjects <- mcmc.objects[[1]]
 	}
 	
+	if(collapse.chains & class(newobjects)=="mcmc.list"){
+		class(newobjects) <- "list"
+		newobjects <- combine.mcmc(newobjects)
+	}
+
 	rowlengths <- niter(newobjects)
 		
 	if(!is.na(return.samples)){
@@ -90,6 +95,7 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA){
 
 	thin <- round(thin, digits=0)
 	suppressWarnings(newobjects <- window(newobjects, thin=thin))
+
 	
 	return(newobjects)
 	

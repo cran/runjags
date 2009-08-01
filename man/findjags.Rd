@@ -13,7 +13,7 @@ findjags(ostype = .Platform$OS.type)}
 \value{A path or command for the most likely location of JAGS on the system.  On unix this will always be 'jags', on Windows for example "C:/Program Files/JAGS/bin/jags-terminal.exe" or "C:/Program Files/JAGS/JAGS-1.0.0/bin/jags-terminal.exe"
 }
 \seealso{
-   \code{\link{testjags}}
+   \code{\link{testjags}},
    \code{\link{run.jags}}
 }
 

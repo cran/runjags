@@ -26,9 +26,9 @@ autorun.jagsfile(path=stop("No path or model string supplied"),
 \value{The output of autorun.jags.  See the help file \code{\link{autorun.jags}} for more information.
 }
 \seealso{
-   \code{\link{run.jagsfile}}
-   \code{\link{autorun.jags}}
-   \code{\link{run.jags}}
+   \code{\link{run.jagsfile}},
+   \code{\link{autorun.jags}},
+   \code{\link{run.jags}},
    \code{\link{read.winbugs}}
 }
 

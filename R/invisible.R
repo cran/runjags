@@ -245,7 +245,7 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 
 }
 
-normalise.mcmc <- function(mcmc.list, normalise = TRUE, warn = TRUE){
+normalise.mcmc <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.stochastic = TRUE){
 
 if(class(mcmc.list)=="mcmc") mcmc <- mcmc.list(mcmc.list) else mcmc <- mcmc.list
 
@@ -254,6 +254,8 @@ if(class(mcmc)!="mcmc.list") stop("Object to be normalised must be an mcmc list 
 usevec <- 1:nvar(mcmc)
 
 parnames <- dimnames(mcmc[[1]])[[2]][!is.na(usevec)]	
+
+if(check.stochastic){
 
 anydone <- FALSE
 
@@ -284,7 +286,9 @@ if(anydone){
 
 	mcmc <- new.mcmc
 }
+}
 
+success <- try({
 if(normalise){
 	for(parameter in 1:nvar(mcmc)){
 
@@ -309,12 +313,33 @@ if(normalise){
 
 		# sample for max length of shapiro.test:
 		
-		if(length(data) > 5000) data <- sample(data, 5000)
-		if(length(logdat) > 5000) logdat <- sample(logdat, 5000)
+		done <- 0
 		
-		norm.s <- shapiro.test(data)$statistic
-		log.s <- shapiro.test(logdat)$statistic
-	
+		alldata <- data
+		alllogdat <- logdat
+		
+		# sometimes shapiro.test returns an error for the normal data (if very skewed?)
+		# repeating it up to 100 times should be OK
+		
+		while(done < 100){
+		
+			if(length(alldata) > 1000) data <- sample(alldata, 1000)
+			if(length(alllogdat) > 1000) logdat <- sample(alllogdat, 1000)
+		
+			norm.s <- shapiro.test(data)$statistic
+			log.s <- shapiro.test(logdat)$statistic
+			
+			done <- done + 1
+			
+			if(!is.na(norm.s) & !is.na(log.s)) break
+		}
+		
+		if(done==100){
+			# in case repeating up to 100 times isn't OK
+			if(warn) warning(paste("Attempt to normalise mcmc chain failed for the parameter '", varnames(mcmc)[parameter], "'", sep=""))
+			next
+		}
+		
 		if(norm.s >= log.s){
 			use <- 1	
 		}else{
@@ -334,6 +359,14 @@ if(normalise){
 			}
 		}
 	}
+}
+})
+
+if(class(success)=="try-error"){
+	#print("TEMP")
+	#name <- new_unique("normalise.failed", ".Rsave")
+	#save(failedmcmc, file=name)
+	stop("An error occured while normalising the mcmc chain")
 }
 
 if(class(mcmc.list)=="mcmc") return(mcmc[[1]]) else return(mcmc)
@@ -356,6 +389,9 @@ safe.gelman.diag <- function(x, warn=TRUE,...){
 		}, silent=TRUE)
 		
 		if(class(success)=="try-error"){
+			#print("TEMP")
+			#name <- new_unique("gelman.failed", ".Rsave")
+			#save(failedmcmc, file=name)
 			stop("An error occured while calculating the Gelman-Rubin statistic")
 		}
 		

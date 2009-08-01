@@ -19,6 +19,52 @@ None planned.
 VERSION HISTORY
 
 
+Version 0.9.3
+
+NEW FEATURES
+
+Chains can now be combined using combine.mcmc (new option collapse.chains)
+
+Thinning of chains in JAGS is now supported in autorun.jags and run.jags via a new thin option
+
+autorun.jags and run.jags now also return a value for 'thin' representing the thin amount of the chains in JAGS
+
+Usage of external JAGS modules is now supported, including the DIC module
+
+New options for monitor.deviance, monitor.popt, and monitor.pd now available
+
+Explanation for summary not calculated now returned when psrf not being calculated
+
+autorun.jags now checks that there is sufficient memory available to store all values of an MCMC chain before calling the simulation
+
+plot is now default TRUE in autorun.jags and run.jags
+
+autorun.jags now thins chains before calculating summary statistics
+
+New option for keeping MCMC files in run.jags added
+
+The plots from autorun.jags and run.jags are now done using a print method which should be more efficient
+
+Summary statistics are now taken from the combined chains
+
+
+BUG FIXES
+
+Fixed a bug causing convergence extensions to go beyond max.time in autorun.jags(file)
+
+Commas added between 'seealso' items in help files
+
+Fixed bug in autorun.jags that could cause a crash when the multivariate PRSF could not be calculated
+
+Bugs preventing the correct value for jags being passed from autorun.jags to run.jags now fixed
+
+Occasional bug in calculating the Gelman-Rubin statistic fixed
+
+The required sample size is now calculated taking into account the number of chains correctly
+
+Bug causing the calculated time remaining to be wrong when the simulation did not converge quickly now fixed
+
+
 Version 0.9.2
 
 NEW FEATURES

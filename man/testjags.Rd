@@ -14,7 +14,7 @@ testjags(jags=findjags(), silent=FALSE)}
 \value{The following self-explanatory information is returned:  os, JAGS.available (logical), JAGS.path, popen.support (internalisation of terminal output), JAGS.version, R.version, R.GUI, R.package.type, username.
 }
 \seealso{
-   \code{\link{run.jags}}
+   \code{\link{run.jags}},
    \code{\link{findjags}}
 }
 
