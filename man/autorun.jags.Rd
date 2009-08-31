@@ -19,7 +19,7 @@ autorun.jags(model=stop("No model supplied"),
    interactive=TRUE, max.time=Inf, 
    adaptive=list(type="burnin", length=200), modules=c(""), 
    thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, 
-   monitor.popt = FALSE)
+   monitor.popt = FALSE, keep.jags.files = FALSE)
 }
 \arguments{
    \item{model}{a character string of the model in the JAGS language.  No default.}
@@ -46,6 +46,7 @@ autorun.jags(model=stop("No model supplied"),
    \item{monitor.deviance}{option to monitor the deviance of each monitored variable using the DIC module for JAGS.  If TRUE, a 'deviance' element is returned representing this value for each monitored variable at each iteration.  For more information see the JAGS user manual section 4.4.  Default FALSE.}
    \item{monitor.pd}{option to monitor the effective number of parameters using the DIC module for JAGS.  If TRUE, a 'pd' element is returned representing this value at each iteration.  For more information see the JAGS user manual section 4.4.  Default FALSE.}
    \item{monitor.popt}{option to monitor the optimism of the expected deviance using the DIC module for JAGS.  If TRUE, a 'popt' element is returned representing this value at each iteration.  For more information see the JAGS user manual section 4.4.  Default FALSE.}
+   \item{keep.jags.files}{option to keep the folder with files needed to call JAGS, rather than deleting it.  May be useful for attempting to bug fix models.  Since autorun.jags typically makes several calls to JAGS, all folders are kept - the order in which the folders were used can be ascertained from the creation dates of the files.  Default FALSE.}
 }
 
 \value{A list including the following elements:

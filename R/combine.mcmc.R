@@ -1,4 +1,4 @@
-combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=FALSE){
+combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=if(length(mcmc.objects)==1) TRUE else FALSE){
 	
 	if(class(mcmc.objects)!="list"){
 		if(any(class(mcmc.objects)==c("mcmc.list", "mcmc"))){

@@ -32,6 +32,7 @@ newlinelast = found = started <- FALSE
 openbracket = closebracket = find.no <- 0
 
 newlinelast <- TRUE
+listfound <- logical()
 
 for(i in 1:length(split)){
 		
@@ -77,6 +78,8 @@ for(i in 1:length(split)){
 				list <- FALSE
 			}
 			
+			listfound <- c(listfound, list)
+			
 			started <- FALSE
 			found <- TRUE
 			find.no <- find.no + 1
@@ -93,26 +96,10 @@ for(i in 1:length(split)){
 			newlinelast <- FALSE
 			}
 	}
+}
 
-}
-for(i in 1:length(newstring)){
-	temp <- strsplit(newstring[i], "")[[1]]
-	
-	#  Because you can't have .Dim <- structure or variable = value:
-	numbers <- which(temp=="=")
-	if(length(numbers)>0){
-		for(k in 1:length(numbers)){
-			string <- character(length=10)
-			for(j in 1:10){
-				string[j] <- paste(temp[pmax((numbers[k]-3-j):(numbers[k]-j), 1)], collapse="")
-			}	
-			if(all(string!=".Dim")) temp[numbers[k]] <- "<-"
-		}
-	}
-	
-	newstring[i] <- paste(temp, collapse="")
-}
-return(newstring)
+if(newstring=="") listfound <- FALSE
+return(list(newstring, listfound=listfound))
 }
 
 

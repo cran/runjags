@@ -1,6 +1,6 @@
 Package: runjags
-Version: 0.9.4-2
-Date: 2009-28-05
+Version: 0.9.5-1
+Date: 2009-31-08
 Title: Run Bayesian MCMC Models in the BUGS syntax from Within R
 Author: Matthew Denwood <m.denwood@vet.gla.ac.uk> (funded as part of
         the DEFRA VTRI project 0101).
@@ -21,6 +21,6 @@ Description: A set of functions to allow any user specified model to be
         functions, see: http://www-fis.iarc.fr/~martyn/software/jags/
 License: GPL
 URL: http://cran.r-project.org/web/packages/runjags/
-Packaged: 2009-05-28 14:22:43 UTC; matthewdenwood
+Packaged: 2009-10-15 15:05:47 UTC; matthewdenwood
 Repository: CRAN
-Date/Publication: 2009-05-28 17:59:15
+Date/Publication: 2009-10-15 15:34:18

@@ -358,7 +358,7 @@ if(plots==TRUE & achieved!=0){
 	final.mcmc <- input.data
 	plot1 = plot2 = vector('list', length=length(varnames(final.mcmc)))
 	names(plot1) = names(plot2) <- varnames(final.mcmc)
-	thinned.mcmc <- combine.mcmc(list(final.mcmc), return.samples=1000)
+	thinned.mcmc <- combine.mcmc(list(final.mcmc), collapse.chains=FALSE, return.samples=1000)
 
 	#startdev <- dev.list()
 
@@ -439,10 +439,12 @@ if(check.conv==TRUE & achieved!=0){
 	
 	}
 	
-	if(class(convergence$mpsrf)!="numeric"){
-		mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
-	}else{
-		mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
+	if(n.chains > 1){
+		if(class(convergence$mpsrf)!="numeric"){
+			mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
+		}else{
+			mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
+		}
 	}
 	
 	if(!is.na(param.conv)){
@@ -474,7 +476,7 @@ if(check.conv==TRUE & achieved!=0){
 	}
 
 	options(show.error.messages = FALSE)
-	suppressWarnings(tsummary <- summary(combine.mcmc(input.data, collapse.chains=TRUE)))
+	suppressWarnings(tsummary <- summary(combine.mcmc(input.data, collapse.chains=FALSE)))
 	options(show.error.messages = TRUE)	
 	
 	if(crashed==TRUE){

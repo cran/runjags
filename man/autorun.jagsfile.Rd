@@ -3,7 +3,7 @@
 \alias{autorun.JAGSfile}
 \title{Read a User Specified Model in a WinBUGS Type Textfile or Character Variable, and Run the Simulation in JAGS with Automatically Calculated Run Length and Convergence Diagnostics}
 \description{
-   Runs a user specified JAGS (similar to WinBUGS) model in a WinBUGS type Textfile from within R, returning a list of the MCMC chain(s) along with convergence diagnostics, autocorrelation diagnostics and monitored variable summaries.  This function is a wrapper for \code{\link{run.jagsfile}} with autorun==TRUE.
+   Runs a user specified JAGS (similar to WinBUGS) model in a WinBUGS type Textfile from within R, returning a list of the MCMC chain(s) along with convergence diagnostics, autocorrelation diagnostics and monitored variable summaries.  This function is a wrapper for \code{\link{run.jagsfile}} with autorun==TRUE, and uses \code{\link{read.winbugs}} to extract model and data definitions from the specified file or string.
 }
 \usage{
 autorun.jagsfile(path=stop("No path or model string supplied"), 

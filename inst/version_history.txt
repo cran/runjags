@@ -19,6 +19,31 @@ None planned.
 VERSION HISTORY
 
 
+
+Version 0.9.5
+
+NEW FEATURES
+
+The default value of collapse.chains in the combine.mcmc function is now to automatically collapse the chains if a single mcmc object is provided, and not otherwise.
+
+The data block returned by read.winbugs is now returned within a 'data{}' block for consistency with the model block.
+
+Data blocks are now passed directly to JAGS rather than being interpreted to allow use of iterative loops etc.
+
+The autorun.jags function now has a keep.jags.files option similar to run.jags.
+
+The (auto)run.jagsfile and read.winbugs functions are now able to differentiate data that should be passed to jags in the model code from data that should be passed as data.  Substantial parts of the read.winbugs function were modified to achieve this, so some behaviours may be slightly different.  The relevant help files have also been updated.
+
+
+BUG FIXES
+
+The summary statistics returned by run.jags and autorun.jags now report the correct number of chains.
+
+Bug fixed in run.jags that would cause an error when calculating summary statistics with only 1 chain
+
+Citation information updated for compatibility with R version 2.10
+
+
 Version 0.9.4
 
 NEW FEATURES

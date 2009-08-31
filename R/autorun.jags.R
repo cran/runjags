@@ -1,4 +1,4 @@
-autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA, n.chains=2, inits = replicate(n.chains, NA), startburnin = 5000, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, plots = TRUE, thin.sample = TRUE, jags = findjags(), silent.jags = FALSE, interactive=TRUE, max.time=Inf, adaptive=list(type="burnin", length=200), modules=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.popt = FALSE){
+autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA, n.chains=2, inits = replicate(n.chains, NA), startburnin = 5000, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, plots = TRUE, thin.sample = TRUE, jags = findjags(), silent.jags = FALSE, interactive=TRUE, max.time=Inf, adaptive=list(type="burnin", length=200), modules=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.popt = FALSE, keep.jags.files=FALSE){
 
 	if(any(c(monitor.deviance, monitor.pd, monitor.popt))) modules <- c(modules, "dic")
 	modules <- unique(modules)
@@ -89,7 +89,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 	pre.time <- Sys.time()
 	
 	
-	pilot <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = inits, burnin=startburnin, sample=startsample, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt)
+	pilot <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = inits, burnin=startburnin, sample=startsample, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt, keep.jags.files=keep.jags.files)
 	if(any(pilot=="Unable to load coda files")){
 		cat("An error occured during the simulation\n\n")
 		return(c("Error", "An error occured during the simulation"))
@@ -114,7 +114,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 			cat("\nThe simulation crashed; retrying...",newlines,sep="")			
 			crash.retry <- crash.retry - 1
 			oldpilot <- pilot
-			pilot <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = inits, burnin=startburnin, sample=startsample, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt)
+			pilot <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = inits, burnin=startburnin, sample=startsample, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt, keep.jags.files=keep.jags.files)
 			
 			if(!any(names(pilot)=="crash.end")) break
 		}
@@ -143,7 +143,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 	}
 	
 	options(show.error.messages = FALSE)
-	suppressWarnings(fsummary <- summary(combine.mcmc(final.mcmc, collapse.chains=TRUE)))
+	suppressWarnings(fsummary <- summary(combine.mcmc(final.mcmc, collapse.chains=FALSE)))
 	options(show.error.messages = TRUE)
 	
 	convergence <- c(convergence, psrf.target=psrf.target)
@@ -208,7 +208,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 				if(neededupdates > 0){
 					
 					oldadditional <- additional
-					additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits=pilot$end.state, burnin=burnadapt, sample=neededupdates, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt)
+					additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits=pilot$end.state, burnin=burnadapt, sample=neededupdates, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt, keep.jags.files=keep.jags.files)
 					
 					if(any(pilot=="Unable to load coda files")){
 						cat("\nThere was an error in the second simulation, possibly due to bad initial values or Random Number Seed values obtained from the first simulation.  You could try using fewer chains.")
@@ -229,7 +229,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 							cat("\nThe simulation crashed; retrying...",newlines,sep="")
 							crash.retry <- crash.retry - 1
 							oldadd <- additional
-							additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = oldadditional$end.state, burnin=burnadapt, sample=(neededupdates), adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt)
+							additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = oldadditional$end.state, burnin=burnadapt, sample=(neededupdates), adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt, keep.jags.files=keep.jags.files)
 							
 							if(!any(names(additional)=="crash.end")) break
 						}
@@ -237,7 +237,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 					
 					pilot <- additional
 					
-					final.mcmc <- window(combine.mcmc(list(final.mcmc, additional$mcmc)), start=(((niter(final.mcmc)+niter(additional$mcmc))-startsample)+1))
+					final.mcmc <- window(combine.mcmc(list(final.mcmc, additional$mcmc)), collapse.chains=FALSE,  start=(((niter(final.mcmc)+niter(additional$mcmc))-startsample)+1))
 					
 					cat("Calculating the Gelman-Rubin statistic....\n")
 					thrownaway <- thrownaway+neededupdates
@@ -253,7 +253,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 					}
 					
 					options(show.error.messages = FALSE)
-					suppressWarnings(fsummary <- summary(combine.mcmc(final.mcmc, collapse.chains=TRUE)))
+					suppressWarnings(fsummary <- summary(combine.mcmc(final.mcmc, collapse.chains=FALSE)))
 					options(show.error.messages = TRUE)
 					
 					convergence <- c(convergence, psrf.target=psrf.target)
@@ -411,7 +411,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 		
 		
 		cat("\n")
-		additional <- run.jags(data=data, model=model, monitor=monitor,  n.chains=n.chains, inits=pilot$end.state, burnin=burnadapt, sample=moreupdates, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt)
+		additional <- run.jags(data=data, model=model, monitor=monitor,  n.chains=n.chains, inits=pilot$end.state, burnin=burnadapt, sample=moreupdates, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt, keep.jags.files=keep.jags.files)
 		if(any(additional=="Unable to load coda files")){
 			cat("An error occured during the simulation\n\n")
 			return(c("Error", "An error occured during the simulation"))
@@ -427,7 +427,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 				cat("\nThe simulation crashed; retrying...",newlines,sep="")			
 				crash.retry <- crash.retry - 1
 				oldadd <- additional
-				additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = pilot$end.state, burnin=burnadapt, sample=moreupdates, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt)
+				additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = pilot$end.state, burnin=burnadapt, sample=moreupdates, adapt=adapt, silent.jags=silent.jags, plots = FALSE, check.conv=FALSE, jags = jags, psrf.target = psrf.target, normalise.mcmc=normalise.mcmc, check.stochastic = check.stochastic, modules=c(""), thin=thin, monitor.deviance=monitor.deviance, monitor.pd=monitor.pd, monitor.popt=monitor.popt, keep.jags.files=keep.jags.files)
 				if(any(additional=="Unable to load coda files")){
 					cat("An error occured during the simulation\n\n")
 					return(c("Error", "An error occured during the simulation"))
@@ -436,7 +436,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 			}
 		}
 		
-		final.mcmc <- combine.mcmc(list(final.mcmc, additional$mcmc))
+		final.mcmc <- combine.mcmc(list(final.mcmc, additional$mcmc), collapse.chains=FALSE)
 		
 		
 	}else{
@@ -445,7 +445,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 	
 	cat("Necessary sample length achieved\n")
 	
-	final.mcmc <- combine.mcmc(final.mcmc, return.samples=thin.sample)
+	final.mcmc <- combine.mcmc(final.mcmc, collapse.chains=FALSE, return.samples=thin.sample)
 	
 	if(monitor.deviance) otheroutputs$deviance <- additional$deviance
 	if(monitor.pd) otheroutputs$pd <- additional$pd
@@ -468,7 +468,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 	
 	
 	options(show.error.messages = FALSE)
-	suppressWarnings(fsummary <- summary(combine.mcmc(final.mcmc, collapse.chains=TRUE)))
+	suppressWarnings(fsummary <- summary(combine.mcmc(final.mcmc, collapse.chains=FALSE)))
 	options(show.error.messages = TRUE)
 	
 	convergence <- c(convergence, psrf.target=psrf.target)
@@ -530,7 +530,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 		success <- try({
 		plot1 = plot2 = vector('list', length=length(varnames(final.mcmc)))
 		names(plot1) = names(plot2) <- varnames(final.mcmc)
-		thinned.mcmc <- combine.mcmc(list(final.mcmc), return.samples=1000)
+		thinned.mcmc <- combine.mcmc(list(final.mcmc), collapse.chains=FALSE, return.samples=1000)
 
 		#startdev <- dev.list()
 
