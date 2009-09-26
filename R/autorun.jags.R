@@ -1,11 +1,14 @@
-autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA, n.chains=2, inits = replicate(n.chains, NA), startburnin = 5000, startsample = 10000, psrf.target = 1.05, crash.retry=1, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=TRUE, max.time=Inf, adaptive=list(type="burnin", length=200)){
+autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA, n.chains=2, inits = replicate(n.chains, NA), startburnin = 5000, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, crash.retry=1, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=TRUE, max.time=Inf, adaptive=list(type="burnin", length=200)){
 
 	
 	if(thin.sample==TRUE) thin.sample <- startsample
 	if(thin.sample==FALSE) thin.sample <- Inf
 	
 	if(startsample < 4000) stop("A startsample of 4000 or more iterations is required to complete the Raftery and Lewis's diagnostic")
-		
+	
+	testmodel <- model
+	testmonitor <- monitor
+	
 	pilot <- NA
 	
 	if(n.chains < 2) stop("Minimum of 2 chains should be used so that convergence can be assessed")
@@ -63,6 +66,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 			crash.retry <- crash.retry - 1
 			oldpilot <- pilot
 			pilot <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits = inits, burnin=startburnin, sample=startsample, adapt=adapt, silent.jags=silent.jags, check.conv=FALSE)
+			
 			if(!any(names(pilot)=="crash.end")) break
 		}
 	}
@@ -75,14 +79,22 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 	final.mcmc <- pilot$mcmc
 	
 	cat("Calculating the Gelman-Rubin statistic....\n")
-
-	success <- try(convergence <- gelman.diag(final.mcmc))
-	if(class(success)=="try-error") return(c("Error", "An error occured while calculating the Gelman-Rubin statistic"))
-	success <- try(autocorr <- autocorr.diag(final.mcmc))
-	if(class(success)=="try-error") return(c("Error", "An error occured while calculating the autocorrelation"))
+	suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmc(final.mcmc, normalise=normalise.mcmc, warn=FALSE), transform=FALSE, autoburnin=TRUE), silent=TRUE))
+	if(class(success)=="try-error"){
+		cat("An error occured while calculating the Gelman-Rubin statistic; aborting simulation.  Check that different chains have not been given the same starting values and random seeds.\n")
+		return(c("Error", "An error occured while calculating the Gelman-Rubin statistic"))
+	}
+	suppressWarnings(success <- try(autocorr <- autocorr.diag(normalise.mcmc(final.mcmc, normalise=FALSE, warn=FALSE)), silent=TRUE))
+	if(class(success)=="try-error"){
+		cat("An error occured while calculating the autocorrelation; aborting simulation\n")
+		return(c("Error", "An error occured while calculating the autocorrelation"))
+	}
 	suppressWarnings(fsummary <- summary(final.mcmc))
 	
-	n.params <- ncol(autocorr)
+	convergence <- c(convergence, psrf.target=psrf.target)
+	class(convergence) <- "gelman.with.target"
+	
+	n.params <- nrow(convergence$psrf)
 	n.iters <- niter(final.mcmc)
 	
 	if(n.params==1) convergence$mpsrf <- convergence$psrf[1,1]
@@ -96,7 +108,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 			}
 		}	
 	}
-	
+
 	updatesdone <- startsample
 	updatesthrown <- 0
 	
@@ -131,6 +143,10 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 					additional <- run.jags(data=data, model=model, monitor=monitor, n.chains=n.chains, inits=pilot$end.state, burnin=burnadapt, sample=neededupdates, adapt=adapt, silent.jags=silent.jags, check.conv=FALSE)
 					pilot <- additional
 					
+					if(any(pilot=="Unable to load coda files")){
+						cat("\nThere was an error in the second simulation, possibly due to bad initial values or Random Number Seed values obtained from the first simulation.  Try monitoring less variables or using less chains.")
+					}
+					
 					if(any(additional=="Unable to load coda files")) return(c("Error", "An error occured during the simulation"))
 					if(any(names(additional)=="crash.end")){
 						repeat{
@@ -148,11 +164,23 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 					final.mcmc <- window(combine.mcmc(list(final.mcmc, additional$mcmc)), start=neededupdates+1)
 					
 					thrownaway <- thrownaway+neededupdates
-					success <- try(convergence <- gelman.diag(final.mcmc))
-					if(class(success)=="try-error") return(c("Error", "An error occured while calculating the Gelman-Rubin statistic"))
-					success <- try(autocorr <- autocorr.diag(final.mcmc))
-					if(class(success)=="try-error") return(c("Error", "An error occured while calculating the autocorrelation"))
+					suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmc(final.mcmc, normalise=normalise.mcmc, warn=FALSE), transform=FALSE, autoburnin=TRUE), silent=TRUE))
+					if(class(success)=="try-error"){
+						cat("An error occured while calculating the Gelman-Rubin statistic; aborting simulation.  Check that different chains have not been given the same starting values and random seeds.\n")
+						return(c("Error", "An error occured while calculating the Gelman-Rubin statistic"))
+					}
+					suppressWarnings(success <- try(autocorr <- autocorr.diag(normalise.mcmc(final.mcmc, normalise=FALSE, warn=FALSE)), silent=TRUE))
+					if(class(success)=="try-error"){
+						cat("An error occured while calculating the autocorrelation; aborting simulation\n")
+						return(c("Error", "An error occured while calculating the autocorrelation"))
+					}
+				
 					suppressWarnings(fsummary <- summary(final.mcmc))
+					
+					convergence <- c(convergence, psrf.target=psrf.target)
+					class(convergence) <- "gelman.with.target"
+					
+					n.params <- nrow(convergence$psrf)
 					
 					unconverged <- 0
 					if(n.params==1) convergence$mpsrf <- convergence$psrf[1,1]
@@ -165,7 +193,8 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 							}
 						}	
 					}
-#unconverged <- 1
+#unconverged <- 1	
+						
 					if(unconverged > 0){
 						cat("The Gelman-Rubin statistic was still above ", psrf.target, " for ", unconverged, " parameter(s) after ", updatesdone + neededupdates, " iterations (multi-variate psrf = ", as.numeric(round(convergence$mpsrf, digits=3)), ").\n", sep="")
 						
@@ -198,11 +227,12 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 	}else{
 		return(c("Error", "The Gelman-Rubin statistic could not be calculated for these chains"))
 	}
-
+	
+	
 	
 	cat("\nCalculating the necessary sample length based on the Raftery and Lewis's diagnostic...\n")
 			
-	success <- try(raftery <- raftery.diag(final.mcmc))
+	success <- try(raftery <- raftery.diag(normalise.mcmc(final.mcmc, normalise=FALSE, warn=FALSE)))
 	
 	#print(niter(final.mcmc))
 	#print(raftery)
@@ -264,26 +294,55 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 				if(!any(names(additional)=="crash.end")) break
 			}
 		}
+		
+		final.mcmc <- combine.mcmc(list(final.mcmc, additional$mcmc))
+		
 	}else{
-		additional <- pilot # for end.state at the end	
+		additional <- pilot # for end.state at the end, pilot is output of either first sim or extended convergence sim
 	}	
 	
 	cat("Necessary sample length achieved\n")
 	
-	final.mcmc <- combine.mcmc(list(pilot$mcmc, additional$mcmc))
-	
-	additional <- pilot
-	
 	
 	final.mcmc <- window(final.mcmc, start=max(burnin))
 	n.iters <- niter(final.mcmc)
-	n.params <- nvar(final.mcmc)
+	
+	suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmc(final.mcmc, normalise=normalise.mcmc, warn=FALSE), warn=TRUE, transform=FALSE, autoburnin=TRUE), silent=TRUE))
+	if(class(success)=="try-error"){
+		cat("An error occured while calculating the Gelman-Rubin statistic; aborting simulation.  Check that different chains have not been given the same starting values and random seeds.\n")
+		return(c("Error", "An error occured while calculating the Gelman-Rubin statistic"))
+	}
+	suppressWarnings(success <- try(autocorrelation <- autocorr.diag(normalise.mcmc(final.mcmc, normalise=FALSE, warn=FALSE)), silent=TRUE))
+	if(class(success)=="try-error"){
+		cat("An error occured while calculating the autocorrelation; aborting simulation\n")
+		return(c("Error", "An error occured while calculating the autocorrelation"))
+	}
+	suppressWarnings(fsummary <- summary(final.mcmc))
+	
+	convergence <- c(convergence, psrf.target=psrf.target)
+	class(convergence) <- "gelman.with.target"
+
+	unconverged <- 0
+	
+	n.params <- nrow(convergence$psrf)
+	if(n.params==1) convergence$mpsrf <- convergence$psrf[1,1]
+	
+	for(j in 1:n.params){
+		param.conv <- convergence$psrf[j, 1]
+		if(!is.na(param.conv)){
+			if(param.conv > psrf.target){
+				unconverged <- unconverged + 1
+			}
+		}	
+	}
+
+	if(unconverged > 0){
+		cat(paste("WARNING:  The Gelman-Rubin statistic for ", unconverged, " parameter(s) are above ", psrf.target, " for the final chains (multi-variate psrf = ", as.numeric(round(convergence$mpsrf, digits=3)), ").  The chains may have fallen out of convergence.  It is important to assess convergence manually before relying on inference from these chains.\n", sep=""))
+	}
 	
 	if(n.params==1) convergence$mpsrf <- NULL
 	
 	autocorrelated <- 0
-	success <- try(autocorrelation <- autocorr.diag(final.mcmc))
-	if(class(success)=="try-error") return(c("Error", "An error occured while calculating the autocorrelation"))
 	
 	for(j in 1:n.params){
 		param.autocorr <- autocorrelation[3,j]
@@ -305,12 +364,14 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = stop("No mon
 			cat("Autocorrelation could not be calculated for these chains\n")
 		}
 	}
+	
 	suppressWarnings(final.mcmc <- window(final.mcmc, thin=max(1, floor(n.iters/thin.sample))))
+	
+	unused <- normalise.mcmc(final.mcmc, normalise=FALSE, warn="warning")  # SO THAT WARNING OF NON STOCHASTICITY IS PRINTED
 
 	cat("Auto-run JAGS complete.\n\n")
-	if(killautocorr==FALSE) cat("*PLEASE NOTE:  THIS SOFTWARE IS INTENDED FOR EDUCATIONAL PURPOSES ONLY*\n*YOU SHOULD ASSESS CONVERGENCE AND AUTOCORRELATION MANUALLY BEFORE RELYING ON RESULTS PROVIDED*\n")
+	if(killautocorr==FALSE) cat("*PLEASE NOTE:  THIS SOFTWARE IS INTENDED FOR EDUCATIONAL PURPOSES ONLY*\n*YOU SHOULD ASSESS CONVERGENCE AND AUTOCORRELATION MANUALLY BEFORE RELYING ON RESULTS PROVIDED*\n\n")
 	
-	fsummary <- suppressWarnings(summary(final.mcmc))
 	
 	return(list(mcmc=final.mcmc, end.state=additional$end.state, req.samples=max(sample), req.burnin=max(burnin), samples.to.conv=updatesthrown, summary=fsummary, psrf=convergence, autocorr=autocorrelation))
 }

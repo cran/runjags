@@ -10,8 +10,8 @@ autorun.jags(model=stop("No model supplied"),
    monitor = stop("No monitored variables supplied"), 
    data=NA, n.chains=2, inits = replicate(n.chains, NA), 
    startburnin = 5000, startsample = 10000,
-   psrf.target = 1.05, crash.retry = 1,
-   thin.sample = FALSE, jags = findjags(), 
+   psrf.target = 1.05, normalise.mcmc = TRUE,
+   crash.retry = 1, thin.sample = FALSE, jags = findjags(), 
    silent.jags = FALSE, interactive=TRUE, max.time=Inf, 
    adaptive=list(type="burnin", length=200))
 }
@@ -24,6 +24,7 @@ autorun.jags(model=stop("No model supplied"),
    \item{startburnin}{the number of initial updates to discard before sampling.  Only used on the initial run before checking convergence.  Default 5000 iterations.}
    \item{startsample}{the number of samples on which to assess convergence.  More samples will give a better chance of allowing the chain to converge, but will take longer to achieve.  Also controls the length of the pilot chain used to assess the required sampling length.  The minimum is 4000 samples, which is the minimum required number of samples for a model with no autocorrelation and good convergence.  Default 10000 iterations.}
    \item{psrf.target}{the value of the point estimate for the potential scale reduction factor of the Gelman Rubin statistic below which the chains are deemed to have converged (must be greater than 1).  Default 1.05.}
+   \item{normalise.mcmc}{the Gelman Rubin statistic is based on the assumption that the posterior distribution of monitored variables is roughly normal.  For very skewed posterior distributions, it may help to log/logit transform the posterior before calculating the Gelman Rubin statistic.  If normalise.mcmc == TRUE, the normality of the untransformed and log/logit transformed posteriors are compared for each monitored variable and the least skewed is used to calculate the Gelman Rubin statistic.  If FALSE, the data are left untransformed (this may give problems calculating the statistic in extreme cases).  Default TRUE.}
    \item{crash.retry}{the number of times to re-attempt a simulation if the model returns an error.  Default 1 retry (simulation will be aborted after the second crash).}
    \item{thin.sample}{option to thin the final MCMC chain(s) before calculating summary statistics and returning the chains.  Thinning heavily autocorrelated, very long chains allows summary statistics to be calculated more quickly.  If TRUE, the chain is thinned to as close to a minimum of startsample iterations as possible, if FALSE the chains are not thinned.  A positive integer can also be specified as the desired chain length after thinning; the chains will be thinned to as close to this minimum value as possible.  Default FALSE (no thinning performed).}
    \item{jags}{the system call or path for activating JAGS.  Default calls findjags() to attempt to locate JAGS on your system.}
@@ -40,7 +41,7 @@ autorun.jags(model=stop("No model supplied"),
    \item{req.burnin}{the minimum burnin period for the chains to stabilise as calculated using the Raftery and Lewis's diagnostic}
    \item{samples.to.conv}{the number of sampled iterations discarded due to poor convergence.  The total number of iterations performed for the simulation is equal to req.samples + req.burnin + samples.to.conv (unless the simulation was aborted before reaching the required sampling length)}
    \item{summary}{the summary statistics for the monitored variables.  Renamed pilot.summary if pilot.only==TRUE or if the simulation is aborted before the required sampling length is achieved}
-   \item{psrf}{the Gelman Rubin statistic for the monitored variables (output of gelman.diag())}
+   \item{psrf}{the Gelman Rubin statistic for the monitored variables (similar to output of gelman.diag())}
    \item{autocorr}{the autocorrelation diagnostic for the monitored variables (output of autocorr.diag())}
 }
 

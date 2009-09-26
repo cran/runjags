@@ -2,7 +2,7 @@ citEntry("Manual{,
     title = {runjags: Run Bayesian MCMC Models in the BUGS syntax from Within R},
     author = {Denwood, M.J.}
     year = {2008},
-    note = {R package version 0.9.0},
+    note = {R package version 0.9.1},
     url = {http://cran.r-project.org/web/packages/runjags/},
     }", "Denwood, M.J. (2008).  runjags: Run Bayesian MCMC Models in the BUGS syntax from Within R.  Available from http://cran.r-project.org/web/packages/runjags/")
 

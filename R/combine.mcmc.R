@@ -3,7 +3,7 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA){
 	if(class(mcmc.objects)=="list"){
 		no.objects <- length(mcmc.objects)
 	}else{
-		stop("Data must be provided as a list of mcmc objects, or a list of mcmc.lists (for multiple chains).  A single mcmc.list or mcmc object can not be combined with  itself.")
+		stop("Data must be provided as a list of mcmc objects, or a list of mcmc.lists (for multiple chains).  A single mcmc.list or mcmc object can not be combined with itself.")
 	}
 	
 	if(length(mcmc.objects)==0) stop("The list provided cannot be empty")
@@ -62,9 +62,8 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA){
 			newobjects[[i]][start.points[j]:(sum(rowlengths[1:j])),] <- as.matrix(window(mcmc.objects[[j]][[i]]))
 			
 		}
-		
+		thin <- round(thin, digits=0)
 		suppressWarnings(newobjects[[i]] <- window(as.mcmc(newobjects[[i]]), thin=thin))
-						
 	}
 
 	return(mcmc.list(newobjects))

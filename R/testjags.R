@@ -82,9 +82,9 @@ testjags <- function(jags=findjags(), silent=FALSE){
 	if(silent==FALSE){
 		cat("You are currently logged on as ", username, ", on a ", os, " machine\n", sep="")
 		cat("You are using ", rversion, ", with the ", gui, " GUI", "\n", sep="")
-		if(os=="windows"){
-			cat("WARNING:  JAGS will run more slowly under windows than unix, and suppression of JAGS output may not be available\n")
-		}
+		#if(os=="windows"){
+		#	cat("WARNING:  JAGS will run more slowly under windows than unix, and suppression of JAGS output may not be available\n")
+		#}
 		if(success==0){
 			if(popen == TRUE){
 				cat("JAGS version ", version, " found successfully using the command ", jags, "\n", sep="")

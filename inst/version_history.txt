@@ -4,9 +4,6 @@ This version of the function is still being developed, and as such will almost c
 OPEN ISSUES
 
 
-Version 0.9.0
-
-
 BUGS
 
 None known.
@@ -19,8 +16,64 @@ None planned.
 
 
 
-
 VERSION HISTORY
+
+
+Version 0.9.1
+
+NEW FEATURES
+
+Number of failures to calculate the gelman-rubin statistic reduced by:
+Checking for monitored variables that are not stochastic and remove from inclusion in gelman-rubin statistic
+Option to improve normality of posterior distributions before estimating the gelman rubin statistic in run.jags and autorun.jags (normalise.mcmc option).
+New function to catch instances where gelman.diag fails for multiple parameters and calcualte the psrf individually (without multivariate psrf)
+
+autorun.jags and run.jags now returns 'psrf.target' as part of $psrf
+
+psrf.target added as an option to run.jags the same as autorun.jags
+
+NAMESPACE file used now
+
+Output of read.winbugs is now consistent - if data or initial value blocks are not found their values are returned as NA
+
+Warning that JAGS under Windows may be slower than Unix now removed
+
+
+BUG FIXES
+
+Bug fixed in combine.mcmc that could prevent thinning being performed as specified
+
+Bug fixed in autorun.jags that resulted in the output chain being replicated and combined together
+
+Bug fixed in run.jagsfile that caused problems when monitors weren't supplied in the model file
+
+Typo fixed in run.jags that caused simulations with only 1 chain to print a converged message
+
+Behaviour changed in run.jags so that a warning is printed if initial values are not the right length
+
+Bug fixed in run.jagsfile (findparams) that caused data containing any missing data to not be found
+
+autorun.jags now recalculates the gelman rubin statistic on the final chains and prints a warning if the chains have fallen out of convergence
+
+Bug fixed in run.jags that caused issues with calculating the Gelman Rubin statistic when the number of expected monitored nodes was not equal to the number of actual monitored nodes
+
+Bug fixed in autorun.jags and run.jags that caused the gelman rubin diagnostic to be calculated on the second half of the chain only
+
+For run.jagsfile, when n.chains was not consistent with length of inits it was ignored.  Now the length of inits is altered to match n.chains, with a warning.
+
+Bug fixed in new_unique that caused the counter to be added and not incremented if a file ending with '_1' existed already
+
+Delay after reading coda files partially replaced with flush.console() for Windows/Aqua, and removed for other OS types
+
+Bug fixed in autorun.jags that could produce a warning message if the chains were extended for convergence
+
+Bug fixed in run.jags that resulted in an error if the convergence calculation failed
+
+autorun.jags modified to attempt to reduce some of the strange errors and warnings sometimes encountered
+
+
+
+Version 0.9.0
 
 New to version 0.9; separated from bayescount to form 2 distinct packages.
 For version history of the package before 0.9 see the version_history file for bayescount.

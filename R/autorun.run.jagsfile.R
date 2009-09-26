@@ -15,58 +15,6 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 		if(class(newdatalist)!="list") stop("datalist must return a named list if specified as a function")
 	}
 	
-	findparams <- function(parameter, inputlist, environment=1, chain=1){
-
-		if(class(inputlist)=="function"){
-			success <- suppressWarnings(try(inputlist <- inputlist(chain), silent=TRUE))
-			if(class(success)=="try-error") inputlist <- inputlist()
-		}
-
-		if(identical(list(), inputlist) | identical(list(list()), inputlist)) inputlist <- list("")
-
-		names <- names(inputlist)
-
-		value <- list()
-		
-		for(i in 1:length(parameter)){	
-
-			if(any(names==parameter[i])){
-
-				value <- c(value, (inputlist[names==parameter[i]]))
-			}else{
-				
-				suppressWarnings(success <- try(temp <- get(parameter[i], sys.frame(sys.parent(n=environment))), silent=TRUE))
-				if(class(success)!="try-error"){
-					if(class(temp)=="function"){
-						success <- suppressWarnings(try(temp <- temp(chain), silent=TRUE))
-						if(class(success)=="try-error") temp <- temp()
-					}
-				}else{
-					suppressWarnings(success <- try(temp <- get(parameter[i], pos=".GlobalEnv"), silent=TRUE))
-					if(class(success)!="try-error"){
-						if(class(temp)=="function"){
-							success <- suppressWarnings(try(temp <- temp(chain), silent=TRUE))
-							if(class(success)=="try-error") temp <- temp()
-						}
-					}else{
-						temp <- NA
-					}
-				}
-
-				if(any(is.na(temp))) stop(paste(parameter[i], "not found")) 
-
-				value[[i]] <- temp
-				
-			}
-
-			names(value)[[i]] <- parameter[i]
-
-		}
-
-
-		return(value)
-
-		}
 	fromautorun <- 3
 	
 	if(all(!is.na(inits))){
@@ -82,7 +30,7 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 		}
 	}
 	
-	if(is.na(n.chains) & all(!is.na(inits))) n.chains <- length(inits)
+	if(is.na(n.chains) & any(!is.na(inits))) n.chains <- length(inits)
 	
 	params <- read.winbugs(path)
 	
@@ -90,63 +38,95 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 	autoinits <- params$autoinits
 	maindata <- params$data
 	maininits <- params$inits
-
+	
+	
 	if(is.na(data)){
-		if(!is.null(autodata)){
-			autodata <- findparams(autodata, datalist, fromautorun)
-			maindata <- paste(maindata, dump.format(autodata), sep="\n")
-			params$data <- maindata
+		if(all(is.na(maindata))) maindata <- ""
+		outdata <- as.character(maindata)
+		
+		if(!all(is.na(autodata))){
+			autodata <- find.parameters(autodata, datalist, fromautorun)
+			outdata <- paste(outdata, dump.format(autodata), sep="\n")
 		}
-		if(maindata=="") maindata <- NA
-		params$data <- as.character(maindata)
 	}else{
-		params$data <- data
+		if(!identical(autodata, NA) | !identical(maindata, NA)) warning("Data was specified in the model block but will be ignored since data was specified in the arguments for (auto)run.jagsfile")
+		outdata <- data
 	}
 	
 	if(all(is.na(inits))){
-		if(all(maininits=="")){
+		if(all(is.na(maininits))){
 			if(is.na(n.chains)){
 				n.chains <- 2
-				warning("No initial value blocks found and n.chains not specified.  2 chains will be used.")
+				warning("No initial value blocks found and n.chains not specified.  2 chains were used.")
 			}
-			maininits <- character(length=n.chains)
+			outinits <- character(length=n.chains)
 		}else{
 			if(is.na(n.chains)) n.chains <- length(maininits)
-			if(length(maininits)==1) maininits <- replicate(n.chains, maininits)
-			if(length(maininits)!=n.chains) warning("Number of initial value blocks found does not correspond to the number of chains specified.  The latter will be ignored.")
+			if(length(maininits)!=n.chains){
+				warning("The number of initial value blocks found does not correspond to the number of chains specified.  Some initial values were recycled or ignored.")
+				
+				temp <- maininits
+				outinits <- character(n.chains)
+
+				suppressWarnings(outinits[] <- temp)
+				
+			}else{
+				outinits <- maininits
+			}
 
 		}
-		if(!is.null(autoinits)){
+		if(!all(is.na(autoinits))){
 			for(i in 1:n.chains){
-				geninits <- findparams(autoinits, initlist, fromautorun, chain=i)
-				maininits[i] <- paste(maininits[i], dump.format(geninits), sep="\n")
+				geninits <- find.parameters(autoinits, initlist, fromautorun, chain=i)
+				outinits[i] <- paste(outinits[i], dump.format(geninits), sep="\n")
 			}
 		}
-		params$inits <- maininits
 	}else{
-		params$inits <- inits
+		if(!identical(autoinits, NA) | !identical(maininits, NA)) warning("Initial values were specified in the model block but will be ignored since initial values were specified in the arguments for (auto)run.jagsfile")
+		outinits <- inits
 	}
 	
-	params$inits[params$inits==""] <- NA
+	outinits[outinits==""] <- NA
 	
-	if(!is.na(n.chains) & length(params$inits)==0) params$inits <- NA
+	if(outdata==""){
+		outdata <- NA
+		warning("The model was run without data since no data was provided or found in the model block.")
+	}
+		
+	if(!all(is.na(monitor))){
+		if(!identical(params$monitor, NA)) warning("Monitors were specified in the model block but will be ignored since monitors were specified in the arguments for (auto)run.jagsfile")
+		outmonitor <- monitor
+	}else{
+		outmonitor <- params$monitor
+	}
 	
-	if(length(params$inits)==0 & is.na(n.chains)) stop("No initial value blocks or tags were found and n.chains was not specified.  Either provide initial values or specify n.chains.")
+	outmonitor <- as.character(outmonitor)
+	outmonitor[outmonitor==""] <- NA
+	outmonitor <- outmonitor[!is.na(outmonitor)]
 	
-	n.chains <- length(params$inits)
+	if(length(outmonitor)==0) stop("No monitors were specified or found in the model block.")
+	
+	if(is.na(n.chains)) n.chains <- length(outinits)
+	
+	if(n.chains!=length(outinits)){
+		
+		temp <- outinits
+		outinits <- character(n.chains)
+		
+		suppressWarnings(outinits[] <- temp)
+		warning("The number of chains specified did not match the number of initial value strings supplied.  Some initial value strings were recycled or ignored")
+	}
+	
 	
 	lengths <- lapply(params, length)
 	if(any(lengths==0)) stop(paste("No ", paste(names(lengths[lengths==0]), collapse=" or "), " blocks or tags were found", sep=""))
 	
-	if(!call.jags) return(list(data=params$data, model=params$model, inits=params$inits, monitor=params$monitor, n.chains=n.chains))
+	if(!call.jags) return(list(data=outdata, model=params$model, inits=outinits, monitor=outmonitor, n.chains=n.chains))
 	
-	if(any(is.null(params$monitor))) stop("No monitored variables specified")
-	if(any(is.na(params$monitor))) stop("No monitored variables specified")
-
 	if(!autorun){
-		return(run.jags(data=params$data, model=params$model, inits=params$inits, monitor=params$monitor, n.chains=n.chains, ...))
+		return(run.jags(data=outdata, model=params$model, inits=outinits, monitor=outmonitor, n.chains=n.chains, ...))
 	}else{
-		return(autorun.jags(data=params$data, model=params$model, inits=params$inits, monitor=params$monitor, n.chains=n.chains, ...))
+		return(autorun.jags(data=outdata, model=params$model, inits=outinits, monitor=outmonitor, n.chains=n.chains, ...))
 	}	
 	
 }

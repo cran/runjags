@@ -11,7 +11,8 @@ run.jags(model=stop("No model supplied"),
    data = NA, n.chains = 2, inits = replicate(n.chains, NA),
    burnin = 5000, sample = 10000, 
    adapt=if(burnin<200) 100 else 0, jags=findjags(), 
-   silent.jags = FALSE, check.conv=TRUE)}
+   silent.jags = FALSE, check.conv = TRUE,
+   psrf.target = 1.05, normalise.mcmc = TRUE)}
 
 \arguments{
    \item{model}{a character string of the model in the JAGS language.  No default.}
@@ -25,6 +26,8 @@ run.jags(model=stop("No model supplied"),
    \item{jags}{the system call or path for activating JAGS.  Default calls findjags() to attempt to locate JAGS on your system.}
    \item{silent.jags}{should the JAGS output be suppressed? (logical)  If TRUE, no indication of the progress of individual models is supplied.  Default FALSE.}
    \item{check.conv}{should the convergence be assessed after the model has completed?  If TRUE, each monitored variable will be assessed for a potential scale reduction factor of the Gelman Rubin statistic of less than 1.05, which indicates adequate convergence.  2 or more chains are required to assess convergence.  Default TRUE.}
+   \item{psrf.target}{the value of the point estimate for the potential scale reduction factor of the Gelman Rubin statistic below which the chains are deemed to have converged (must be greater than 1).  Ignored if check.conv==FALSE.  Default 1.05.}
+   \item{normalise.mcmc}{the Gelman Rubin statistic is based on the assumption that the posterior distribution of monitored variables is roughly normal.  For very skewed posterior distributions, it may help to log/logit transform the posterior before calculating the Gelman Rubin statistic.  If normalise.mcmc == TRUE, the normality of the untransformed and log/logit transformed posteriors are compared for each monitored variable and the least skewed is used to calculate the Gelman Rubin statistic.  If FALSE, the data are left untransformed (this may give problems calculating the statistic in extreme cases).  Ignored if check.conv==FALSE.  Default TRUE.}
 }
 
 \value{The results of the simulation are returned as list including the following items (omitting the last 3 items if check.conv==FALSE):
@@ -33,7 +36,7 @@ run.jags(model=stop("No model supplied"),
    \item{burnin}{number of burnin iterations discarded before sampling.}
    \item{sample}{number of sampled iterations.}
    \item{summary}{the summary of each monitored variable (equivalent to summary(mcmc)).}
-   \item{psrf}{the output of the Gelman Rubin dignostic (equivalent to gelman.diag(mcmc)).}
+   \item{psrf}{the output of the Gelman Rubin dignostic (similar [but not exactly equivalent] to gelman.diag(mcmc)).}
    \item{autocorr}{the output of the autocorrelation diagnostic (equivalent to autocorr.diag(mcmc)).}
 }
 

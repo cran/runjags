@@ -8,7 +8,7 @@ timestring <- function(time1, time2=NA, units=NA, show.units=TRUE){
 		if(length(time)==1){
 			time <- as.integer(time)
 		}else{
-			stop("Error:  input variables incorrect")
+			stop("Input variables incorrectly specified")
 		}
 	}
 	

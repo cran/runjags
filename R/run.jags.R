@@ -1,11 +1,10 @@
-run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000, sample = 10000, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv=TRUE){
+run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000, sample = 10000, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE){
 
 updates <- sample
 
 real.runs <- as.integer(updates)
 ini.runs <- as.integer(burnin)
 adapt.runs <- as.integer(adapt)
-
 
 if(!require(lattice)){
 	stop("The required library 'lattice' is not installed")
@@ -22,9 +21,21 @@ if(test[[2]][1]==FALSE){
 
 inits <- unlist(inits)
 if(all(is.na(inits))) inits <- replicate(n.chains, NA)
-if(length(inits)==1) inits <- replicate(n.chains, inits)
 
-if(length(inits) != n.chains) warning("Number of chains does not match length of initial values, n.chains specified will be ignored")
+if(length(inits)==1){
+	inits <- replicate(n.chains, inits)
+	if(n.chains!=1) warning("Only one set of initial values was provided.  The same initial values will be used across all chains (this is not recommended)")
+}
+
+if(!is.na(n.chains)){
+	if(length(inits) != n.chains){
+		temp <- inits
+		inits <- character(n.chains)
+		
+		suppressWarnings(inits <- temp)
+		warning("The number of chains specified did not match the number of initial value strings supplied.  Some initial value strings will be recycled or ignored")
+	}
+}
 
 n.chains <- length(inits)
 
@@ -49,12 +60,13 @@ chains <- length(inits)
 
 if(chains<1) stop("Number of chains must be greater than 0")
 
-if(class(monitor)!="character"){
+monitor[monitor==""] <- NA
+if(class(monitor)!="character" | all(is.na(monitor))){
 	stop("Monitored variable(s) must be provided in the form of a character vector")
 }
 
 if(check.conv==TRUE & chains==1){
-	cat("Warning:  Convergence cannot be assessed with only 1 chain\n")
+	warning("Convergence cannot be assessed with only 1 chain")
 }
 
 modelstring <- paste(model, "\n", sep="")
@@ -169,12 +181,17 @@ if (file.exists("CODAindex.txt") == FALSE){
 }
 
 
-if(silent.jags == FALSE){
-	for(i in 1:3000000) {
-		hold <- exp(100)
+if((.Platform$GUI == "AQUA" || .Platform$OS.type == "windows") && silent.jags==FALSE){
+	flush.console()
+	for(i in 1:15) {
+		Sys.sleep(0.1)
+		cat("")
 	}
-	cat("\n")
+	flush.console()
 }
+
+cat("\n")
+
 
 cat("Simulation complete.  Reading coda files...\n")
 
@@ -187,7 +204,7 @@ if((class(inputsuccess)=="try-error")){
 		
 		setwd(save.directory)
 		unlink(temp.directory, recursive = TRUE)
-		cat("Unable to load coda files or output of a crashed model.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given do not conflict with the data.\n")
+		cat("Unable to load coda files or output of a crashed model.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given are valid and do not conflict with the data.\n")
 		results <- c("Unable to load coda files")
 		return(results)
 	}else{
@@ -274,26 +291,29 @@ if(any(is.na(unlist(input.data)))){
 
 if(check.conv==TRUE & achieved!=0){
 	success <- try({
-	mcmc <- vector('list', length=chains)
-
-	for(i in 1:chains){
-		mcmc[[i]] <-input.data[[i]][,1:n.params]
-	}
+		
 	
-	if(n.chains > 1){
-		convergence <- gelman.diag(mcmc.list(mcmc))
+	if(chains > 1){
+		convergence <- safe.gelman.diag(normalise.mcmc(input.data, normalise = normalise.mcmc, warn=TRUE), transform=FALSE, autoburnin=TRUE)
+		
+		convergence <- c(convergence, psrf.target=psrf.target)
+		class(convergence) <- "gelman.with.target"
+		
+		n.params <- nrow(convergence$psrf)
+
 	}else{	
 		convergence <- "Convergence cannot be assessed using only 1 chain"
 		unconverged <- 0
 		param.conv <- 1
+		n.params <- 1
 	}
-	autocorrelation <- autocorr.diag(mcmc.list(mcmc))
+	autocorrelation <- autocorr.diag(normalise.mcmc(input.data, normalise = FALSE, warn = FALSE))
 
 	autocorrelated <- 0
 	unconverged <- 0
-
+	
 	for(j in 1:n.params){
-		if(n.chains > 1){
+		if(chains > 1){
 			param.conv <- convergence$psrf[j, 1]
 			if(!is.na(param.conv)){
 				if(param.conv > 1.05){
@@ -301,6 +321,10 @@ if(check.conv==TRUE & achieved!=0){
 				}
 			}
 		}
+	}
+	
+
+	for(j in 1:n.params){
 		param.autocorr <- autocorrelation[3,j]
 		if(!is.na(param.autocorr)){
 			if(param.autocorr > 0.1){
@@ -314,7 +338,8 @@ if(check.conv==TRUE & achieved!=0){
 		if(unconverged > 0){
 			if(n.params==1) cat("Convergence failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else cat("Convergence failed for this run for ", unconverged, " parameter(s) after ", updates, " iterations (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")\n", sep="")
 		}else{
-			if(n.chains > 0) cat("The Gelman-Rubin statistic is below 1.05 for all parameters\n")
+			if(n.chains > 1) cat("The Gelman-Rubin statistic is below 1.05 for all parameters\n")
+			if(n.chains==0) cat("The Gelman-Rubin statistic could not be calculated for these chains\n")
 		}
 	}else{
 		cat("The Gelman-Rubin statistic could not be calculated for these chains\n")
@@ -333,15 +358,17 @@ if(check.conv==TRUE & achieved!=0){
 	}, silent=FALSE)
 	if(class(success)=="try-error"){
 		cat("An error occured when assessing convergence\n")
+		convergence <- "An error occured when assessing convergence"
+		autocorrelation <- "An error occured when assessing convergence and autocorrelation"
 	}
 	
 	tsummary <- suppressWarnings(summary(input.data))
 	
-		if(crashed==TRUE){
-			return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, summary=tsummary, psrf=convergence, autocorr=autocorrelation))
-		}else{
-			return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, summary=tsummary, psrf=convergence, autocorr=autocorrelation))
-		}
+	if(crashed==TRUE){
+		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, summary=tsummary, psrf=convergence, autocorr=autocorrelation))
+	}else{
+		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, summary=tsummary, psrf=convergence, autocorr=autocorrelation))
+	}
 	
 }else{
 

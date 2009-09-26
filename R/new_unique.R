@@ -19,12 +19,13 @@ new_unique <- function(name=NA, suffix="", ask=FALSE, prompt="A file or director
 			}
 		}
 		while(path.ok == FALSE){
-			temp <- paste(temp, "_", counter, "", sep="")
-			exists <- file.exists(paste(temp, suffix, sep=""))
+			temptemp <- paste(temp, "_", counter, "", sep="")
+			exists <- file.exists(paste(temptemp, suffix, sep=""))
 			if(exists==TRUE){
 				counter <- counter + 1
 			}else{
 				path.ok <- TRUE
+				temp <- temptemp
 				break
 			}
 		}
