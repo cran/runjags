@@ -3,7 +3,7 @@
 \alias{run.JAGSfile}
 \title{Read a User Specified Model in a WinBUGS Type Textfile or Character Variable, and Run the Simulation in JAGS from Within R}
 \description{
-   Runs a user specified JAGS (similar to WinBUGS) model in a WinBUGS type textfile or character variable from within R, returning a list of the MCMC chain(s) along with optional convergence diagnostics, autocorrelation diagnostics and monitored variable summaries.  JAGS is called using the lower level function run.jags.
+   Runs a user specified JAGS (similar to WinBUGS) model in a WinBUGS type textfile or character variable from within R, returning a list of the MCMC chain(s) along with optional convergence diagnostics, autocorrelation diagnostics and monitored variable summaries.  JAGS is called using the lower level function \code{\link{run.jags}}.
 }
 \usage{
 run.jagsfile(path=stop("No path or model string supplied"), 

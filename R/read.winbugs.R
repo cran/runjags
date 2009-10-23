@@ -1,14 +1,27 @@
 
 read.winbugs <- function(path){
 
-exists <- suppressWarnings(try(file.exists(path), silent=TRUE))
-if(class(exists)=="try-error") exists <- FALSE
+exists = likelystring <- logical(length(path))
 
-likelystring <- any(strsplit(path, "")[[1]]=="{")
+for(i in 1:length(path)){
+	exists[i] <- suppressWarnings(try(file.exists(path[i]), silent=TRUE))
+	if(class(exists[i])=="try-error") exists[i] <- FALSE
+	likelystring[i] <- any(strsplit(path[i], "")[[1]]=="{") | any(strsplit(path[i], "")[[1]]=="=") | any(strsplit(path[i], "")[[1]]=="<") | any(strsplit(path[i], "")[[1]]=="#")
+}
 
-if(likelystring==FALSE & exists==FALSE) stop("Path or modelstring not valid")
+if(all(!likelystring) & all(!exists)) stop("Path(s) or modelstring(s) not valid")
 
-if(exists) string <- paste(readLines(path, warn=FALSE), collapse="\n") else string <- path
+if(length(path)==1){
+	if(exists[1]) string <- paste(readLines(path, warn=FALSE), collapse="\n") else string <- path
+	
+}else{
+	string <- ""
+	for(i in 1:length(path)){
+	
+		if(likelystring[i]==FALSE & exists[i]==FALSE) warning(paste("Specified file '", path[i], "' does not exist", sep=""))
+		if(exists[i]) string <- paste(string, paste(readLines(path[i], warn=FALSE), collapse="\n"), sep="\n") else string <- paste(string, path[i], sep="\n")
+	}
+}
 
 string <- paste(string, "\n", sep="")
 

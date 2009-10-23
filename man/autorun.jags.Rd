@@ -3,7 +3,9 @@
 \alias{autorun.JAGS}
 \title{Run a User Specified Bayesian MCMC Model in JAGS with Automatically Calculated Run Length and Convergence Diagnostics}
 \description{
-   Runs a user specified JAGS (similar to WinBUGS) model from within R, returning a list of the MCMC chain(s) along with convergence diagnostics, autocorrelation diagnostics and monitored variable summaries.  Chain convergence over the first run of the simulation is assessed using the Gelman and Rubin's convergence diagnostic.  If necessary, the simulation is extended to improve chain convergence (up to a user-specified maximum time limit), before the required sample size of the Markov chain is calculated using the Raftery and Lewis's diagnostic.  The simulation is extended to the required sample size dependant on autocorrelation.  This function is provided as an educational tool only, and is not a replacement for manually assessing convergence and monte carlo error for real-world applications.  JAGS is called using the lower level function run.jags.
+   Runs a user specified JAGS (similar to WinBUGS) model from within R, returning a list of the MCMC chain(s) along with convergence diagnostics, autocorrelation diagnostics and monitored variable summaries.  Chain convergence over the first run of the simulation is assessed using the Gelman and Rubin's convergence diagnostic.  If necessary, the simulation is extended to improve chain convergence (up to a user-specified maximum time limit), before the required sample size of the Markov chain is calculated using the Raftery and Lewis's diagnostic.  The simulation is extended to the required sample size dependant on autocorrelation.  
+
+This function is provided as an educational tool only, and is not a replacement for manually assessing convergence and Monte Carlo error for real-world applications.  For more complex models, the use of run.jags directly with manual assessment of necessary run length is strongly recommended.  JAGS is called using the lower level function \code{\link{run.jags}}.
 }
 \usage{
 autorun.jags(model=stop("No model supplied"), 
@@ -11,7 +13,8 @@ autorun.jags(model=stop("No model supplied"),
    data=NA, n.chains=2, inits = replicate(n.chains, NA), 
    startburnin = 5000, startsample = 10000,
    psrf.target = 1.05, normalise.mcmc = TRUE,
-   crash.retry = 1, thin.sample = FALSE, jags = findjags(), 
+   raftery.options = list(), crash.retry = 1, 
+   plots = TRUE, thin.sample = TRUE, jags = findjags(), 
    silent.jags = FALSE, interactive=TRUE, max.time=Inf, 
    adaptive=list(type="burnin", length=200))
 }
@@ -24,13 +27,15 @@ autorun.jags(model=stop("No model supplied"),
    \item{startburnin}{the number of initial updates to discard before sampling.  Only used on the initial run before checking convergence.  Default 5000 iterations.}
    \item{startsample}{the number of samples on which to assess convergence.  More samples will give a better chance of allowing the chain to converge, but will take longer to achieve.  Also controls the length of the pilot chain used to assess the required sampling length.  The minimum is 4000 samples, which is the minimum required number of samples for a model with no autocorrelation and good convergence.  Default 10000 iterations.}
    \item{psrf.target}{the value of the point estimate for the potential scale reduction factor of the Gelman Rubin statistic below which the chains are deemed to have converged (must be greater than 1).  Default 1.05.}
-   \item{normalise.mcmc}{the Gelman Rubin statistic is based on the assumption that the posterior distribution of monitored variables is roughly normal.  For very skewed posterior distributions, it may help to log/logit transform the posterior before calculating the Gelman Rubin statistic.  If normalise.mcmc == TRUE, the normality of the untransformed and log/logit transformed posteriors are compared for each monitored variable and the least skewed is used to calculate the Gelman Rubin statistic.  If FALSE, the data are left untransformed (this may give problems calculating the statistic in extreme cases).  Default TRUE.}
+   \item{normalise.mcmc}{the Gelman Rubin statistic is based on the assumption that the posterior distribution of monitored variables is roughly normal.  For very skewed posterior distributions, it may help to log/logit transform the posterior before calculating the Gelman Rubin statistic.  If normalise.mcmc == TRUE, the normality of the untransformed and log/logit transformed posteriors are compared for each monitored variable and the least skewed is used to calculate the Gelman Rubin statistic (this may take some time for large numbers of monitored variables).  If FALSE, the data are left untransformed (this may give problems calculating the statistic in extreme cases).  Default TRUE.}
+   \item{raftery.options}{a named list which is passed as additional arguments to \code{\link[coda]{raftery.diag}}.  Default none (default arguments to raftery.diag are used).}
    \item{crash.retry}{the number of times to re-attempt a simulation if the model returns an error.  Default 1 retry (simulation will be aborted after the second crash).}
-   \item{thin.sample}{option to thin the final MCMC chain(s) before calculating summary statistics and returning the chains.  Thinning heavily autocorrelated, very long chains allows summary statistics to be calculated more quickly.  If TRUE, the chain is thinned to as close to a minimum of startsample iterations as possible, if FALSE the chains are not thinned.  A positive integer can also be specified as the desired chain length after thinning; the chains will be thinned to as close to this minimum value as possible.  Default FALSE (no thinning performed).}
+   \item{plots}{should traceplots and density plots be produced for each monitored variable?  If TRUE, the returned list will include elements 'trace' and 'density' which consist of a list of lattice objects.  The alternative is to use plot(results\$mcmc) to look at the density and traceplots for each variable using the traditional graphics system.  Default TRUE.}
+   \item{thin.sample}{option to thin the final MCMC chain(s) before calculating summary statistics and returning the chains.  Thinning heavily autocorrelated, very long chains allows summary statistics to be calculated more quickly.  If TRUE, the chain is thinned to as close to a minimum of startsample iterations as possible, if FALSE the chains are not thinned.  A positive integer can also be specified as the desired chain length after thinning; the chains will be thinned to as close to this minimum value as possible.  Default TRUE (thinned chains of length startsample returned).}
    \item{jags}{the system call or path for activating JAGS.  Default calls findjags() to attempt to locate JAGS on your system.}
    \item{silent.jags}{should the JAGS output be suppressed? (logical)  If TRUE, no indication of the progress of individual models is supplied.  Default FALSE.}
    \item{interactive}{option to allow the simulation to be interactive, in which case the user is asked if the simulation should be extended when run length and convergence calculations are performed and the extended simulation will take more than 1 minute.  The function will wait for a response before extending the simulations.  If FALSE, the simulation will be run until the chains have converged or until the next extension would extend the simulation beyond 'max.time'.  Default FALSE.}
-   \item{max.time}{the maximum time the function is allowed to run for, as a character string including units or as an integer in which case units are taken as seconds.  Ignored if interactive==TRUE.  If the function thinks that the next simulation extension will result in a total time of greater than max.time, the extension is aborted.  The time per iteration is estimated from the pilot chain.  Acceptable units include 'seconds', 'minutes', 'hours', 'days', 'weeks', or the first letter(s) of each.  Default "1hr".}
+   \item{max.time}{the maximum time for which the function is allowed to extend the chains to improve convergence, as a character string including units or as an integer in which case units are taken as seconds.  Ignored if interactive==TRUE.  If the function thinks that the next simulation extension to improve convergence will result in a total time of greater than max.time, the extension is aborted.  The time per iteration is estimated from the first simulation.  Acceptable units include 'seconds', 'minutes', 'hours', 'days', 'weeks', or the first letter(s) of each.  Default "1hr".}
    \item{adaptive}{a list of advanced options controlling the length of the adaptive mode of each simulation.  Extended simulations do not require an adaptive phase, but JAGS prints a warning if one is not performed.  Reduce the length of the adpative phase for very time consuming models.  'type' must be one of 'adaptive' or 'burnin'.}
 }
 
@@ -43,6 +48,8 @@ autorun.jags(model=stop("No model supplied"),
    \item{summary}{the summary statistics for the monitored variables.  Renamed pilot.summary if pilot.only==TRUE or if the simulation is aborted before the required sampling length is achieved}
    \item{psrf}{the Gelman Rubin statistic for the monitored variables (similar to output of gelman.diag())}
    \item{autocorr}{the autocorrelation diagnostic for the monitored variables (output of autocorr.diag())}
+   \item{trace}{a list of lattice objects representing traceplots for each monitored variable.  Calling each individual element will result in the traceplot for that variable being shown, calling the entire list will result in all traceplots being shown in new windows (which may cause problems with your R session if there are several monitored variables).  Not produced if plots==FALSE.}
+   \item{density}{a list of lattice objects representing density plots for each monitored variable.  Calling each individual element will result in the  density plot for that variable being shown, calling the entire list will result in all density plots being shown in new windows (which may cause problems with your R session if there are several monitored variables).  Not produced if plots==FALSE.}
 }
 
 \seealso{
@@ -78,9 +85,12 @@ precision ~ dexp(1);
 data <- list(X=x, Y=y, N=length(x))
 
 # Run the model
-results <- run.jags(model=model, monitor=c("m", "c", "precision"), data=data)
+results <- autorun.jags(model=model, monitor=c("m", "c", "precision"), data=data)
 
-# Analyse the results
+# Analyse traceplots of the results to assess convergence:
+results$trace
+
+# Summary of monitored variables:
 results$summary
 }
 }

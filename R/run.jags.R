@@ -1,4 +1,4 @@
-run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000, sample = 10000, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE){
+run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000, sample = 10000, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = FALSE, psrf.target = 1.05, normalise.mcmc = TRUE){
 
 updates <- sample
 
@@ -15,7 +15,7 @@ if(!require(coda)){
 
 test <- testjags(jags, silent=TRUE)
 if(test[[2]][1]==FALSE){
-	cat("Unable to call JAGS using '", jags, "'\n", sep="")
+	cat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument\n", sep="")
 	stop("Unable to call JAGS")
 }
 
@@ -38,7 +38,6 @@ if(!is.na(n.chains)){
 }
 
 n.chains <- length(inits)
-
 
 if(class(model)!="character" | length(model)!=1){
 	stop("The model must be provided in the form of a single character string")
@@ -190,7 +189,7 @@ if((.Platform$GUI == "AQUA" || .Platform$OS.type == "windows") && silent.jags==F
 	flush.console()
 }
 
-cat("\n")
+if(!silent.jags) cat("\n")
 
 
 cat("Simulation complete.  Reading coda files...\n")
@@ -288,6 +287,39 @@ if(any(is.na(unlist(input.data)))){
 	return(results)
 }
 
+if(plots==TRUE & achieved!=0){
+	final.mcmc <- input.data
+	plot1 = plot2 = vector('list', length=length(varnames(final.mcmc)))
+	names(plot1) = names(plot2) <- varnames(final.mcmc)
+	thinned.mcmc <- combine.mcmc(list(final.mcmc), return.samples=1000)
+
+	startdev <- dev.list()
+
+	#a <- dev.new()
+	#if(options("device")$device=="x11") x11()
+
+	for(i in 1:length(varnames(final.mcmc))){
+
+		plotdata <- thinned.mcmc[,c(i,i)]
+		varnames(plotdata)[1] <- ""		
+		plot1[[i]] <- xyplot(plotdata, layout=c(1,1), ylab="Value", xlab="Iteration", lattice.options=list(par.settings=plot.new()))
+		class(plot1[[i]]) <- "plotindpages"
+		plot2[[i]] <- densityplot(plotdata, layout=c(1,1), ylab="Density", xlab="Value")
+		class(plot2[[i]]) <- "plotindpages"
+
+	}
+
+	if(!is.null(startdev)){
+		for(i in dev.list()){
+			if(!any(startdev==i)) dev.off(i)
+		}
+	}else{
+		try(a <- dev.off(), silent=TRUE)
+	}
+}else{
+	plot1 = plot2 <- "Plots not produced when plots==FALSE"
+}
+
 
 if(check.conv==TRUE & achieved!=0){
 	success <- try({
@@ -361,21 +393,23 @@ if(check.conv==TRUE & achieved!=0){
 		convergence <- "An error occured when assessing convergence"
 		autocorrelation <- "An error occured when assessing convergence and autocorrelation"
 	}
-	
-	tsummary <- suppressWarnings(summary(input.data))
+
+	options(show.error.messages = FALSE)
+	suppressWarnings(tsummary <- summary(input.data))
+	options(show.error.messages = TRUE)	
 	
 	if(crashed==TRUE){
-		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, summary=tsummary, psrf=convergence, autocorr=autocorrelation))
+		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2))
 	}else{
-		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, summary=tsummary, psrf=convergence, autocorr=autocorrelation))
+		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2))
 	}
 	
 }else{
 
 	if(crashed==TRUE){
-		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved))
+		return(list(mcmc=input.data, crash.end=unlist(crash.end), burnin=burnin+adapt, sample=achieved, trace=plot1, density=plot2))
 	}else{
-		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample))
+		return(list(mcmc=input.data, end.state=unlist(input.end), burnin=burnin+adapt, sample=sample, trace=plot1, density=plot2))
 	}
 
 }

@@ -13,6 +13,13 @@ print.gelman.with.target <- function (x, digits = 3, ...)
 }
 
 
+print.plotindpages <- function (x, ...) 
+{
+	dev.new()
+	class(x) <- "trellis"
+	print(x, ...)
+}
+
 
 winbugs.extract.big <- function(find, string){
 	
@@ -188,16 +195,24 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 
 	names <- names(inputlist)
 
-	value <- list()
+	value <- vector('list', length=length(names))
 	
 	for(i in 1:length(parameter)){	
 
 		if(any(names==parameter[i])){
-
-			value <- c(value, (inputlist[names==parameter[i]]))
+			temp <- inputlist[names==parameter[i]]
+			
+			if(class(temp)=="function"){
+				success <- suppressWarnings(try(temp <- temp(chain), silent=TRUE))
+				if(class(success)=="try-error") temp <- temp()
+			}
+			
+			value[[i]] <- temp
+			
 		}else{
 			
 			suppressWarnings(success <- try(temp <- get(parameter[i], sys.frame(sys.parent(n=environment))), silent=TRUE))
+
 			if(class(success)!="try-error"){
 				if(class(temp)=="function"){
 					success <- suppressWarnings(try(temp <- temp(chain), silent=TRUE))
@@ -211,11 +226,11 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 						if(class(success)=="try-error") temp <- temp()
 					}
 				}else{
-					temp <- NA
+					temp <- NULL
 				}
 			}
-			
-			if(all(is.na(temp))) stop(paste(parameter[i], "not found")) 
+					
+			if(is.null(temp)) stop(paste(parameter[i], "not found (or has/returns value NULL)")) 
 
 			value[[i]] <- temp
 			
@@ -243,6 +258,9 @@ parnames <- dimnames(mcmc[[1]])[[2]][!is.na(usevec)]
 anydone <- FALSE
 
 for(i in 1:nvar(mcmc)){
+	testa <- if(nvar(mcmc)==1) mcmc[[1]][2] else mcmc[[1]][1,i]
+	testb <- if(nvar(mcmc)==1) mcmc[[1]][1] else mcmc[[1]][2,i]
+	if(testa==testb){
 	values <- unlist(mcmc[,i])
 	if(all(values==values[1])){
 		if(!anydone){
@@ -252,19 +270,20 @@ for(i in 1:nvar(mcmc)){
 		usevec[i] <- NA
 		if(warn==TRUE) cat(paste("*WARNING* The monitored variable '", parnames[i], "' appears to be non-stochastic.  It will not be included in the convergence diagnostic\n", sep=""))
 		if(warn=="warning") warning(paste("The monitored variable '", parnames[i], "' appears to be non-stochastic.  It will not be included in the convergence diagnostic", sep=""))
-	}
+	}}
 }
 if(anydone & warn==TRUE) cat("\n")
+if(anydone){
+	new.mcmc <- vector('list', length=nchain(mcmc))
 
-new.mcmc <- vector('list', length=nchain(mcmc))
+	for(i in 1:nchain(mcmc)){
+		new.mcmc[[i]] <- mcmc(matrix(mcmc[[i]][,na.omit(usevec)], ncol=length(na.omit(usevec)), dimnames=list(1:niter(mcmc), dimnames(mcmc[[1]])[[2]][!is.na(usevec)])))
+	}
 
-for(i in 1:nchain(mcmc)){
-	new.mcmc[[i]] <- mcmc(matrix(mcmc[[i]][,na.omit(usevec)], ncol=length(na.omit(usevec)), dimnames=list(1:niter(mcmc), dimnames(mcmc[[1]])[[2]][!is.na(usevec)])))
+	class(new.mcmc) <- "mcmc.list"
+
+	mcmc <- new.mcmc
 }
-
-class(new.mcmc) <- "mcmc.list"
-
-mcmc <- new.mcmc
 
 if(normalise){
 	for(parameter in 1:nvar(mcmc)){
@@ -273,22 +292,28 @@ if(normalise){
 
 		if(!all(data > 0)) next
 
-		if(length(data) > 5000) data <- sample(data, 5000)
 	
 		if(all(data > 0) & all(data < 1)){
-			log <- log(data/(1-data))
+			logdat <- log(data/(1-data))
 			logit <- TRUE
 		}else{
-			log <- log(data)
+			logdat <- log(data)
 			logit <- FALSE
 		}
 		
-		# having problems with some probabilites coming out at Inf, so:
-		if(any(is.na(log))) next
-		if(any(log==Inf) | any(log==-Inf)) next
+		# having problems with some probabilites coming out at Inf, although this should be fixed now I am checking all values not just the thinned ones, but it doesn't do any harm to leave so:
+	
+		if(any(is.na(logdat))) next
+		if(any(logdat==Inf) | any(logdat==-Inf)) next
+
+
+		# sample for max length of shapiro.test:
+		
+		if(length(data) > 5000) data <- sample(data, 5000)
+		if(length(logdat) > 5000) logdat <- sample(logdat, 5000)
 		
 		norm.s <- shapiro.test(data)$statistic
-		log.s <- shapiro.test(log)$statistic
+		log.s <- shapiro.test(logdat)$statistic
 	
 		if(norm.s >= log.s){
 			use <- 1	
@@ -300,13 +325,12 @@ if(normalise){
 		#use <- if(logit) 3 else 2
 		
 		if(use!=1){
-		
 			for(chain in 1:nchain(mcmc)){
 				newvalues <- unlist(mcmc[[chain]][,parameter])
 				if(logit) newvalues <- log(newvalues/(1-newvalues)) else newvalues <- log(newvalues)
-		
 				mcmc[[chain]][,parameter] <- newvalues
-		
+				
+				
 			}
 		}
 	}

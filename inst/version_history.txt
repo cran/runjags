@@ -19,6 +19,46 @@ None planned.
 VERSION HISTORY
 
 
+Version 0.9.2
+
+NEW FEATURES
+
+autorun.jags and run.jags now produce trace and density plots of all monitored variables (if plots==TRUE), which are returned as $trace[[variable]] and $density[[variable]]
+
+Multiple model files or strings (or a mixture) can now be specified as a character vector to read.winbugs
+
+User can now change options for the Raftery and Lewis diagnostic via 'raftery.options' for autorun.jags(file)
+
+When a simulation is aborted due to crashes or unexpected results from autorun.jags(file), an error message is now printed as well as returned
+
+combine.mcmc will now ignore a request to return more samples than provided rather than returning an error
+
+combine.mcmc can now accept a single mcmc list or mcmc object to be thinned (or returned unchanged if thin=1)
+
+autodata and autoinits can now be specified as a vector (or array) of missing data
+
+
+BUG FIXES
+
+Bug fixed that could result in chain values being returned as infinite causing an error with the gelman rubin statistic if normalise==TRUE
+
+Bug fixed in combine.mcmc that resulted in mcmcchains with only 1 variable causing an error
+
+Bug fixed that resulted in models being specified to (auto)run.jagsfile being ignored
+
+Errors resulting from use of 'summary' in autorun.jags and run.jags now suppressed correctly
+
+Efficiency of the normalise.mcmc function dramatically increased for chains with many variables
+
+Time limit in autorun.jags now does not include time spent waiting for dialogs to be answered, and is only used for simulation extensions to improve convergence (simulation is always extended for sample size if necessary)
+
+Bug fixed that could result in extended chains with non-stochastic monitored nodes causing an error in autorun.jags
+
+Bug fixed that resulted in crashed datasets always causing autorun.jags to return an error
+
+Bug fixed that prevented parameters specified as functions inside the datalist or initlist lists (or functions) being interpreted correctly
+
+
 Version 0.9.1
 
 NEW FEATURES

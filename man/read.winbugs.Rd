@@ -3,7 +3,7 @@
 \alias{read.WinBUGS}
 \title{Extract Any Models, Data, Monitored Variables or Initial Values As Character Vectors from a Winbugs Type Textfile}
 \description{
-   Read a user specified WinBUGS type textfile or character variable and extract any models, data, monitored variables or initial values as character vectors.  Used by run.jagsfile to interpret the input file.
+   Read a user specified WinBUGS type textfile or character variable and extract any models, data, monitored variables or initial values as character vectors.  Used by (auto)run.jagsfile to interpret the input file(s) or strings.
 }
 \usage{
 read.winbugs(path)

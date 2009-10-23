@@ -3,7 +3,7 @@
 \alias{findJAGS}
 \title{Attempt to Locate a JAGS Install}
 \description{
-   Search the most likely locations for JAGS to be installed on the users system, based on the operating system, and return the most likely path to try.  Where multiple installs exist, findjags will attempt to return the path to the install with the highest version number.
+   Search the most likely locations for JAGS to be installed on the users system, based on the operating system, and return the most likely path to try.  Where multiple installs exist, findjags will attempt to return the path to the install with the highest version number.  For Unix systems, calling jags using 'jags' requires the jags binary to be in the search path, which may be specified in your user '.Profile' if necessary.
 }
 \usage{
 findjags(ostype = .Platform$OS.type)}

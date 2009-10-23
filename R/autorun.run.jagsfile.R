@@ -39,6 +39,13 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 	maindata <- params$data
 	maininits <- params$inits
 	
+	if(is.na(model)){
+		if(params$model=="model{\n\n}\n") stop("No valid model was specified or found in the model block")
+		outmodel <- params$model
+	}else{
+		outmodel <- model
+		if(params$model!="model{\n\n}\n") warning("A model was found in the model block but will be ignored since a model was specified in the arguments for (auto)run.jagsfile")
+	}
 	
 	if(is.na(data)){
 		if(all(is.na(maindata))) maindata <- ""
@@ -124,9 +131,9 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 	if(!call.jags) return(list(data=outdata, model=params$model, inits=outinits, monitor=outmonitor, n.chains=n.chains))
 	
 	if(!autorun){
-		return(run.jags(data=outdata, model=params$model, inits=outinits, monitor=outmonitor, n.chains=n.chains, ...))
+		return(run.jags(data=outdata, model=outmodel, inits=outinits, monitor=outmonitor, n.chains=n.chains, ...))
 	}else{
-		return(autorun.jags(data=outdata, model=params$model, inits=outinits, monitor=outmonitor, n.chains=n.chains, ...))
+		return(autorun.jags(data=outdata, model=outmodel, inits=outinits, monitor=outmonitor, n.chains=n.chains, ...))
 	}	
 	
 }

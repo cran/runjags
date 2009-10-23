@@ -12,7 +12,7 @@ new_unique(name = NA, suffix = "", ask = FALSE,
    \item{name}{the filename to be used (character string).  A vector of character strings is also permissible, in which case they will be pasted together.  One or more missing (NA) values can also be used, which will be replaced with a randomly generated 9 character alphanumeric string.  Default NA.}
    \item{suffix}{the file extension (including '.') to use (character string).  Default none.}
    \item{ask}{if a file exists with the input name, should the function ask to overwrite the file? (logical)  If FALSE, a new filename is used instead and no files will be over-written.  Default FALSE.}
-   \item{prompt}{if ask==TRUE, what text string should be used to prompt the user? (character string)  A generic default is supplied.}
+   \item{prompt}{what text string should be used to prompt the user? (character string)  Ignored is ask==FALSE.  A generic default is supplied.}
 }
 \value{A unique filename that is safe to use without fear of destroying existing files
 }
