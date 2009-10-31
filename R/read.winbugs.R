@@ -75,7 +75,7 @@ tdata <- gsub("#(.*?)\n", "\n", maindata[i], perl=TRUE)
 
 # This code will remove any "\n" from between "(" and ")" and replace it with a comma (all commas removed beforehand):
 # [^\\)] means any character except ) - it's double escaped for some reason
-greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", tdata, extended=TRUE)
+greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", tdata)
 s <- greps[[1]]
 e <- (s-1)+ attr(greps[[1]], "match.length")
 if(s[1]!=-1){ # If it doesn't find anything, s=-1
@@ -206,7 +206,7 @@ tdata <- gsub("#(.*?)\n", "\n", maininits[i], perl=TRUE)
 
 # This code will remove any "\n" from between "(" and ")" and replace it with a comma (all commas removed beforehand):
 # [^\\)] means any character except ) - it's double escaped for some reason
-greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", tdata, extended=TRUE)
+greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", tdata)
 s <- greps[[1]]
 e <- (s-1)+ attr(greps[[1]], "match.length")
 if(s[1]!=-1){ # If it doesn't find anything, s=-1
