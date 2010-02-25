@@ -1,6 +1,23 @@
 findjags <- function(ostype = .Platform$OS.type){
 
 	if(ostype=="unix"){
+		
+		# First test popen support and then give up if we don't have it:
+		testpopen <- system('printf " \r"', intern=TRUE)
+		if(testpopen!=' \r') return('jags')
+		
+		# Then test standard 'jags':
+		jagspath <- system('which jags 2>&1', intern=TRUE)
+		# If that doesn't work try some paths and if one exists return it:
+		if(length(jagspath)==0){
+			paths <- c("/opt/local/bin/jags", "/opt/local/sbin/jags", "/usr/texbin/jags", "/usr/bin/jags", "/bin/jags", "/usr/sbin/jags", "/sbin/jags", "/usr/local/bin/jags", "/usr/X11/bin/jags")
+			for(i in 1:length(paths)){
+				jagspath <- system(paste('which ', paths[i], ' 2>&1', sep=""), intern=TRUE)
+				if(length(jagspath)!=0) return(jagspath)
+			}
+		}
+		
+		# Or just return 'jags' (will do this if 'jags' works or if nothing works):
 		return("jags")
 	}
 	

@@ -1,6 +1,6 @@
 testjags <- function(jags=findjags(), silent=FALSE){
 
-	tempfile <- new_unique(name=c("test.", NA), suffix=".cmd")
+	tempfile <- new_unique(name=c("test.", NA), suffix=".cmd", touch=TRUE, type='file')
 	write("exit", file=tempfile)
 	s.info <- Sys.info()
 	p.info <- .Platform
@@ -102,6 +102,7 @@ testjags <- function(jags=findjags(), silent=FALSE){
 		}else{
 			cat("JAGS was not found on your system using the command ", jags, ".  Please ensure that the command is correct and that the latest version of JAGS from http://www-fis.iarc.fr/~martyn/software/jags/ is installed\n", sep="")
 			jags.avail <- FALSE
+			popen <- NA
 			num.version <- list("none found")
 		}
 	}else{
@@ -119,11 +120,17 @@ testjags <- function(jags=findjags(), silent=FALSE){
 			}
 		}else{
 			jags.avail <- FALSE
-			popen <- FALSE
+			popen <- NA
 			num.version <- list("none found")
 		}
 	}
 	unlink(tempfile)
+	
+	if(os=='unix'){
+		testpopen <- system('printf " \r"', intern=TRUE)
+		if(testpopen==' \r') popen <- TRUE
+	}
+	
 	return(c("os"=os, "JAGS.available"=jags.avail, "JAGS.path"=jags, "popen.support"=popen, "JAGS.version"=num.version, "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username))
 }
 

@@ -11,12 +11,46 @@ None known.
 
 FEATURES TO BE IMPLEMENTED
 
-None planned.
+Support for features implemented in JAGS version 2.
 
 
 
 
 VERSION HISTORY
+
+
+Version 0.9.6
+
+NEW FEATURES
+
+There are new methods for calling JAGS under unix-alikes.  You can now specify 'interruptible' which allows JAGS to be fully interruptible using sigterm on the terminal/console, 'parallel' which runs each chain as a separate task, 'xgrid' which sends the JAGS call to an xgrid distributed computing cluster, or 'simple' which runs JAGS as a single process in the foreground (legacy behaviour and sole option on Windows).  The run.jags function now has the new arguments 'method' and 'xgrid.options' to control these settings.
+
+There are also new functions for running JAGS models remotely on Apple Xgrid distributed computing clusters, as well as functions for running arbitrary code over Xgrid.  A BASH shell script called mgrid which extends the functionality of the base Apple Xgrid software is also now included, but needs to be installed manually if required.
+
+The locally specified temporary directory is now used rather than the working directory if tmpdir=TRUE (default).  Any temporary files created are always deleted even if the process is killed by sigterm etc.
+
+If keep.jags.files then the jags directory is copied to the working directory with a unique filename based on the name 'runjagsfiles'
+
+In new_unique if the suffix supplied does not start with '.' one is now automatically prepended
+
+(auto)run.jags can now take inits as named lists or a list of named lists
+
+(auto)run.jags now returns a named list as end.state rather than a dump.format string
+
+new_unique now has a touch option (default TRUE) which creates the named directory (if new option type=='d') or file (if type=='f)
+
+/usr/local/bin/jags now examined for JAGS if popen=TRUE
+
+
+BUG FIXES
+
+The densityplot and traceplot returned by (auto)run.jags now only return one plot per variable, rather than two with one printed over the top of the other.  The 'plotindpages' class is also now documented in the help files for run.jags/autorun.jags under the values for trace and density.
+
+Popen=TRUE is now more accurate for testjags
+
+Bug fixed in read.winbugs that failed to identify separate variables specified on the same line
+
+Many other miscellaneous code tweaks and bug fixes.
 
 
 

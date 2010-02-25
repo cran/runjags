@@ -1,4 +1,13 @@
-new_unique <- function(name=NA, suffix="", ask=FALSE, prompt="A file or directory with this name already exists.  Overwrite?"){
+new_unique <- function(name=NA, suffix="", ask=FALSE, prompt="A file or directory with this name already exists.  Overwrite?", touch=FALSE, type='file'){
+	
+	if(suffix!=""){
+		if(strsplit(suffix, split="")[[1]][1]!=".") suffix <- paste(".", suffix, sep="")
+	}
+	
+	if(!any(type==c('file', 'folder', 'directory', 'dir', 'f', 'd'))) stop('The type specified must be either file or directory')
+	
+	if(type=='f') type <- 'file'
+	if(any(type==c('folder', 'dir', 'd'))) type <- 'directory'
 	
 	for(i in 1:length(name)){
 		if(is.na(name[i])){
@@ -30,14 +39,19 @@ new_unique <- function(name=NA, suffix="", ask=FALSE, prompt="A file or director
 			}
 		}
 	}
-	suppressWarnings(try(dir.create(paste(temp, suffix, sep="")), silent=TRUE))
+	
+	if(type=='file'){
+		suppressWarnings(try(file.create(paste(temp, suffix, sep="")), silent=TRUE))
+	}else{
+		suppressWarnings(try(dir.create(paste(temp, suffix, sep="")), silent=TRUE))
+	}
 	permissions <- file.exists(paste(temp, suffix, sep=""))
 	if(permissions==FALSE){
 		cat("Error:  Directory not writable\n")
 		return("Directory not writable")
 	}else{
-		unlink(paste(temp, suffix, sep=""), recursive = TRUE)
+		if(!touch) unlink(paste(temp, suffix, sep=""), recursive = TRUE)
 	}
-	suppressWarnings(try(backupforspaces <- file.remove(paste(temp, suffix, sep="")), silent=TRUE))
+	if(!touch) suppressWarnings(try(backupforspaces <- file.remove(paste(temp, suffix, sep="")), silent=TRUE))
 	return(paste(temp, suffix, sep=""))
 }

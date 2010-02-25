@@ -3,18 +3,39 @@
 \alias{combine.MCMC}
 \title{Combine Two or More MCMC Objects With the Same Number of Chains Into One Longer MCMC Object}
 \description{
-   Allows an MCMC object (with 1 or more chains) to be combined with another (or several other) MCMC object(s) representing extensions of the same simulation, to produce one MCMC object that contains the continuous combined Markov chains of the other MCMC objects.  Also provides a safe way to thin a single MCMC object or list.
+   Allows an MCMC object (with 1 or more chains) to be combined with
+   another (or several other) MCMC object(s) representing extensions of
+   the same simulation, to produce one MCMC object that contains the
+   continuous combined Markov chains of the other MCMC objects.  Also
+   provides a safe way to thin a single MCMC object or list.
 }
 \usage{
-combine.mcmc(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=if(length(mcmc.objects)==1) TRUE else FALSE)
+combine.mcmc(mcmc.objects=list(), thin=1, return.samples=NA, 
+collapse.chains=if(length(mcmc.objects)==1) TRUE else FALSE)
 }
 \arguments{
-   \item{mcmc.objects}{a list of MCMC objects, all with the same number of chains, or a single MCMC object or list.  No default.}
-   \item{thin}{an integer to use to thin the (final) MCMC object by, in addition to any thinning already applied to the objects before being passed to combine.mcmc.  Ignored if return.samples is specified (!=NA).  Default 1 (no additional thinning is performed).}
-   \item{return.samples}{the number of samples to return after thinning.  The chains will be thinned to as close to this minimum value as possible.  Supersedes thin if both are specified.  Ignored if niter(mcmc.objects) < return.samples.  Default NA.}
-   \item{collapse.chains}{option to combine all MCMC chains into a single MCMC chain with more iterations.  Can be used for combining chains prior to calculating results in order to reduce the Monte Carlo error of estimates.  Default TRUE if a single mcmc.object is provided, or FALSE otherwise.}
+
+\item{mcmc.objects}{a list of MCMC objects, all with the same number of
+chains, or a single MCMC object or list.  No default.}
+
+\item{thin}{an integer to use to thin the (final) MCMC object by, in
+addition to any thinning already applied to the objects before being
+passed to combine.mcmc.  Ignored if return.samples is specified (!=NA). 
+Default 1 (no additional thinning is performed).}
+
+\item{return.samples}{the number of samples to return after thinning. 
+The chains will be thinned to as close to this minimum value as
+possible.  Supersedes thin if both are specified.  Ignored if
+niter(mcmc.objects) < return.samples.  Default NA.}
+
+\item{collapse.chains}{option to combine all MCMC chains into a single
+MCMC chain with more iterations.  Can be used for combining chains prior
+to calculating results in order to reduce the Monte Carlo error of
+estimates.  Default TRUE if a single mcmc.object is provided, or FALSE
+otherwise.}
 }
-\value{A single MCMC object of length equal to the sum of the lengths of the input MCMC objects (if thin=1)
+\value{A single MCMC object of length equal to the sum of the lengths of
+the input MCMC objects (if thin=1)
 }
 
 \seealso{
@@ -22,7 +43,7 @@ combine.mcmc(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=if(
    \code{\link{testjags}}
 }
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk} funded as part of the DEFRA VTRI project 0101.}
+\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
 
 \examples{
 

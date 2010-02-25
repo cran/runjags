@@ -73,6 +73,9 @@ for(i in 1:length(maindata)){
 # This is non-greedy matching:
 tdata <- gsub("#(.*?)\n", "\n", maindata[i], perl=TRUE)
 
+# Replaces any '),' with ')\n' (allowing for spaces in between) so that multiple vars on 1 line are allowed:
+tdata <- gsub(") *?,", ")\n", tdata)
+
 # This code will remove any "\n" from between "(" and ")" and replace it with a comma (all commas removed beforehand):
 # [^\\)] means any character except ) - it's double escaped for some reason
 greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", tdata)
@@ -202,11 +205,14 @@ for(i in 1:length(maininits)){
 # This would be greedy:
 #tdata <- gsub("#.*\n", "\n", maindata[i])
 # This is non-greedy matching:
-tdata <- gsub("#(.*?)\n", "\n", maininits[i], perl=TRUE)
+maininits[i] <- gsub("#(.*?)\n", "\n", maininits[i], perl=TRUE)
+
+# Replaces any '),' with ')\n' (allowing for spaces in between) so that multiple vars on 1 line are allowed:
+maininits[i] <- gsub(") *?,", ")\n", maininits[i])
 
 # This code will remove any "\n" from between "(" and ")" and replace it with a comma (all commas removed beforehand):
 # [^\\)] means any character except ) - it's double escaped for some reason
-greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", tdata)
+greps <- gregexpr("\\([^\\)]*\n[^\\)]*\\)", maininits[i])
 s <- greps[[1]]
 e <- (s-1)+ attr(greps[[1]], "match.length")
 if(s[1]!=-1){ # If it doesn't find anything, s=-1
