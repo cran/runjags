@@ -518,9 +518,11 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		}
 		xgridoutput <- system(paste('xgrid -job results -id ', jobnum, ' -out ', directory, sep=''), intern=TRUE)
 		
-		if(length(xgridoutput)==0) stop("The job produced no output; ensure that the jagspath supplied is accurate")
 		cat("Job was successfully retreived from xgrid\n")
-		if(!silent)	cat('\nThe xgrid output is displayed below:\n', xgridoutput, sep='\n')
+		if(!silent){
+			if(length(xgridoutput)==0) cat('\nThe xgrid job did not produce any output to screen\n') else cat('\nThe xgrid output is displayed below:\n', xgridoutput, sep='\n')
+		}
+		
 		if(cleanup){
 			xgriddeleteout <- system(paste('xgrid -job delete -id ', jobnum, sep=''), intern=TRUE)
 			if(paste(xgriddeleteout, collapse='')!='{}') warning(paste('Possible error deleting xgrid job number ', jobnum, ' - please check this manually', sep=''))

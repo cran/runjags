@@ -40,43 +40,40 @@ details section.
 
 xgrid.run.jags(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit'
-else 'mgrid -t $ntasks', sub.options="",
-sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '),
-...)
+sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
+else 'mgrid -t $ntasks -i $indir', sub.options="", 
+sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
 
 xgrid.run.jagsfile(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit'
-else 'mgrid -t $ntasks', sub.options="",
-sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '),
-...)
+sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
+else 'mgrid -t $ntasks -i $indir', sub.options="", 
+sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
 
 xgrid.autorun.jags(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit'
-else 'mgrid -t $ntasks', sub.options="",
-sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '),
-...)
+sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
+else 'mgrid -t $ntasks -i $indir', sub.options="", 
+sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
 
 xgrid.autorun.jagsfile(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit'
-else 'mgrid -t $ntasks', sub.options="",
-sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '),
-...)
+sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
+else 'mgrid -t $ntasks -i $indir', sub.options="", 
+sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
 
 xgrid.submit.jags(xgrid.method='simple', jagspath='/usr/local/bin/jags',
-jobname=NA, cleanup=TRUE, sub.app=if(Sys.which('mgrid')=="")
-'xgrid -job submit' else 'mgrid -t $ntasks', sub.options="",
-sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '),
+jobname=NA, cleanup=TRUE, sub.app=if(Sys.which('mgrid')=="") 
+'xgrid -job submit -in $indir' else 'mgrid -t $ntasks -i $indir', 
+sub.options="", sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), 
 ...)
+
 
 xgrid.submit.jagsfile(xgrid.method='simple',
 jagspath='/usr/local/bin/jags',
-jobname=NA, cleanup=TRUE, sub.app=if(Sys.which('mgrid')=="")
-'xgrid -job submit' else 'mgrid -t $ntasks', sub.options="",
-sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '),
+jobname=NA, cleanup=TRUE, sub.app=if(Sys.which('mgrid')=="") 
+'xgrid -job submit -in $indir' else 'mgrid -t $ntasks -i $indir', 
+sub.options="", sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), 
 ...)
 
 xgrid.results.jags(jobname)
@@ -220,7 +217,12 @@ installed in the default library), run the following code in R, then
 paste the contents of the clipboard into the opened Terminal window and
 hit enter followed by an Administrator's password:
 
-clip <- pipe("pbcopy", "w"); cat(paste('cd ', .Library, '/runjags/xgrid; sudo chmod 755 mgrid.sh; sudo cp mgrid.sh /usr/local/bin/mgrid; if [ ! -d "/Library/Application Support/mgrid" ]; then sudo mkdir "/Library/Application Support/mgrid"; fi;', sep=""), file=clip); close(clip); system('open -n -a /Applications/Utilities/Terminal.app')
+clip <- pipe("pbcopy", "w"); 
+command <- paste('cd ', .Library, '/runjags/xgrid; sudo chmod 755 mgrid.sh; sudo cp mgrid.sh /usr/local/bin/mgrid; ', sep=""); 
+command <- paste(command, 'if [ ! -d "/Library/Application Support/mgrid" ]; then sudo mkdir "/Library/Application Support/mgrid"; fi;', sep=""); 
+cat(command, file=clip); 
+close(clip); 
+system('open -n -a /Applications/Utilities/Terminal.app')
 
 You can then look at the possible arguments to mgrid by typing 'mgrid'
 in the Terminal or system('mgrid') within R.
@@ -280,7 +282,7 @@ precision ~ dexp(1);
 }"
 
 # Run the model synchronously using the 'simple' method and a wait interval of 1 minute:
-results <- xgrid.run.jags(xgrid.method='simple', wait.interval='1 min', model=model, monitor=c("m", "c", "precision"), data=data, n.chains=2, plots = FALSE)
+results <- xgrid.run.jags(xgrid.method='simple', wait.interval='1 min', model=model, monitor=c("m", "c", "precision"), data=list(N=length(X), X=X, Y=Y), n.chains=2, plots = FALSE)
 
 # Analyse the results:
 results$summary
@@ -315,13 +317,13 @@ precision ~ dexp(1);
 }"
 
 # Run the model asynchronously:
-name <- xgrid.submit.jags(xgrid.method='separatejobs', sub.options=paste('-a ' , getwd(), '/jagsART.sh', sep=''), model=model, monitor=c("m", "c", "precision"), data=data, n.chains=2, plots = FALSE)
+name <- xgrid.submit.jags(xgrid.method='separatejobs', sub.options=paste('-a ' , getwd(), '/jagsART.sh', sep=''), model=model, monitor=c("m", "c", "precision"), data=list(N=length(X), X=X, Y=Y), n.chains=2, plots = FALSE)
 
 # Cleanup (remove jagsART file):
 unlink('jagsART.sh')
 
 # Retrieve the results:
-results <- xgrid.results(name)
+results <- xgrid.results.jags(name)
 }
 
 
@@ -353,7 +355,7 @@ precision ~ dexp(1);
 }"
 
 # Run the model synchronously using the 'separatetasks' method and a wait interval of 1 minute:
-results <- xgrid.autorun.jags(xgrid.method='separatetasks', wait.interval='1 min', sub.options='-h "Bugati:McLaren" -f', model=model, monitor=c("m", "c", "precision"), data=data, n.chains=2, plots = FALSE)
+results <- xgrid.autorun.jags(xgrid.method='separatetasks', wait.interval='1 min', sub.options='-h "Bugati:McLaren" -f', model=model, monitor=c("m", "c", "precision"), data=list(N=length(X), X=X, Y=Y), n.chains=2, plots = FALSE)
 
 }
 

@@ -35,22 +35,22 @@ xgrid.run(f=function(iteration){}, niters,
    object.list=list(), file.list=character(0), 
    threads=min(niters,100), jobname=NA, wait.interval="10 min", 
    xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 
-   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', cleanup=TRUE, 
+   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', cleanup=FALSE, 
    submitandstop=FALSE, tempdir=!submitandstop, keep.files=FALSE, 
    show.output=TRUE, max.filesize="1GB", 
-   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit' 
-   else 'mgrid -t $ntasks', sub.options="", 
-   sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '), ...)
+   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
+   else 'mgrid -t $ntasks -i $indir', sub.options="", 
+   sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
 
 xgrid.submit(f=function(iteration){}, niters, 
    object.list=list(), file.list=character(0), 
    threads=min(niters,100), jobname=NA, 
    xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 
-   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', cleanup=TRUE, 
+   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', cleanup=FALSE, 
    keep.files=FALSE, show.output=TRUE, max.filesize="1GB", 
-   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit' 
-   else 'mgrid -t $ntasks', sub.options="", 
-   sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '), ...)
+   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
+   else 'mgrid -t $ntasks -i $indir', sub.options="", 
+   sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
 
 xgrid.results(jobname)
 }
@@ -141,7 +141,7 @@ xgrid.results(jobname)
    for R).}
 
    \item{cleanup}{option to delete the job(s) from Xgrid after
-   retrieving result.  Default TRUE.}
+   retrieving result.  Default FALSE.}
 
    \item{submitandstop}{controls whether job should be run synchronously
    (submitandstop=FALSE), in which case the process will wait for the
@@ -278,7 +278,12 @@ installed in the default library), run the following code in R, then
 paste the contents of the clipboard into the opened Terminal window and
 hit enter followed by an Administrator's password:
 
-clip <- pipe("pbcopy", "w"); cat(paste('cd ', .Library, '/runjags/xgrid; sudo chmod 755 mgrid.sh; sudo cp mgrid.sh /usr/local/bin/mgrid; if [ ! -d "/Library/Application Support/mgrid" ]; then sudo mkdir "/Library/Application Support/mgrid"; fi;', sep=""), file=clip); close(clip); system('open -n -a /Applications/Utilities/Terminal.app')
+clip <- pipe("pbcopy", "w"); 
+command <- paste('cd ', .Library, '/runjags/xgrid; sudo chmod 755 mgrid.sh; sudo cp mgrid.sh /usr/local/bin/mgrid; ', sep=""); 
+command <- paste(command, 'if [ ! -d "/Library/Application Support/mgrid" ]; then sudo mkdir "/Library/Application Support/mgrid"; fi;', sep=""); 
+cat(command, file=clip); 
+close(clip); 
+system('open -n -a /Applications/Utilities/Terminal.app')
 
 You can then look at the possible arguments to mgrid by typing 'mgrid'
 in the Terminal or system('mgrid') within R.
@@ -309,9 +314,8 @@ prevent the xgrid controller crashing due to transferring large files).
 \code{\link{xgrid.run.jags}} for functions to run JAGS models on Xgrid,
 or \code{\link{run.jags}} to do so locally.
 
-\code{\link[multicore]{mclapply}} and
-\code{\link[multicore]{mcparallel}} in the multicore package for parallel execution of code over
-multiple local cores.
+mclapply and mcparallel in the multicore package for parallel execution
+of code over multiple local cores.
 
 }
 
@@ -401,7 +405,7 @@ f <- function(iteration){
 }
 
 # Submit the function to xgrid using our ART script to ensure the node can handle the job (the ART script path must be specified as an absolute link as xgrid won't be called in the current working directory):
-name <- xgrid.submit(f, object.list=list(X=X, Y=Y, model=model, data=data, hostname=hostname, password=password), threads=1, niters=1, sub.options=paste('-a ', getwd(), '/runjagsART.sh', sep=''), xgrid.method='simple')
+name <- xgrid.submit(f, object.list=list(X=X, Y=Y, model=model, data=data, hostname=hostname, password=password), threads=1, niters=1, sub.options=if(Sys.which('mgrid')=="") paste('-art ', getwd(), '/runjagsART.sh', sep='') else paste('-a ', getwd(), '/runjagsART.sh', sep=''), xgrid.method='simple')
 # Cleanup (remove runjagsART file):
 unlink('runjagsART.sh')
 

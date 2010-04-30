@@ -1,4 +1,4 @@
-xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, wait.interval="10 min", xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=TRUE, submitandstop=FALSE, tempdir=!submitandstop, keep.files=FALSE, show.output=TRUE, max.filesize="1GB", sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit' else 'mgrid -t $ntasks', sub.options="", sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '), ...){
+xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, wait.interval="10 min", xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=FALSE, submitandstop=FALSE, tempdir=!submitandstop, keep.files=FALSE, show.output=TRUE, max.filesize="1GB", sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir' else 'mgrid -t $ntasks -i $indir', sub.options="", sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...){
 		
 	if(class(max.filesize)=="numeric" | class(max.filesize)=="integer"){
 		max.filesize <- max.filesize * 1024^3# DEFAULT IS GB
@@ -96,6 +96,7 @@ xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.
 	
 	if(xgrid.method=='xgrid.retrieve'){
 		if(!file.exists(jobname)) stop("The supplied jobname does not exist in the working directory")
+		cat('Retrieving the following xgrid job: "', jobname, '"\n', sep='')
 		save.directory <- getwd()
 		on.exit(setwd(save.directory))
 		setwd(jobname)
@@ -262,7 +263,7 @@ indir="', temp.directory, '"
 			xgrid.waiting <- TRUE
 			Sys.sleep(2)
 			xgrid.waiting <- FALSE
-			cat("Job submitted to xgrid\n")
+			cat('Your job (name: "', jobname, '") has been succesfully uploaded to xgrid\n', sep='')
 
 
 		}
@@ -272,11 +273,11 @@ indir="', temp.directory, '"
 	if(submitandstop){
 		cat(jobnum, file='jobid.txt', sep='\n') 
 		save(list=ls(), file='workingobj.Rsave')
-		gottoend <- TRUE
+		gottoend <- TRUE		
 		return(list(jobname=jobname, jobid=jobnum))
 	}
-		
-	xgrid.retrieve(jobnum, wait=(xgrid.method=='xgrid.run'), wait.interval=wait.interval, silent=!show.output, cleanup=cleanup, directory=temp.directory)
+	
+	success <- xgrid.retrieve(jobnum, wait=(xgrid.method=='xgrid.run'), wait.interval=wait.interval, silent=!show.output, cleanup=cleanup, directory=temp.directory)
 	
 	gottoend <- TRUE
 		
@@ -297,8 +298,9 @@ indir="', temp.directory, '"
 			if(xgrid.waiting) cat("The execution was halted while waiting for the xgrid job to finish - the job has not been deleted\n")
 		}
 	})
-				
-	results <- vector('list', length=length(unlist(iterations)))
+	
+	success <- try(results <- vector('list', length=length(unlist(iterations))), silent=TRUE)
+	if(class(success)=='try-error') stop('The results were not in the expected format - if this job was started using xgrid.submit.jags then use the xgrid.results.jags function to retrieve the results')
 	names(results) <- paste('iteration.', 1:length(results), sep='')
 	for(t in 1:length(iterations)){
 		load(paste('results.', t, '.Rsave', sep=''))
@@ -311,7 +313,7 @@ indir="', temp.directory, '"
 	
 }
 
-xgrid.submit <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=TRUE, keep.files=FALSE, show.output=TRUE, max.filesize='1GB', sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit' else 'mgrid -t $ntasks', sub.options="", sub.command=paste(sub.app, sub.options, '-i $indir $cmd', sep=' '), ...){
+xgrid.submit <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=FALSE, keep.files=FALSE, show.output=TRUE, max.filesize='1GB', sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir' else 'mgrid -t $ntasks -i $indir', sub.options="", sub.command=paste(sub.app, sub.options, '$cmd', sep=' '),  ...){
 
 	return(xgrid.run(f=f, niters=niters, object.list=object.list, file.list=file.list, threads=threads, jobname=jobname, sub.command=sub.command, xgrid.method=xgrid.method, Rpath=Rpath, cleanup=cleanup, tempdir=FALSE, keep.files=keep.files, submitandstop=TRUE, show.output=show.output, max.filesize=max.filesize, ...))
 }
