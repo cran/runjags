@@ -92,7 +92,16 @@ block is allowed, and each will be differentiated independently.
 
 # ALL SYNTAX GIVEN BELOW IS EQUIVALENT
 
-# Use a modified WinBUGS text file with manual inits and manual data and a seperate monitor block (requires least modification from a WinBUGS file).  For compatibility with WinBUGS, the use of list() to enclose data and initial values is allowed and ignored, however all seperate variables in the data and inits blocks must be seperated with a line break (commas or semicolons before linebreaks are ignored).  'data\{' and 'inits\{' must also be added to WinBUGS textfiles so that the function can seperate data from initial values.  Iterative loops are allowed in data blocks but not in init blocks.  See also the differences in JAGS versus WinBUGS syntax in the JAGS help file.
+# Use a modified WinBUGS text file with manual inits and manual data and
+# a seperate monitor block (requires least modification from a WinBUGS
+# file).  For compatibility with WinBUGS, the use of list() to enclose
+# data and initial values is allowed and ignored, however all seperate
+# variables in the data and inits blocks must be seperated with a line
+# break (commas or semicolons before linebreaks are ignored).  'data\{'
+# and 'inits\{' must also be added to WinBUGS textfiles so that the
+# function can seperate data from initial values.  Iterative loops are
+# allowed in data blocks but not in init blocks.  See also the differences
+# in JAGS versus WinBUGS syntax in the JAGS help file.
 
 # Contents of a textfile 'mymodel.bug':
 
@@ -128,7 +137,8 @@ monitor{
 read.winbugs('pathtofile/mymodel.bug')
 
 
-# Use internal character variable, define monitors in the model, use autodata and manual initial values:
+# Use internal character variable, define monitors in the model, 
+# use autodata and manual initial values:
 
 string <- "
 model{

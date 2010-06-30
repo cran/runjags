@@ -36,8 +36,10 @@ ensure compatibility with JAGS).}
 
 \examples{
 
-initial.values.1 <- dump.format(list(mean="1", sd="0.1", lambda=matrix(1, ncol=3, nrow=10)))
-initial.values.2 <- dump.format(list(mean="10", sd="10", lambda=matrix(10, ncol=3, nrow=10)))
+initial.values.1 <- dump.format(list(mean="1", sd="0.1", 
+	lambda=matrix(1, ncol=3, nrow=10)))
+initial.values.2 <- dump.format(list(mean="10", sd="10", 
+	lambda=matrix(10, ncol=3, nrow=10)))
 data <- dump.format(list(N="10", Count=c(4,2,7,0,6,9,1,4,12,1)))
 
 }

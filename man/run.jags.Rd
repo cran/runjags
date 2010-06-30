@@ -36,9 +36,9 @@ burnin = 5000*thin, sample = 10000*thin,
 adapt=if(burnin<200) 100 else 0, jags=findjags(),
 silent.jags = FALSE, check.conv = TRUE, plots = TRUE,
 psrf.target = 1.05, normalise.mcmc = TRUE,
-check.stochastic = TRUE, modules=c(""), thin = 1,
-monitor.deviance = FALSE, monitor.pd = FALSE,
-monitor.popt = FALSE, keep.jags.files = FALSE,
+check.stochastic = TRUE, modules=c(""), factories=c(""), 
+thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE,
+monitor.pd.i = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE,
 tempdir=TRUE, method=if(.Platform$OS.type=='unix' &
 .Platform$GUI!="AQUA") 'interruptible' else 'simple')}
 
@@ -127,26 +127,42 @@ and can be bypassed if check.stochastic==FALSE.  Default TRUE.}
 \item{modules}{external modules to be loaded into JAGS.  More than 1
 module can be used.  Default none.}
 
+\item{factories}{factory modules to be loaded into JAGS.  More than 1
+factory can be used.  Entried should be in the format '"<facname>"
+<status>, type(<factype>)', for example: factories='"mix::TemperedMix"
+off, type(sampler)'.  Default none.}
+
 \item{thin}{the thinning interval to be used in JAGS.  Increasing the
 thinning interval may reduce autocorrelation, and therefore reduce the
 number of samples required, but will increase the time required to run
 the simulation.  Default 1.}
 
-\item{monitor.deviance}{option to monitor the deviance of each monitored
-variable using the DIC module for JAGS.  If TRUE, a 'deviance' element
-is returned representing this value for each monitored variable at each
-iteration.  For more information see the JAGS user manual section 4.4. 
-Default FALSE.}
+\item{monitor.deviance}{option to monitor the total deviance of the
+model using the DIC module in JAGS.  If TRUE, an additional monitor
+called 'deviance' is added to the MCMC objects returned, representing
+the deviance of the model for each iteration and each chain.  This
+option requires JAGS version 2 or greater.  For more information see the
+JAGS user manual. Default FALSE.}
 
-\item{monitor.pd}{option to monitor the effective number of parameters
-using the DIC module for JAGS.  If TRUE, a 'pd' element is returned
-representing this value at each iteration.  For more information see the
-JAGS user manual section 4.4.  Default FALSE.}
+\item{monitor.pd}{option to monitor the total effective number of
+parameters in the model using the DIC module for JAGS.  If TRUE, a 'pd'
+element is returned representing the total effective number of
+parameters at each iteration.  This option requires JAGS version 2 or
+greater and at least 2 chains.  For more information see the JAGS user
+manual. Default FALSE.}
+
+\item{monitor.pd.i}{option to monitor the contribution of each parameter
+towards the total effective number of parameters using the DIC module
+for JAGS.  If TRUE, a 'pd.i' element is returned representing the mean
+value for each parameter.  This option requires JAGS version 2 or
+greater and at least 2 chains.  For more information see the JAGS user
+manual. Default FALSE.}
 
 \item{monitor.popt}{option to monitor the optimism of the expected
 deviance using the DIC module for JAGS.  If TRUE, a 'popt' element is
-returned representing this value at each iteration.  For more
-information see the JAGS user manual section 4.4.  Default FALSE.}
+returned representing the mean value for each parameter.  This option
+requires JAGS version 2 or greater and at least 2 chains.  For more
+information see the JAGS user manual. Default FALSE.}
 
 \item{keep.jags.files}{option to keep the folder with files needed to
 call JAGS, rather than deleting it.  May be useful for attempting to bug
@@ -166,7 +182,8 @@ allows the JAGS process to be terminated immediately using the interrupt
 signal 'control-c' (terminal/console versions of R only), and 'parallel'
 runs each chain as a separate process on a separate core (this will
 speed up execution of models with multiple tasks at the expense of using
-more RAM).  Only the 'simple' method is available for Windows.  On
+more RAM, but cannot be used with monitor.pd, monitor.pd.i or
+monitor.popt).  Only the 'simple' method is available for Windows.  On
 machines running Mac OS X and with access to an Apple Xgrid cluster, the
 method may be a list with an element 'xgrid.method="simple"' (see
 \code{\link{xgrid.run.jags}} for more information).  Default
@@ -239,12 +256,19 @@ if plots==FALSE.}
 \seealso{
 
 \code{\link{autorun.jags}},
+
 \code{\link{run.jagsfile}},
+
 \code{\link{combine.mcmc}},
+
 \code{\link{testjags}},
+
 \code{\link{dump.format}},
+
 \code{\link[coda]{summary.mcmc}},
+
 \code{\link[coda]{gelman.diag}},
+
 \code{\link[coda]{autocorr.diag}}
 
 }
@@ -257,7 +281,8 @@ if plots==FALSE.}
 
 \examples{
 
-# run a model to calculate the intercept and slope of the expression y = m x + c, assuming normal observation errors for y:
+# run a model to calculate the intercept and slope of the expression 
+# y = m x + c, assuming normal observation errors for y:
 
 \dontrun{
 
@@ -276,14 +301,18 @@ c ~ dunif(-1000,1000);
 precision ~ dexp(1);
 }"
 
-# Use dump.format to convert the data and initial values files into the R dump format, with explicit control over the random number generator used for each chain (optional):
+# Use dump.format to convert the data and initial values files 
+# into the R dump format, with explicit control over the random 
+# number generator used for each chain (optional):
 data <- dump.format(list(X=X, Y=Y, N=length(X)))
-inits1 <- dump.format(list(m=1, c=1, precision=1, .RNG.name="base::Super-Duper", .RNG.seed=1))
-inits2 <- dump.format(list(m=0.1, c=10, precision=1, .RNG.name="base::Wichmann-Hill", .RNG.seed=2))
+inits1 <- dump.format(list(m=1, c=1, precision=1, 
+	.RNG.name="base::Super-Duper", .RNG.seed=1))
+inits2 <- dump.format(list(m=0.1, c=10, precision=1, 
+	.RNG.name="base::Wichmann-Hill", .RNG.seed=2))
 
 # Run the model and produce plots
-results <- run.jags(model=model, monitor=c("m", "c", "precision"), data=data, n.chains=2, inits=c(inits1,
-inits2), plots = TRUE)
+results <- run.jags(model=model, monitor=c("m", "c", "precision"), 
+	data=data, n.chains=2, inits=c(inits1,inits2), plots = TRUE)
 
 # Density plots of the monitored variables:
 results$density

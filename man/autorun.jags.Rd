@@ -32,9 +32,10 @@ autorun.jags(model=stop("No model supplied"),
    jags = findjags(), silent.jags = FALSE, 
    interactive=TRUE, max.time=Inf, 
    adaptive=list(type="burnin", length=200), modules=c(""), 
-   thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, 
-   monitor.popt = FALSE, keep.jags.files = FALSE, 
-   tempdir=TRUE, method=if(.Platform$OS.type=='unix' & 
+   factories=c(""), thin = 1, monitor.deviance = FALSE, 
+   monitor.pd = FALSE, monitor.pd.i = FALSE,
+   monitor.popt = FALSE, keep.jags.files = FALSE, tempdir=TRUE, 
+   method=if(.Platform$OS.type=='unix' & 
    .Platform$GUI!="AQUA") 'interruptible' else 'simple')
 }
 \arguments{
@@ -164,6 +165,11 @@ Reduce the length of the adpative phase for very time consuming models.
 \item{modules}{external modules to be loaded into JAGS.  More than 1
 module can be used.  Default none.}
 
+\item{factories}{factory modules to be loaded into JAGS.  More than 1
+factory can be used.  Entried should be in the format '"<facname>"
+<status>, type(<factype>)', for example: factories='"mix::TemperedMix"
+off, type(sampler)'.  Default none.}
+
 \item{thin}{the thinning interval to be used in JAGS.  Increasing the
 thinning interval may reduce autocorrelation, and therefore reduce the
 number of samples required, but will increase the time required to run
@@ -171,21 +177,32 @@ the simulation.  Using this option thinning is performed directly in
 JAGS, rather than on an existing MCMC object as with thin.sample. 
 Default 1.}
 
-\item{monitor.deviance}{option to monitor the deviance of each monitored
-variable using the DIC module for JAGS.  If TRUE, a 'deviance' element
-is returned representing this value for each monitored variable at each
-iteration.  For more information see the JAGS user manual section 4.4. 
-Default FALSE.}
+\item{monitor.deviance}{option to monitor the total deviance of the
+model using the DIC module in JAGS.  If TRUE, an additional monitor
+called 'deviance' is added to the MCMC objects returned, representing
+the deviance of the model for each iteration and each chain.  This
+option requires JAGS version 2 or greater.  For more information see the
+JAGS user manual. Default FALSE.}
 
-\item{monitor.pd}{option to monitor the effective number of parameters
-using the DIC module for JAGS.  If TRUE, a 'pd' element is returned
-representing this value at each iteration.  For more information see the
-JAGS user manual section 4.4.  Default FALSE.}
+\item{monitor.pd}{option to monitor the total effective number of
+parameters in the model using the DIC module for JAGS.  If TRUE, a 'pd'
+element is returned representing the total effective number of
+parameters at each iteration.  This option requires JAGS version 2 or
+greater and at least 2 chains.  For more information see the JAGS user
+manual. Default FALSE.}
+
+\item{monitor.pd.i}{option to monitor the contribution of each parameter
+towards the total effective number of parameters using the DIC module
+for JAGS.  If TRUE, a 'pd.i' element is returned representing the mean
+value for each parameter.  This option requires JAGS version 2 or
+greater and at least 2 chains.  For more information see the JAGS user
+manual. Default FALSE.}
 
 \item{monitor.popt}{option to monitor the optimism of the expected
 deviance using the DIC module for JAGS.  If TRUE, a 'popt' element is
-returned representing this value at each iteration.  For more
-information see the JAGS user manual section 4.4.  Default FALSE.}
+returned representing the mean value for each parameter.  This option
+requires JAGS version 2 or greater and at least 2 chains.  For more
+information see the JAGS user manual. Default FALSE.}
 
 \item{keep.jags.files}{option to keep the folder with files needed to
 call JAGS, rather than deleting it.  May be useful for attempting to bug
@@ -207,7 +224,8 @@ allows the JAGS process to be terminated immediately using the interrupt
 signal 'control-c' (terminal/console versions of R only), and 'parallel'
 runs each chain as a separate process on a separate core (this will
 speed up execution of models with multiple tasks at the expense of using
-more RAM).  Only the 'simple' method is available for Windows.  On
+more RAM, but cannot be used with monitor.pd, monitor.pd.i or
+monitor.popt).  Only the 'simple' method is available for Windows.  On
 machines running Mac OS X and with access to an Apple Xgrid cluster, the
 method may be a list with an element 'xgrid.method="simple"' (see
 \code{\link{xgrid.run.jags}} for more information).  Default
@@ -304,17 +322,23 @@ sample size) or monitor less variables.
 
 \seealso{
    \code{\link{run.jags}},
+   
    \code{\link{autorun.jagsfile}},
+   
    \code{\link{combine.mcmc}},
+   
    \code{\link[coda]{raftery.diag}},
+   
    \code{\link[coda]{gelman.diag}},
+   
    \code{\link[coda]{autocorr.diag}}
 }
 
 \author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
 
 \examples{
-# run a model to calculate the intercept and slope of the expression y = m x + c, assuming normal observation errors for y:
+# run a model to calculate the intercept and slope of the expression 
+# y = m x + c, assuming normal observation errors for y:
 
 \dontrun{
 # Simulate the data
@@ -336,7 +360,8 @@ precision ~ dexp(1);
 data <- list(X=x, Y=y, N=length(x))
 
 # Run the model
-results <- autorun.jags(model=model, monitor=c("m", "c", "precision"), data=data)
+results <- autorun.jags(model=model, monitor=c("m", "c", "precision"), 
+	data=data)
 
 # Analyse traceplots of the results to assess convergence:
 results$trace

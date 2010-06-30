@@ -3,7 +3,7 @@
 ##############################################################################################################
 #                                                                                                            #
 #     mgrid                                                                                                  #
-#     Copyright 2010 Matthew Denwood - matthewdenwood@mac.com - Version 2.01 - February 2010                 #
+#     Copyright 2010 Matthew Denwood - matthewdenwood@mac.com - Version 3.01 - June 2010                     #
 #                                                                                                            #
 #     This script is a replacement for xgrid -job submit that provides some extra features, including        #
 #     support for jobs with multiple tasks, use of environmental variables and easier targeting of the job   #
@@ -15,12 +15,10 @@
 #     better documention to my woefully cobbled together code so that it might be more useful to others....  #
 #                                                                                                            #
 #     Requires XGRID_CONTROLLER_HOSTNAME and XGRID_CONTROLLER_PASSWORD to be set as environmental variables. #
-#     You should also put this script in eg /usr/local/bin/ and create a folder for the local copy of the    #
-#     node list (University of Glasgow only) by issuing the following commands in the Terminal:              #
+#     You should also put this script in eg /usr/local/bin/ by issuing the following commands in Terminal:   #
 #                                                                                                            #
 #     [cd <path_to_download_folder/>runjags/inst/xgrid/]                                                     #
 #     sudo cp mgrid.sh /usr/local/bin/mgrid                                                                  #
-#     [sudo mkdir "/Library/Application Support/mgrid/"]                                                     #
 #                                                                                                            #
 #     The script will then be accessible to all functions in the runjags package for R, and invokable from   #
 #     the command line by using the command 'mgrid' (see the options by typing 'mgrid -?').  This is NOT     #
@@ -32,8 +30,9 @@
 #     and whether or not the node is a server (running Mac OS X server).  The first task is assigned to the  #
 #     node with the highest score before incrementing the number of jobs running on that node to account for #
 #     the extra task, and re-calculating the score for that node.  This process is then repeated for all     #
-#     remaining tasks.  Additional information detailing the amount of RAM, processor speed and 32/64 bit    #
-#     availability on the nodes is collected but not used by default.  To change the way in which the        #
+#     remaining tasks.  Additional information detailing the amount of available RAM, processor speed and    #
+#     32/64 bit availability on the nodes is collected but not used by default, except for the amount of     #
+#     RAM free which is used to score a node 0 if it is less than the given minimum.  To change the way that #
 #     tasks are distributed among the available nodes, modify the code as desired in the file included with  #
 #     the runjags package (found in 'runjags/inst/xgrid/node_scoring_example.rb'), rename the file           #
 #     'scoring.rb/sh', and save either in the working directory or in "/Library/Application Support/mgrid/". #
@@ -45,9 +44,9 @@
 #     complex method described above.                                                                        #
 #                                                                                                            #
 #     USAGE                                                                                                  #
-#     mgrid [-s stdin] [-i indir] [-d jobid] [-e email-address] [-a art-path | -r art-path] [-b batchname]   #
+#     mgrid [-s stdin] [-i indir] [-d jobid] [-e email-address] [-a art-path | -z art-path] [-b batchname]   #
 #     [-c arch] [-v "env_variable=env_value [...]" ] [-q] [-h "node_name_task1[:node_name_task2...]"] [-f]   #
-#     [-n name] [-t number_of_tasks] cmd [arg1 [...] ['$task']]                                              #
+#     [-r ram_required_(MB)] [-n name] [-t number_of_tasks] cmd [arg1 [...] ['$task']]                       #
 #     mgrid -l [-m] [-u]                                                                                     #
 #     mgrid -?                                                                                               #
 #     (Use 'mgrid' with no arguments to see the manual page)                                                 #
@@ -61,7 +60,7 @@
 #     -e  Use supplied email address to report status changes (equivalent to -email)                         #
 #     -a  Use supplied file as an ART script (equivalent to -art)                                            #
 #     Other options for xgrid -job submit are not supported.  The following options are new for this script: #
-#     -r  Use supplied file as an ART script, and also calculate the node ranking scores using the supplied  #
+#     -z  Use supplied file as an ART script, and also calculate the node ranking scores using the supplied  #
 #         script rather than the inbuilt script or a script in "Application Support/mgrid/scoring.rb".  The  #
 #         disadvantage of using an ART script to calculate node ranking in this way is that for multi-task   #
 #         jobs, the score is not altered to take into account previous task allocations.  For an alternative #
@@ -71,12 +70,12 @@
 #         submission of this job.                                                                            #
 #     -b  Produce a batch file with the specified file name and stop (does not submit to xgrid).  This       #
 #         option also prints the (ranked) scores and nodes to screen.  If the batchname specified is         #
-#         "/dev/null" then more detailed information about the scoring is shown and no batch file is         #
-#         produced (and cmd may be omitted)                                                                  #
-#     -c  Ensure that jobs are run only on intel or ppc machines - arch should be 'intel' or 'ppc'           #
-#     -v  A space seperated string of environmental variable(s) in the form of "var_one=value_one            #
-#         var_two=value_two" to be set locally before running the command                                    #
-#     -q  Wait for nodes running OS X server to become available rather than running jobs on desktop nodes   #
+#         "profile" (or "dev/null") then more detailed information about the scoring is shown, no batch file #
+#         is produced, and cmd is ignored (and may be omitted).                                              #
+#     -c  Ensure that jobs are run only on intel or ppc machines - arch should be 'intel' or 'ppc'.          #
+#     -v  A space seperated string of environmental variable(s) in the form of "var_one=value_one.           #
+#         var_two=value_two" to be set locally before running the command.                                   #
+#     -q  Wait for nodes running OS X server to become available rather than running jobs on desktop nodes.  #
 #     -h  Don't run the ranking script, and use the provided node name(s) instead.  For multiple tasks,      #
 #         separate node names with a colon (no space).  Entire string must be quoted if any node name        #
 #         contains a space.  Colons in node names will produce either an error or unexpected results.  If    #
@@ -87,8 +86,11 @@
 #         still passed as an ART script to the job - see the -r option for a way to disable both).           #
 #     -f  Force the controller to assign the job to the highest ranked (or specified using -t) node by using #
 #         an ART script rather than schedule hinting.  Note that ALL tasks will be run on the same node.     #
+#     -r  The minimum amount of free RAM in MB that is required for the job.  If not supplied, 10MB is used  #
+#         as a default amount to prevent machines that have free processors but no free RAM from accepting   #
+#         jobs.                                                                                              #
 #     -n  The name to give the job (appears on xgrid admin etc).  If none is supplied, the command is used   #
-#         as the name                                                                                        #
+#         as the name.                                                                                       #
 #     -t  The number of tasks being run.  The arguments should include one containing '$task' which denotes  #
 #         the task number (this MUST be enclosed in single quotes or '\' used to escape '$'), otherwise the  #
 #         task number will be passed as the last argument to the command.                                    #
@@ -131,9 +133,9 @@ else
 fi
 
 if [ $uog == 1 ]; then
-	subid='mgrid_UoG_v2.01'
+	subid='mgrid_UoG_v3.01'
 else
-	subid='mgrid_v2.01'
+	subid='mgrid_v3.01'
 fi
 
 
@@ -160,8 +162,9 @@ listuser=0
 printhelp=0
 printerror=0
 rankingdisabled=0
+requiredram=10
 
-while getopts "s:i:d:e:a:r:c:v:b:qh:fn:t:lmu?" flag; do
+while getopts "s:i:d:e:a:z:c:v:b:qh:fr:n:t:lmu?" flag; do
 if [ $flag == "s" ]; then
 	stdin=$OPTARG
 elif [ $flag == "i" ]; then
@@ -174,7 +177,7 @@ elif [ $flag == "e" ]; then
 elif [ $flag == "a" ]; then
 	artscore=1
 	artpath=$OPTARG
-elif [ $flag == "r" ]; then
+elif [ $flag == "z" ]; then
 	if [ "$OPTARG" == "" -o "$OPTARG" == " " -o "$OPTARG" == "none" -o "$OPTARG" == "None" -o "$OPTARG" == "NONE" ]; then
 		uog=0
 		rankingdisabled=1
@@ -196,6 +199,9 @@ elif [ $flag == "v" ]; then
 	env_var=$OPTARG
 elif [ $flag == "b" ]; then
 	batch=$OPTARG
+	if [ "$batch" == "profile" ]; then
+		batch='/dev/null'
+	fi
 elif [ $flag == "q" ]; then
 	queue=1
 elif [ $flag == "h" ]; then
@@ -203,6 +209,8 @@ elif [ $flag == "h" ]; then
 	manhints=$OPTARG
 elif [ $flag == "f" ]; then
 	force=1
+elif [ $flag == "r" ]; then
+	requiredram=$OPTARG
 elif [ $flag == "n" ]; then
 	thejobname=$OPTARG
 elif [ $flag == "t" ]; then
@@ -228,6 +236,10 @@ if [ $nenv_var -gt 0 ];then
 	done
 fi
 
+#if [ "$1" == "profile" ]; then
+#	batch='/dev/null'
+#fi
+
 statusonly=0
 if [ "$batch" == "/dev/null" -o "$batch" == "/dev/null/" ]; then
 	if [ $uog == 1 ]; then
@@ -241,7 +253,7 @@ fi
 #done
 
 if [ $printerror == 1 ]; then
-	printf "\nUsage:\nmgrid [-s stdin] [-i indir] [-d jobid] [-e email-address] \n      [-a art-path | -r art-path] [-b batchname] [-c arch] \n      [-v \"env_variable=env_value [...]\" ] [-q] [-h node_name] \n      [-f] [-n name] [-t number_of_tasks] cmd [arg1 [...]]\nmgrid -l [-m] [-u]\nmgrid -?\n(Use 'mgrid' with no arguments to see the manual page)\n\n" >&2
+	printf "\nmgrid -- version 3.01, June 2010\nby Matthew Denwood (matthewdenwood@mac.com)\n\nUsage:\nmgrid [-s stdin] [-i indir] [-d jobid] [-e email-address] \n      [-a art-path | -z art-path] [-b batchname] [-c arch] \n      [-v \"env_variable=env_value [...]\" ] [-q] [-h node_name] \n      [-f] [-r ram_required_(MB)] [-n name] [-t number_of_tasks] \n      cmd [arg1 [...]] ['\$task']]\nmgrid -l [-m] [-u]\nmgrid -?\n(Use 'mgrid' with no arguments to see the manual page)\n\n" >&2
 	exit $EX_USAGE	
 fi
 
@@ -265,7 +277,7 @@ if [ $printhelp == 1 ]; then
 
 
 	printf "
-`embold "mgrid -- version 2.01, February 2010"`
+`embold "mgrid -- version 3.01, June 2010"`
 by Matthew Denwood (matthewdenwood@mac.com)
 
 `embold SYNOPSIS`
@@ -276,9 +288,10 @@ ppc machines.
 
 `embold USAGE`
 `embold mgrid` [`embold -s` stdin] [`embold -i` indir] [`embold -d` jobid] [-\b-e\be email-address] 
-   [`embold -a` art-path | `embold -r` art-path] [`embold -b` batchname] [`embold -c` arch]
+   [`embold -a` art-path | `embold -z` art-path] [`embold -b` batchname] [`embold -c` arch]
    [`embold -v` \"env_variable=env_value [...]\" ] [`embold -q`] [`embold -h` node_name] [`embold -f`] 
-   [-\b-n\bn name] [`embold -t` number_of_tasks] `embold cmd` [arg1 [...] ['\$task']]
+   [`embold -r` ram_required_(MB)] [-\b-n\bn name] [`embold -t` number_of_tasks] 
+   `embold cmd` [arg1 [...] ['\$task']]
 `embold 'mgrid -l'` [`embold -m`] [`embold -u`]
 `embold 'mgrid -?'`
 
@@ -293,7 +306,7 @@ The following options are equivaent to those given for xgrid -job submit:
 
 Other options for xgrid -job submit are not supported.  The following options 
 are unique for this script:
-`embold -r`  Use supplied file as an ART script, and also calculate the node ranking 
+`embold -z`  Use supplied file as an ART script, and also calculate the node ranking 
     scores using the supplied script rather than the inbuilt script or a script 
     in 'Application Support/mgrid/scoring.rb'.  The disadvantage of using an 
     ART script to calculate node ranking in this way is that for multi-task 
@@ -301,20 +314,20 @@ are unique for this script:
     allocations.  For an alternative method which preserves this feature see:
     'runjags/inst/xgrid/node_scoring_example.rb'.  For users outside the
     University of Glasgow or not using node ranking, the `embold -r` option is identical 
-    to the `embold -a` option.  Supplying \" \" or \"none\" as the argument 
+    to the `embold -a` option.  Supplying \" \" or \"none\" as the argument.
     disables node ranking and the ranking ART script for submission of this job.
 `embold -b`  Produce a batch file with the specified file name and stop (does not 
     submit to xgrid).  This option also prints the (ranked) scores and nodes to
-    screen.  If the batchname specified is /dev/null then more detailed 
-    information about the scoring is shown and no batch file is produced (and 
-    `embold cmd` may be omitted)
+    screen.  If the batchname specified is \"profile\" (or \"/dev/null\") then
+    more detailed information about the scoring is shown, no batch file
+    is produced and `embold cmd` is ignored (and may be omitted).
 `embold -c`  Ensure that jobs are run only on intel or ppc machines - should be 
-    'intel' or 'ppc'
+    'intel' or 'ppc'.
 `embold -v`  A space seperated string of environmental variable(s) in the form of 
     \"var_one=value_one var_two=value_two\" to be set locally before running the
-    command
+    command.
 `embold -q`  Wait for nodes running OS X server to become available rather than running 
-    jobs on desktop nodes
+    jobs on desktop nodes.
 `embold -h`  Don't run the ranking script, and use the provided node name(s) instead.  
     For multiple tasks, separate node names with a colon (no space).  Entire 
     string must be quoted if any node name contains a space.  Colons in node
@@ -328,9 +341,12 @@ are unique for this script:
     to disable both).
 `embold -f`  Force the controller to assign the job to the highest ranked (or specified 
     using `embold -t`) node by using an ART script rather than schedule hinting.  
-    Note that ALL tasks will be run on the same node
+    Note that ALL tasks will be run on the same node.
+`embold -r`  The minimum amount of free RAM in MB that is required for the job.  If not 
+    supplied, 10MB is used as a default amount to prevent machines that have 
+    free processors but no free RAM from accepting jobs.
 -\b-n\bn  The name to give the job (appears on xgrid admin etc).  If none is supplied,
-    the command is used as the name
+    the command is used as the name.
 `embold -t`  The number of tasks being run.  The arguments should include one containing
     '\$task' which denotes the task number (this MUST be enclosed in single
     quotes or the \$ sign escaped), otherwise the task number will be passed as 
@@ -383,9 +399,10 @@ the highest score before incrementing the number of jobs running on that node
 to account for the extra task, and re-calculating the score for that node.  
 This process is then repeated for all remaining tasks.  Additional information 
 detailing the amount of RAM, processor speed and 32/64 bit availability on the 
-nodes is collected but not used by default.  To change the way in which the 
-tasks are distributed among the available nodes, modify the code as desired in 
-the file included with the runjags package (found in:
+nodes is collected but not used by default, except for the amount of RAM free 
+which is used to score a node 0 if it is less than the given minimum.  To change 
+the way that tasks are distributed among the available nodes, modify the code as 
+desired in the file included with the runjags package (found in:
 'runjags/inst/xgrid/node_scoring_example.rb'), rename the file either
 'scoring.rb' or 'scoring.sh', and save either in the working directory or in 
 '/Library/Application Support/mgrid/'.  Alternatively, a simple scoring script
@@ -491,9 +508,9 @@ if [ $list == 1 ]; then
 			
 			if [ $listuser == 1 ]; then
 				if [ $listcomment == 1 ]; then
-					echo "Name;ID;Status;Comment;User" > $tempstatusfile
+					echo "Name;ID;Status;Comment;User;Email" > $tempstatusfile
 				else
-					echo "Name;ID;Status;User" > $tempstatusfile
+					echo "Name;ID;Status;User;Email" > $tempstatusfile
 				fi
 			else
 				if [ $listcomment == 1 ]; then
@@ -513,6 +530,16 @@ if [ $list == 1 ]; then
 					
 					grepstring=`cat $tfile1 | grep "applicationIdentifier"`
 					usern=`echo $grepstring | awk '{print $3}' | sed 's/;//g' | sed 's/"//g' | sed "s/'//g"`
+					
+					usere=`echo $usern | awk 'BEGIN { FS = "#@#" } ; { print $2 }'`
+					if [ "$usere" == "" ]; then
+						usere='Not avaialble'
+					fi
+					if [ "$usere" == "no_email" ]; then
+						usere='None supplied'
+					fi
+					
+					usern=`echo $usern | awk 'BEGIN { FS = "#@#" } ; { print $1 }'`
 					
 					if [ "$usern" == "com.apple.xgrid.cli" ]; then
 						usern="Unknown"
@@ -610,7 +637,7 @@ if [ $list == 1 ]; then
 					fi
 					
 					if [ $listuser == 1 ]; then
-						string=`echo "$string;$usern"`
+						string=`echo "$string;$usern;$usere"`
 					fi
 					echo $string >> $tempstatusfile
 				else
@@ -724,13 +751,17 @@ if [ ! -f $stdin ]; then
 	cat "The file specified for standard-in does not exist">&2
 	exit $EX_USAGE
 fi
-if [ ! -d $indir ]; then
-	cat "The directory specified as the input directory does not exist">&2
-	exit $EX_USAGE
+if [ ! "$indir"=="" ]; then
+	if [ ! -d "$indir" ]; then
+		cat "The directory specified as the input directory does not exist">&2
+		exit $EX_USAGE
+	fi
 fi
-if [ ! -f $artpath ]; then
-	cat "The file specified as art-path does not exist">&2
-	exit $EX_USAGE
+if [ ! "$artpath"=="" ]; then
+	if [ ! -f "$artpath" ]; then
+		cat "The file specified as art-path does not exist">&2
+		exit $EX_USAGE
+	fi
 fi
 
 if [ "$thejobname" == "" ]; then
@@ -748,22 +779,10 @@ if [ $manhint == 1 -o $uog == 0 ]; then
 else
 	
 	##########################################################################################################################
-	# The following code is the (space separated) names for the desktop machines, and will (at intervals) have to be updated.
-	# Alternatively, we could access a list from a common resource so we only have to update one list.....
-
 	# These names are correct as of 23.11.09, but are now only here as a last resort backup.  They should never need to be used or updated.  Leave first element of names blank (so index starts at 1):
-	names=( "" "Dan’s Mac Pro" "Richard Orton’s Mac Pro" "Darran’s Mac Pro" "boydorr.ibls.gla.ac.uk" "boydorr-gkb.ibls.gla.ac.uk" "r-reeve.zoology.gla.ac.uk" "l mac pro" "PowerMac_MD" )
+	names=( "" "hydra" "boydorr" )
 	l=$[${#names[@]}-1]
-	ndesktops=$l
-
-	# The code to generate the server names; this probably won't need to be altered except possibly to increase the size of the
-	# loop when more intel nodes get added:
-
-	l=$[$l + 1]
-	names[$l]="hydra"
-
-	l=$[$l + 1]
-	names[$l]="boydorr"
+	ndesktops=0
 
 	for (( i=3; i <= 5; i++ )); do
 	l=$[$l + 1]
@@ -791,7 +810,7 @@ else
 #  For mgrid, tasks is now specified as an option
 #  For xgrid.start, artpath is always 'art.score.sh' if the file exists:
 # artpath='art.score.sh'
-# if [ ! -f $artpath ]; then
+# if [ ! -f "$artpath" ]; then
 # artpath=""
 # fi
 #  And statusonly is always 0:
@@ -806,17 +825,17 @@ echo "Updating the local node list..."
 # first see if a valid file exists:
 validfile=0
 
-if [ -f "/Library/Application Support/mgrid/nodelist.txt" ]; then
-	listok=`find "/Library/Application Support/mgrid/nodelist.txt"`
+if [ -f ~/.mgrid_nodelist.txt ]; then
+	listok=`find ~/.mgrid_nodelist.txt`
 	listok=`echo $listok`
 else
 	listok=""
 fi
 
-if [ "$listok" == "/Library/Application Support/mgrid/nodelist.txt" ]; then
+if [ "$listok" == ~/.mgrid_nodelist.txt ]; then
 	
-	firstline=`head -n 1 "/Library/Application Support/mgrid/nodelist.txt"`
-	lastline=`tail -n 1 "/Library/Application Support/mgrid/nodelist.txt"`
+	firstline=`head -n 1 ~/.mgrid_nodelist.txt`
+	lastline=`tail -n 1 ~/.mgrid_nodelist.txt`
 
 	if [ "$firstline" == "desktops:" ]; then
 		if [ "$lastline" == "endlist" ]; then
@@ -891,7 +910,7 @@ if [ $success == 1 ]; then
 							
 							if [ "$firstline" == "desktops:" ]; then
 								if [ "$lastline" == "endlist" ]; then
-									cp $ntemp "/Library/Application Support/mgrid/nodelist.txt"
+									cp $ntemp ~/.mgrid_nodelist.txt
 									echo "Node list updated successfully"
 								else
 									echo "An error occured while retrieving the updated node list; the file returned is in an unexpected format" >&2
@@ -935,17 +954,30 @@ fi
 
 }
 
-#  Look for an 'mgrid.nodes.txt' file in /Library/Application Support/mgrid:
+#  Look for an 'mgrid.nodes.txt' file in ~/.
 redolist=1
 updatelist=1
 
-if [ ! -d "/Library/Application Support/mgrid/" ]; then
-	echo "Error:  Attempt to use node ranking features with no local directory setup.  Please follow the installation instructions and create a folder at \"/Library/Application Support/mgrid/\"">&2
-	exit $EX_USAGE
-fi
+#if [ ! -d "/Library/Application Support/mgrid/" ]; then
+#	echo ""
+#	echo "Warning:  Attempt to use node ranking features with no local directory setup.">&2
+#	echo "Please enter an administrator's password to create a folder at">&2
+#	echo "\"/Library/Application Support/mgrid/\" using 'sudo' (or stop mgrid and create">&2
+#	echo "this folder manually)">&2
+#	exit $EX_USAGE
+#	sudo echo "Please enter your password to create a folder at /Library/Application Support/mgrid (this will only need to be done once):"
+#	sudo mkdir -m 0777 '/Library/Application Support/mgrid/'
+#	if [ $? == 0 ]; then
+#		echo "Node ranking support folder created succesfully"
+#		echo ""
+#	else
+#		echo "Error:  There was a problem creating the necessary node ranking support folder at \"/Library/Application Support/mgrid/\" - please try creating this folder manually and then re-run mgrid" >&2
+#		exit $EX_USAGE
+#	fi
+#fi
 
 # If statusonly then always get a new list:
-if [ -f "/Library/Application Support/mgrid/nodelist.txt" -a $statusonly == 0 ]; then
+if [ -f ~/.mgrid_nodelist.txt -a $statusonly == 0 ]; then
 	
 	# Get what the date was 28 days ago:
 	
@@ -977,12 +1009,12 @@ if [ -f "/Library/Application Support/mgrid/nodelist.txt" -a $statusonly == 0 ];
 	rm ${tmpdir}/tdate
 		
 	# Make sure the local node list isn't ridiculously old:
-	listok=`find "/Library/Application Support/mgrid/nodelist.txt" -newermt "$prevdate"`
+	listok=`find ~/.mgrid_nodelist.txt -newermt "$prevdate"`
 	listok=`echo $listok`
 	
-	if [ "$listok" == "/Library/Application Support/mgrid/nodelist.txt" ]; then
-		firstline=`head -n 1 "/Library/Application Support/mgrid/nodelist.txt"`
-		lastline=`tail -n 1 "/Library/Application Support/mgrid/nodelist.txt"`
+	if [ "$listok" == ~/.mgrid_nodelist.txt ]; then
+		firstline=`head -n 1 ~/.mgrid_nodelist.txt`
+		lastline=`tail -n 1 ~/.mgrid_nodelist.txt`
 
 		if [ "$firstline" == "desktops:" ]; then
 			if [ "$lastline" == "endlist" ]; then
@@ -991,17 +1023,17 @@ if [ -f "/Library/Application Support/mgrid/nodelist.txt" -a $statusonly == 0 ];
 				
 				# Check to see if the node list has been updated since yesterday:
 				thedate=`date '+%d %B %Y' | sed y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/`
-				listok=`find "/Library/Application Support/mgrid/nodelist.txt" -newermt "$thedate 00:00:00"`
-				if [ "$listok" == "/Library/Application Support/mgrid/nodelist.txt" ]; then
+				listok=`find ~/.mgrid_nodelist.txt -newermt "$thedate 00:00:00"`
+				if [ "$listok" == ~/.mgrid_nodelist.txt ]; then
 					updatelist=0
 				fi
 			else
 				echo "Local node list may be corrupt"
-				rm "/Library/Application Support/mgrid/nodelist.txt"
+				rm ~/.mgrid_nodelist.txt
 			fi
 		else
 			echo "Local node list may be corrupt"
-			rm "/Library/Application Support/mgrid/nodelist.txt"
+			rm ~/.mgrid_nodelist.txt
 		fi
 	else
 		echo "Local node list is old"
@@ -1014,7 +1046,7 @@ if [ $redolist == 1 ]; then
 fi
 
 # Update the node names and lnames etc ief the nodelist file exists (otherwise the ones at the top of the script will be kept):
-if [ -f "/Library/Application Support/mgrid/nodelist.txt" ]; then
+if [ -f ~/.mgrid_nodelist.txt ]; then
 	
 	lnames=$[${#names[@]}-1]
 	# First remove all the backup names:
@@ -1028,7 +1060,7 @@ if [ -f "/Library/Application Support/mgrid/nodelist.txt" ]; then
 	#reset ifs to end of line stuff
 	exec 3<&0
 	#save current value of stdin
-	exec 0<"/Library/Application Support/mgrid/nodelist.txt"
+	exec 0<~/.mgrid_nodelist.txt
 	#set stdin to read from the profile file
 	
 	l=1
@@ -1115,7 +1147,7 @@ else
 		nlogical = ARGV[2].to_i
 		# 1 or 0:
 		server = ARGV[3].to_i
-		# RAM in MB:
+		# Free RAM in MB:
 		ram = ARGV[4].to_i
 		# Clock speed in MHz:
 		cpuspeed = ARGV[5].to_i
@@ -1147,7 +1179,12 @@ else
 		  # Randomise to vary order of usage
 		  base = base + Kernel.rand(50)
 		end
-
+		
+		# Set score to 0 (or 1?) if the minimum free RAM requirement is not met (the dollarrequiredram thing is automatically swapped out for the right value when writing the script):
+		if (ram < $requiredram)
+			base = 0
+		end
+		
 		# Take into account the ART scores (server/desktop * intel/ppc * custom.art - these will just be 1 if not used):
 		base = base * artcustom * artserver * artcpu
 	
@@ -1170,12 +1207,6 @@ cat > ${tmpdir}/getinfo.rb <<-EOA
 # To get all sysctl info:
 # sysctl -a
 
-# This is the best approximation I can get to the number of jobs the
-# computer is currently running
-#xjobs = \`/bin/ls -1 /var/xgrid/agent/tasks | /usr/bin/wc -l\`.strip.to_i - 1
-xjobs = \`/usr/bin/find /var/xgrid/agent/tasks -newerat '1 month ago' -and -not -newerBt '10 seconds ago' -maxdepth 1 -type d -name '??????*' | /usr/bin/wc -l\`.strip.to_i
-xjobs = 0 if (xjobs < 0)
-
 # Can extract number of physical cpu cores from sysctl
 ncpu = \`/usr/sbin/sysctl hw.physicalcpu | /usr/bin/sed 's/hw.physicalcpu: //'\`.strip.to_i
 
@@ -1183,19 +1214,52 @@ ncpu = \`/usr/sbin/sysctl hw.physicalcpu | /usr/bin/sed 's/hw.physicalcpu: //'\`
 nlogical = \`/usr/sbin/sysctl hw.ncpu | /usr/bin/sed 's/hw.ncpu: //'\`.strip.to_i
 os=\`/usr/sbin/system_profiler SPSoftwareDataType | /usr/bin/grep 'System Version'\`.strip
 
+
+# OLD approximation using tasks directory - problem is crashed jobs stay there....
+#xjobs = \`/bin/ls -1 /var/xgrid/agent/tasks | /usr/bin/wc -l\`.strip.to_i - 1
+#xjobs = \`/usr/bin/find /var/xgrid/agent/tasks -newerat '1 month ago' -and -not -newerBt '10 seconds ago' -maxdepth 1 -type d -name '??????*' | /usr/bin/wc -l\`.strip.to_i
+#xjobs = 0 if (xjobs < 0)
+
+# NEW approximation using iostat - much better and multi-task aware
+#user = \`/usr/sbin/iostat -dCI -n 1 -w 5 -c 3 | /usr/bin/sed -e 's/us//g' -e 's/sy//g' -e 's/id//g' | /usr/bin/awk 'BEGIN {FS=" "}
+#min=="" {
+#min=max=\$4
+#}
+#{
+#if (\$4 > max) {max = \$4};
+#if (\$4 < min) {min = \$4};
+#total += \$4
+#count += 1
+#}
+#END {
+#print min;
+#}'\`.to_f
+
+# Which corresponds to how many processors (allowing for a small amount of extraneous junk but otherwise rounded to the whole processor up)?
+#xjobs = ((user*nlogical+95)/100).to_i
+
+# NEWER approximation using vm.loadavg - much faster than iostat
+user = \`/usr/sbin/sysctl vm.loadavg | /usr/bin/perl -wane 'print \$F[-3]'\`.to_f
+xjobs = (user+0.5).to_i
+
 # Is it a server?
 server = 0
 if (os =~ /Server/)
   server = 1
 end
 
-# RAM (in MB):
-ram = \`/usr/sbin/sysctl hw.physmem | /usr/bin/sed 's/hw.physmem: //'\`.strip.to_i
-ram = ram / (1024**2)
+# FREE MEMORY IN PAGES:
+ram = \`vm_stat | awk '{ print \$3 }' | awk -F '\\\\n' 'BEGIN { RS = "" } { print \$2 }'\`.strip.to_i
+# 1 page = 4096 bytes, so FREE RAM IN MB:
+ram = (ram*4096) / (1024**2)
+
+# TOTAL RAM (in MB):
+totalram = \`/usr/sbin/sysctl hw.physmem | /usr/bin/sed 's/hw.physmem: //'\`.strip.to_i
+totalram = totalram / (1024**2)
 
 # CPU speed (in MHz):
 cpuspeed = \`/usr/sbin/sysctl hw.cpufrequency | /usr/bin/sed 's/hw.cpufrequency: //'\`.strip.to_i
-cpuspeed = cpuspeed / (1024**2)
+cpuspeed = cpuspeed / (1000**2)
 
 # bits (64 or 32):
 bits = \`/usr/sbin/sysctl hw.optional 2> /dev/null |/usr/bin/awk -F': ' '/64/ {print $2}'\`.strip.to_i
@@ -1274,7 +1338,7 @@ if [ ! "$artpath" == "" ]; then
 	"customart.sh" = {
 	fileData = <
 	EOA
-	hexdump  -v -e ' "" 4/1 "%02x" " "' $artpath >> $batchname
+	hexdump  -v -e ' "" 4/1 "%02x" " "' "$artpath" >> $batchname
 	cat >> $batchname <<-EOA
 	>;
 	                isExecutable = YES;
@@ -1389,14 +1453,14 @@ if [ $success == 1 ]; then
 else
 	echo "An error occured while submitting the profiling job to xgrid.  The following was returned:" >&2
 	cat < $tfile1 >&2
-	exit 1
+	exit $EX_UNAVAILABLE
 fi
 
 rm $batchname
 
 echo "Waiting for the job to complete..."
 while true; do
-	sleep 20
+	sleep 10
 
 	xgrid -job attributes -id $jobnum >& $tfile1 && success=1 || success=0
 
@@ -1410,6 +1474,10 @@ while true; do
 			echo "Profiling job complete, reading results..."
 			break
 		else
+			if [ "$grepstring" == "" ]; then
+				echo "There was an error retrieving the profiling job - it may have been deleted">&2
+				exit $EX_UNAVAILABLE
+			fi
 			echo "Profiling job is not yet complete.  Waiting to try again..."
 		fi
 	else
@@ -1628,6 +1696,8 @@ for (( i=1; i<=$lnames; i++ )); do
 		availcores[$i]=$[${nlogical[$i]}-${origxjobs[$i]}]
 		totalcores=$[$totalcores+${availcores[$i]}]
 	fi
+	availcoresforfeedback[$i]=$[${nlogical[$i]}-${origxjobs[$i]}]
+	
 done
 
 
@@ -1719,13 +1789,13 @@ if [ $statusonly == 1 ]; then
 	
 	prettyprofile=${tmpdir}/pprof
 
-	echo "Name|Score|Free cores" > $prettyprofile
+	echo "Name|Score|Free cores|Free RAM" > $prettyprofile
 	for (( i=1; i<=$lnames; i++ )); do
 		current=${order[$i]}
 		if [ ${namesfound[$current]} == 1 ]; then
-			echo ${names[$current]}"|"${firstscore[$current]}"|"${availcores[$current]} >> $prettyprofile
+			echo ${names[$current]}"|"${firstscore[$current]}"|"${availcoresforfeedback[$current]}"|"${ram[$current]} >> $prettyprofile
 		elif [ ${namesfound[$current]} == 0 ]; then
-			echo ${names[$current]}"|No response|0" >> $prettyprofile
+			echo ${names[$current]}"|No response||" >> $prettyprofile
 		fi
 	done
 	
@@ -1739,7 +1809,7 @@ if [ $statusonly == 1 ]; then
 	for (( i=1; i<$tasksdone; i++ )); do
 		printf "${hints[$i]}, "
 	done
-	printf ${hints[$tasksdone]}"."
+	printf "${hints[$tasksdone]}."
 	echo ""
 	echo ""
 fi
@@ -1750,8 +1820,11 @@ fi
 echo "{" > $batchname 
 echo "jobSpecification = {" >> $batchname
 echo "submissionIdentifier = \"$subid\";" >> $batchname
-echo "applicationIdentifier = \"`whoami`"@"$HOSTNAME\";" >> $batchname
-
+if [ "$email" == "" ]; then
+	echo "applicationIdentifier = \"`whoami`"@"$HOSTNAME#@#no_email\";" >> $batchname
+else
+	echo "applicationIdentifier = \"`whoami`"@"$HOSTNAME#@#$email\";" >> $batchname
+fi
 echo "artConditions = {" >> $batchname
 if [ $uog == 1 ]; then
 	echo "\"basescore\" = {" >> $batchname
@@ -1792,7 +1865,7 @@ fi
 if [ ! "$artpath" == "" ]; then
 	echo "\"customscore\" = {" >> $batchname
 	echo "artData = <" >> $batchname
-	hexdump  -v -e ' "" 4/1 "%02x" " "'  $artpath >> $batchname
+	hexdump  -v -e ' "" 4/1 "%02x" " "'  "$artpath" >> $batchname
 	echo ">;" >> $batchname
 	echo "isExecutable = YES;" >> $batchname
 	echo "};" >> $batchname
@@ -1852,7 +1925,7 @@ fi
 
 if [ "$indir" != "" ]; then
 	cwd=`pwd`
-	cd $indir
+	cd "$indir"
 	echo "inputFiles = {" >> $batchname
 
 	temp2=${tmpdir}/temp2
@@ -1924,7 +1997,7 @@ if [ "$indir" != "" ]; then
 		fi
 	fi
 	echo "};" >> $batchname
-	cd $cwd
+	cd "$cwd"
 else
 # This commandisfile stuff doesn't work as /bin/bash is a file etc....
 #	if [ -f ./$cmd ]; then 

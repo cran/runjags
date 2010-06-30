@@ -72,10 +72,12 @@ testjags <- function(jags=findjags(), silent=FALSE){
     	rightstring <- which(rightstring==TRUE)
     	if(is.na(rightstring)){
     		version <- 'unknown'
-    		num.version <- c(0,0,0)
+    		num.version <- 0.00
     	}else{
     		version <- strsplit(popen.support[rightstring], split=" ", fixed=TRUE)[[1]][4]
-    		num.version <- strsplit(version, split=".", fixed=TRUE)
+			versioncom <- sub('.',';',version,fixed=TRUE)
+			versioncom <- gsub('.','',versioncom,fixed=TRUE)
+			num.version <- as.numeric(gsub(';','.',versioncom,fixed=TRUE))
     	}
     }
     
@@ -88,7 +90,7 @@ testjags <- function(jags=findjags(), silent=FALSE){
 		if(success==0){
 			if(popen == TRUE){
 				cat("JAGS version ", version, " found successfully using the command ", jags, "\n", sep="")
-				if(as.numeric(num.version[[1]][1] == 0) && as.numeric(num.version[[1]][2] < 97)){
+				if(num.version<1){
 					cat("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://www-fis.iarc.fr/~martyn/software/jags/\n")
 					jags.avail <- FALSE
 				}else{
@@ -108,7 +110,7 @@ testjags <- function(jags=findjags(), silent=FALSE){
 	}else{
 		if(success==0){
 			if(popen == TRUE){
-				if(as.numeric(num.version[[1]][1] == 0) && as.numeric(num.version[[1]][2] < 97)){
+				if(num.version<1){
 					cat("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://www-fis.iarc.fr/~martyn/software/jags/\n")
 					jags.avail <- FALSE
 				}else{
@@ -131,7 +133,7 @@ testjags <- function(jags=findjags(), silent=FALSE){
 		if(testpopen==' \r') popen <- TRUE
 	}
 	
-	return(c("os"=os, "JAGS.available"=jags.avail, "JAGS.path"=jags, "popen.support"=popen, "JAGS.version"=num.version, "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username))
+	return(list("os"=os, "JAGS.available"=jags.avail, "JAGS.path"=jags, "popen.support"=popen, "JAGS.version"=num.version, "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username))
 }
 
 testJAGS <- testjags

@@ -3,7 +3,7 @@
 ##############################################################################################################
 #                                                                                                            #
 #     mgrid node_scoring_example.rb                                                                          #
-#     Copyright 2010 Matthew Denwood - m.denwood@vet.gla.ac.uk - Version 2.01 - February 2010                #
+#     Copyright 2010 Matthew Denwood - matthewdenwood@mac.com - Version 3.00 - June 2010                     #
 #                                                                                                            #
 #     This file is an example of a scoring script for use with the node ranking features of mgrid, which     #
 #     can be used to customise the score assigned to nodes based on their physical characteristics such as   #
@@ -27,7 +27,7 @@
 #                                                                                                            #
 ##############################################################################################################
 
-# Current number of jobs running (approximated not all that well unfortunately):
+# Current number of jobs running (approximated better as of version 2.1):
 xjobs = ARGV[0].to_i
 # Physical cores:
 ncpu = ARGV[1].to_i

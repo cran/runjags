@@ -11,12 +11,51 @@ None known.
 
 FEATURES TO BE IMPLEMENTED
 
-Support for features implemented in JAGS version 2.
+None planned.
 
 
 
 
 VERSION HISTORY
+
+
+Version 0.9.7
+
+NEW FEATURES
+
+The object list supplied to xgrid.submit/xgrid.run can now be a character list, for which objects will be looked for in the global environment.
+
+The 'cleanup' and 'keep files' options have been moved to the retrieving xgrid functions.  Options relating to processing the MCMC chains (such as convergence and plotting options) can now be provided to xgrid.results.jags.
+
+Code for autorun.jags optimised in several places to speed up processing of large MCMC objects between runs.
+
+Support for factories added.
+
+Support for new popt/deviance/pd features of JAGS 2 added.
+
+The number of variables is now displayed when calculating convergence statistics.
+
+xgrid.results and xgrid.results.jags now display the output so far if the job isn't complete
+
+
+BUG FIXES
+
+Bug fixed that could cause the .jagsfile functions to not find objects correctly.
+
+Bug fixed in autorun.jags preventing modules from being loaded
+
+Bugs fixed that prevented errors being reported under Windows
+
+Bug fixed in mgrid that prevented directory names with spaces being used.
+
+Manual over-hauled to improve appearance and prevent truncation of examples on PDF version.
+
+Bug fixed that could mistake error returns from mgrid/xgrid as job numbers
+
+New examples added and some examples corrected.
+
+Many other miscellaneous code tweaks and bug fixes.
+
 
 
 Version 0.9.6

@@ -204,7 +204,7 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 					if(class(success)=="try-error") temp <- temp()
 				}
 			}else{
-				suppressWarnings(success <- try(temp <- get(parameter[i], pos=".GlobalEnv"), silent=TRUE))
+				suppressWarnings(success <- try(temp <- get(parameter[i]), silent=TRUE)) #, pos=".GlobalEnv"
 				if(class(success)!="try-error"){
 					if(class(temp)=="function"){
 						success <- suppressWarnings(try(temp <- temp(chain), silent=TRUE))
@@ -214,7 +214,7 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 					temp <- NULL
 				}
 			}
-					
+
 			if(is.null(temp)) stop(paste(parameter[i], "not found (or has/returns value NULL)")) 
 			
 		}
@@ -232,7 +232,7 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 
 }
 
-normalise.mcmc <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.stochastic = TRUE){
+normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.stochastic = TRUE){
 
 if(class(mcmc.list)=="mcmc") mcmc <- mcmc.list(mcmc.list) else mcmc <- mcmc.list
 
@@ -277,75 +277,104 @@ if(anydone){
 
 success <- try({
 if(normalise){
-	for(parameter in 1:nvar(mcmc)){
+	
+	use <- sample(1:niter(mcmc)*nvar(mcmc), size=1000, replace=FALSE)
+	shap.res <- apply(combine.mcmc(mcmc, collapse.chains=TRUE), 2, function(x){
+		if(all(x==x[1])){
+			return(1)
+		}else{
+			if(all(x > 0)){
+				if(all(x < 1)){
+					if(shapiro.test(x[use])$statistic > shapiro.test(log(x[use]/(1-x[use])))$statistic) return(3) else return(1)
+				}else{
+					if(shapiro.test(x[use])$statistic > shapiro.test(log(x[use]))$statistic) return(2) else return(1)
+				}
+			}else{
+				return(1)
+			}
+		}})
+	
+	change <- which(shap.res!=1)
+	for(parameter in change){
+		for(chain in 1:nchain(mcmc)){
+			newvalues <- unlist(mcmc[[chain]][,parameter])
+			if(shap.res[parameter]==3) newvalues <- log(newvalues/(1-newvalues)) else newvalues <- log(newvalues)
+			mcmc[[chain]][,parameter] <- newvalues
+		}
+	}
 
-		data <- unlist(mcmc[,parameter])
 
-		if(!all(data > 0)) next
+	# Really slow code:
+	
+	#for(parameter in 1:nvar(mcmc)){
+		
+	#	data <- unlist(mcmc[,parameter])
+
+	#	if(!all(data > 0)) next
 
 	
-		if(all(data > 0) & all(data < 1)){
-			logdat <- log(data/(1-data))
-			logit <- TRUE
-		}else{
-			logdat <- log(data)
-			logit <- FALSE
-		}
+	#	if(all(data > 0) & all(data < 1)){
+	#		logdat <- log(data/(1-data))
+	#		logit <- TRUE
+	#	}else{
+	#		logdat <- log(data)
+	#		logit <- FALSE
+	#	}
 		
 		# having problems with some probabilites coming out at Inf, although this should be fixed now I am checking all values not just the thinned ones, but it doesn't do any harm to leave so:
 	
-		if(any(is.na(logdat))) next
-		if(any(logdat==Inf) | any(logdat==-Inf)) next
+	#	if(any(is.na(logdat))) next
+	#	if(any(logdat==Inf) | any(logdat==-Inf)) next
 
 
 		# sample for max length of shapiro.test:
 		
-		done <- 0
+	#	done <- 0
 		
-		alldata <- data
-		alllogdat <- logdat
+	#	alldata <- data
+	#	alllogdat <- logdat
 		
 		# sometimes shapiro.test returns an error for the normal data (if very skewed?)
 		# repeating it up to 100 times should be OK
 		
-		while(done < 100){
+	#	while(done < 100){
 		
-			if(length(alldata) > 1000) data <- sample(alldata, 1000)
-			if(length(alllogdat) > 1000) logdat <- sample(alllogdat, 1000)
-		
-			norm.s <- shapiro.test(data)$statistic
-			log.s <- shapiro.test(logdat)$statistic
+	#		if(length(alldata) > 1000) data <- sample(alldata, 1000)
+	#		if(length(alllogdat) > 1000) logdat <- sample(alllogdat, 1000)
+	#	
+	#		norm.s <- shapiro.test(data)$statistic
+	#		log.s <- shapiro.test(logdat)$statistic
 			
-			done <- done + 1
-			
-			if(!is.na(norm.s) & !is.na(log.s)) break
-		}
+	#		done <- done + 1
+	#		
+	#		if(!is.na(norm.s) & !is.na(log.s)) break
+	#	}
 		
-		if(done==100){
+	#	if(done==100){
 			# in case repeating up to 100 times isn't OK
-			if(warn) warning(paste("Attempt to normalise mcmc chain failed for the parameter '", varnames(mcmc)[parameter], "'", sep=""))
-			next
-		}
+	#		if(warn) warning(paste("Attempt to normalise mcmc chain failed for the parameter '", varnames(mcmc)[parameter], "'", sep=""))
+	#		next
+	#	}
 		
-		if(norm.s >= log.s){
-			use <- 1	
-		}else{
-			use <- if(logit) 3 else 2
-		}
+	#	if(norm.s >= log.s){
+	#		use <- 1	
+	#	}else{
+	#		use <- if(logit) 3 else 2
+	#	}
 		
 		# for bug testing log transformations:
 		#use <- if(logit) 3 else 2
 		
-		if(use!=1){
-			for(chain in 1:nchain(mcmc)){
-				newvalues <- unlist(mcmc[[chain]][,parameter])
-				if(logit) newvalues <- log(newvalues/(1-newvalues)) else newvalues <- log(newvalues)
-				mcmc[[chain]][,parameter] <- newvalues
+	#	if(use!=1){
+	#		for(chain in 1:nchain(mcmc)){
+	#			newvalues <- unlist(mcmc[[chain]][,parameter])
+	#			if(logit) newvalues <- log(newvalues/(1-newvalues)) else newvalues <- log(newvalues)
+	#			mcmc[[chain]][,parameter] <- newvalues
 				
 				
-			}
-		}
-	}
+	#		}
+	#	}
+	#}
 }
 })
 
@@ -358,6 +387,13 @@ if(class(success)=="try-error"){
 
 if(class(mcmc.list)=="mcmc") return(mcmc[[1]]) else return(mcmc)
 
+}
+
+safe.autocorr.diag <- function(x, ...){
+	y <- autocorr.diag(x[,1])
+	if(nvar(x)>1) for(i in 2:nvar(x)) y <- cbind(y, autocorr.diag(x[,i]))
+	dimnames(y)[[2]] <- dimnames(x[[1]])[[2]]
+	return(y)
 }
 
 safe.gelman.diag <- function(x, warn=TRUE,...){
@@ -425,6 +461,14 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		}
 		
 		if(!wait & !all(done)){
+			if(!silent){
+				cat('The job outputs (if any) are shown below:\n')
+				for(s in 1:nsims){
+					system(paste('xgrid -job results -id ', jobnum[s], sep=''))
+					cat('\n')
+				}
+				cat('Jobs not finished.  Statuses are "', paste(status, collapse=', '), '"\n', sep='')
+			}
 			stop(paste('Jobs not finished.  Statuses are "', paste(status, collapse=', '), '"', sep=''))
 		}
 		
@@ -458,7 +502,7 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		
 		xgridoutput <- vector('list', length=nsims)
 		for(s in 1:nsims){
-			xgridoutput[[s]] <- c(paste('\n', if(jags) 'Chain' else 'Task', ' ', s, ':', sep=''), system(paste('xgrid -job results -id ', jobnum[s], ' -out ', directory, if(jags) '/sim.', if(jags) s, sep=''), intern=TRUE))
+			xgridoutput[[s]] <- c(paste('\n', if(jags) 'Chain' else 'Task', ' ', s, ':', sep=''), system(paste('xgrid -job results -id ', jobnum[s], ' -out "', directory, if(jags) '/sim.', if(jags) s, '"', sep=''), intern=TRUE))
 			if(length(xgridoutput[[s]])==0) stop(paste("The job produced no output for chain ", s, "; ensure that the jagspath supplied is accurate", sep=''))
 		}
 
@@ -489,6 +533,11 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		status <- gsub('[[:space:]]', '', gsub(';', '', gsub('jobStatus = ', '', status)))
 		
 		if(!wait & !status=='Finished'){
+			if(!silent){
+				cat('The job output (if any) is shown below:\n')
+				system(paste('xgrid -job results -id ', jobnum, sep=''))
+				cat('\nJob not finished.  Status is "', status, '"\n', sep='')
+			}
 			stop(paste('Job not finished.  Status is "', status, '"', sep=''))
 		}
 		
@@ -516,7 +565,7 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 			cat('The xgrid job is showing the status "', status, '"\n', sep="")
 			silent <- FALSE
 		}
-		xgridoutput <- system(paste('xgrid -job results -id ', jobnum, ' -out ', directory, sep=''), intern=TRUE)
+		xgridoutput <- system(paste('xgrid -job results -id ', jobnum, ' -out "', directory, '"', sep=''), intern=TRUE)
 		
 		cat("Job was successfully retreived from xgrid\n")
 		if(!silent){
@@ -530,5 +579,5 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		
 	}
 	
-	return(TRUE)
+	return(xgridoutput)
 }

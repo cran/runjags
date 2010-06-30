@@ -35,24 +35,24 @@ xgrid.run(f=function(iteration){}, niters,
    object.list=list(), file.list=character(0), 
    threads=min(niters,100), jobname=NA, wait.interval="10 min", 
    xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 
-   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', cleanup=FALSE, 
-   submitandstop=FALSE, tempdir=!submitandstop, keep.files=FALSE, 
-   show.output=TRUE, max.filesize="1GB", 
-   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
-   else 'mgrid -t $ntasks -i $indir', sub.options="", 
-   sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
+   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', 
+   cleanup = TRUE, submitandstop = FALSE, tempdir=!submitandstop, 
+   keep.files = FALSE, show.output = TRUE, max.filesize="1GB", 
+   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"' 
+   else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
+   sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), ...)
 
 xgrid.submit(f=function(iteration){}, niters, 
    object.list=list(), file.list=character(0), 
    threads=min(niters,100), jobname=NA, 
    xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 
-   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', cleanup=FALSE, 
-   keep.files=FALSE, show.output=TRUE, max.filesize="1GB", 
-   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir'
-   else 'mgrid -t $ntasks -i $indir', sub.options="", 
-   sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...)
+   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', 
+   show.output = TRUE, max.filesize="1GB", 
+   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"'
+   else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
+   sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), ...)
 
-xgrid.results(jobname)
+xgrid.results(jobname, cleanup=TRUE, keep.files=FALSE, show.output=TRUE)
 }
 
 \arguments{
@@ -67,19 +67,21 @@ xgrid.results(jobname)
    which case multiple iterations are evaluated serially as part of the
    same task.  No default.}
 
-   \item{object.list}{a named list of objects that will be made visible
-   inside the function.  All other objects in the current working
-   directory will not be visible when the function is evaluated.  THIS
-   INCLUDES LIBRARIES WHICH MUST BE RE-CALLED WITHIN THE FUNCTION BEFORE
-   USE.  In order to use functions within an R library it is therefore
-   necessary for the required library to be installed on the Xgrid nodes
-   on which the job will be run.  If not all nodes have the required
-   libraries installed, you can use an ART script to ensure the job is
-   sent only to machines that do (see the example provided below), or
-   you can use mgrid to manually request certain nodes using the '-f -h
-   <nodename>' options. Alternatively, text files containing R code can
-   be included in the 'file.list' argument and source()d within the
-   function. Default blank list (no objects copied).}
+\item{object.list}{a named list of objects that will be copied to the
+global environment on Xgrid and so will be visible inside the function. 
+Alternatively, this can be a character vector of objects, that will be
+looked for in the global environment, rather than a named list.  All
+other objects in the current working directory will not be visible when
+the function is evaluated. THIS INCLUDES LIBRARIES WHICH MUST BE
+RE-CALLED WITHIN THE FUNCTION BEFORE USE.  In order to use functions
+within an R library it is therefore necessary for the required library
+to be installed on the Xgrid nodes on which the job will be run.  If not
+all nodes have the required libraries installed, you can use an ART
+script to ensure the job is sent only to machines that do (see the
+example provided below), or you can use mgrid to manually request
+certain nodes using the '-f -h <nodename>' options. Alternatively, text
+files containing R code can be included in the 'file.list' argument and
+source()d within the function. Default blank list (no objects copied).}
 
    \item{file.list}{a vector of filenames representing files in the
    current working directory that will be copied to the working
@@ -157,20 +159,16 @@ xgrid.results(jobname)
    when the function exits.  A temporary directory cannot be used for
    xgrid.submit.  Default TRUE when running the job synchronously.}
 
-   \item{keep.files}{for xgrid.run, option to keep the folder with files
-   needed to run the job rather than deleting it, or copy the folder to
-   the working directory before exiting if tempdir=TRUE.  This may be
-   useful for attempting to bug fix failing jobs.  The folder is never
-   automatically deleted when using xgrid.submit or xgrid.results to
-   prevent the possibility of unexpected errors resulting in the loss of
-   lengthy computations, so the folder should be deleted manually after
-   retrieving and saving results.  Default FALSE.}
+\item{keep.files}{option to keep the folder with files needed to run the
+job rather than deleting it, or copy the folder to the working directory
+before exiting if tempdir=TRUE.  This may be useful for attempting to
+bug fix failing jobs.  Default FALSE.}
 
    \item{show.output}{option to print the output of the function
    (obtained using cat, writeLine or print for example) at each
    iteration after retrieving the job(s) from xgrid.  If FALSE, the
    output is suppressed.  Default TRUE.}
-
+  
    \item{max.filesize}{the maximum total size of the objects produced by
    the function for each thread if xgrid.method=separatejobs, or for the
    entire job if xgrid.method=separatetasks.  This is a failsafe
@@ -186,62 +184,65 @@ xgrid.results(jobname)
    directory by the function are NOT automatically cheked.  Units can be
    provided as either "MB" or "GB".  Default "1GB".}
 
-   \item{sub.app}{the submission application or script to use for job
-   running/submission.  The inbuilt Xgrid application supports most
-   options, but greater functionality is provided by the mgrid script
-   (see the details section for more information and installation
-   instructions).  Any other custom script can be used with the
-   requirements that it submit the job provided and print the Xgrid job
-   ID to screen before exiting (as the only numerical value printed), or
-   alternatively the script may submit the job and create a 'jobid.txt'
-   file in the working directory containing the job id.  If xgrid.method
-   is 'separatejobs' then the argument may be of length equal to the
-   number of chains, in which case each job is submitted using a
-   different application/script. Default uses mgrid if installed,
-   otherwise 'xgrid -job submit'.}
+\item{sub.app}{the submission application or script to use for job
+running/submission.  The inbuilt Xgrid application supports most
+options, but greater functionality is provided by the mgrid script (see
+the details section for more information and installation instructions).
+ Any other custom script can be used with the requirements that it
+submit the job provided and print the Xgrid job ID to screen before
+exiting (as the only numerical value printed), or alternatively the
+script may submit the job and create a 'jobid.txt' file in the working
+directory containing the job id.  If xgrid.method is 'separatejobs' then
+the argument may be of length equal to the number of chains, in which
+case each job is submitted using a different application/script. Paths
+with spaces in them must be quoted when the command is passed to the
+shell (this may mean escaping quotes if necessary).  Default uses mgrid
+if installed, otherwise 'xgrid -job submit'.}
 
-   \item{sub.options}{one or more option flags to be passed through to
-   the submission application (as a character string).  Examples include
-   ART scripts, email on job completion, and when using the mgrid script
-   many other possibilities (see the details section).  When providing
-   links to files as part of the command, all links must be absolute (ie
-   start with / or ~) as xgrid/mgrid will be will not be called in th
-   working directory.  If xgrid.method is 'separatejobs' then the
-   argument may be of length equal to the number of chains, in which
-   case each job receives a different set of options.  Some options
-   require the Xgrid controller to be running OS X Leopard (10.5) or
-   later.  Default none.}
+\item{sub.options}{one or more option flags to be passed through to the
+submission application (as a character string).  Examples include ART
+scripts, email on job completion, and when using the mgrid script many
+other possibilities (see the details section).  When providing links to
+files as part of the command, all links must be absolute (ie start with
+/ or ~) as xgrid/mgrid will be will not be called in the working
+directory, and paths with spaces must be quoted.  If xgrid.method is
+'separatejobs' then the argument may be of length equal to the number of
+chains, in which case each job receives a different set of options. 
+Some options require the Xgrid controller to be running OS X Leopard
+(10.5) or later.  Default none.}
 
-   \item{sub.command}{the actual command to be executed using system()
-   to submit the job.  Changing this results in sub.app and sub.options
-   being ignored, and is probably the best option to use for custom
-   submission scripts (see the sub.app argument for the requirements for
-   custom scripts).  The environmental variables $cmd (the name of the
-   BASH script to be run), $ntasks (the number of tasks), $job (the job
-   number for multiple jobs), and $indir (the input directory) will be
-   available to the script.  For multiple tasks, the custom script
-   should ensure that the task number is supplied as the (only) argument
-   to the BASH script (requires xgrid.method="separatetasks" to
-   function).  If xgrid.method is 'separatejobs' then the argument may
-   be of length equal to the number of chains, in which case each job
-   receives a different command.  Default uses the values of sub.app and
-   sub.options.}
+\item{sub.command}{the actual command to be executed using system() to
+submit the job.  Changing this results in sub.app and sub.options being
+ignored, and is probably the best option to use for custom submission
+scripts (see the sub.app argument for the requirements for custom
+scripts).  The environmental variables $cmd (the name of the BASH script
+to be run), $ntasks (the number of tasks), $job (the job number for
+multiple jobs), and $indir (the input directory) will be available to
+the script.  For multiple tasks, the custom script should ensure that
+the task number is supplied as the (only) argument to the BASH script
+(requires xgrid.method="separatetasks" to function).  If xgrid.method is
+'separatejobs' then the argument may be of length equal to the number of
+chains, in which case each job receives a different command.  Paths with
+spaces in them must be quoted when the command is passed to the shell
+(this may mean escaping quotes if necessary).  Default uses the values
+of sub.app and sub.options.}
 
    \item{...}{objects to be passed to the function provided (equivalent
    to specifying the objects in the object.list).} 
-   
+
 }
 
 
 
 \details{
 
-These functions allow arbitrary R code to be run on Xgrid distributed
-computing clusters from within R.  All the functionality could be
-replicated by saving all necessary objects to files and using the Xgrid
-command line utility to submit and retrieve the job manually; these
-functions merely provide the convenience of not having to do this
-manually.  Xgrid support is only available on Mac OS X machines.  
+These functions allow JAGS models to be run on Xgrid distributed
+computing clusters from within R using the same syntax as required to
+run the models locally.  All the functionality could be replicated by
+saving all necessary objects to files and using the Xgrid command line
+utility to submit and retrieve the job manually; these functions merely
+provide the convenience of not having to do this manually.  Xgrid
+support is only available on Mac OS X machines.  
 
 The xgrid controller hostname and password must be set as environmental
 variables. The command line version of R knows about environmental
@@ -256,37 +257,14 @@ Sys.setenv(XGRID_CONTROLLER_PASSWORD="<password>")
 (These lines could be copied into your .Rprofile file for a 'set and
 forget' solution)
 
+
 All functions can be run using the built-in xgrid commands, however some
 added functionality (including multi-tasks jobs to enable the
 'separatetasks' method) is provided by the 'mgrid.sh' BASH shell script
 which is included with the runjags package (in the 'inst/xgrid' folder
 for the package source or the 'xgrid' folder for the installed package).
 More details about this script is given at the top of the mgrid.sh file.
- To install (optional), open the Terminal and change directory to the
-'xgrid' folder inside the package.  Then run the following commands to
-install mgrid in /usr/local/bin and create the support folder in
-'Application Support' (an Administrator's password will be required):
-
-sudo chmod 755 mgrid.sh
-
-sudo cp mgrid.sh /usr/local/bin/mgrid
-
-sudo mkdir "/Library/Application Support/mgrid/"
-
-Alternatively, to do this automatically (and assuming runjags is
-installed in the default library), run the following code in R, then
-paste the contents of the clipboard into the opened Terminal window and
-hit enter followed by an Administrator's password:
-
-clip <- pipe("pbcopy", "w"); 
-command <- paste('cd ', .Library, '/runjags/xgrid; sudo chmod 755 mgrid.sh; sudo cp mgrid.sh /usr/local/bin/mgrid; ', sep=""); 
-command <- paste(command, 'if [ ! -d "/Library/Application Support/mgrid" ]; then sudo mkdir "/Library/Application Support/mgrid"; fi;', sep=""); 
-cat(command, file=clip); 
-close(clip); 
-system('open -n -a /Applications/Utilities/Terminal.app')
-
-You can then look at the possible arguments to mgrid by typing 'mgrid'
-in the Terminal or system('mgrid') within R.
+ To install (optional), see the \code{\link{install.mgrid}} function.
 
 }
 
@@ -314,6 +292,8 @@ prevent the xgrid controller crashing due to transferring large files).
 \code{\link{xgrid.run.jags}} for functions to run JAGS models on Xgrid,
 or \code{\link{run.jags}} to do so locally.
 
+\code{\link{install.mgrid}} to install the mgrid script.
+
 mclapply and mcparallel in the multicore package for parallel execution
 of code over multiple local cores.
 
@@ -327,14 +307,17 @@ of code over multiple local cores.
 
 \examples{
 
-# A basic example of synchronous running of code over 100 iterations, split up between 10 tasks (or 10 jobs if mgrid is not installed):
+# A basic example of synchronous running of code over 100 iterations, 
+# split up between 10 tasks (or 10 jobs if mgrid is not installed):
 
 \dontrun{
 
 # The function to evaluate:
 f <- function(iteration){
-	# All objects supplied to object.list will be visible here, but remember to call all necessary libraries within the function
+	# All objects supplied to object.list will be visible here, but
+	# remember to call all necessary libraries within the function
 	
+	cat("Running iteration", iteration, "\n")
 	# Some lengthy code evaluation....
 	
 	output <- rpois(10, iteration)
@@ -347,11 +330,41 @@ results <- xgrid.run(f, niters=100, threads=10)
 }
 
 
-# An example of running an Xgrid job within another Xgrid job, using xgrid.submit to submit a job that runs a JAGS model to convergence using xgrid.autorun.jags:
+# Any packages required by the function need to be installed on the
+# nodes the function is run on.  This function retrieves information
+# about the available packages on each of the node names provided:
 
 \dontrun{
 
-# Create an ART script to make sure that (a) R is installed, (b) JAGS is installed, and (c) the runjags package is installed on the node:
+# The name of one or more nodes to get information about:
+nodenames <- c("mynode", "guestnode", "othernode")
+
+# Run the job:
+results <- xgrid.run(function(i){
+		return(installed.packages()[,'Version'])
+	}, 
+	niters=length(nodenames), threads=length(nodenames), 
+	wait.interval="10 seconds", xgrid.method='separatejobs',
+	sub.options=paste("-f -h '", nodenames, "'", sep=""),
+	show.output=FALSE)
+# Make the names match up to the statistics:
+names(results) <- nodenames
+
+# Show the available packages and their versions for each node:
+results
+
+}
+
+
+# An example of running an Xgrid job within another Xgrid job, using 
+# xgrid.submit to submit a job that runs a JAGS model to convergence 
+# using xgrid.autorun.jags:
+
+\dontrun{
+
+# Create an ART script to make sure that (a) R is installed, 
+# (b) JAGS is installed, and (c) the runjags package is installed 
+# on the node:
 cat('#!/bin/bash
 #!/bin/bash
 if [ ! -f /usr/bin/R ]; then 
@@ -364,7 +377,6 @@ exit 0
 fi
 /usr/bin/R --slave -e "suppressMessages(rjsuccess <- require(runjags, quietly=TRUE)); writeLines(as.character(rjsuccess*1))"
 exit 0
-"
 ', file='runjagsART.sh')
 
 # Some data etc we will need for the model:
@@ -385,7 +397,8 @@ c ~ dunif(-1000,1000);
 precision ~ dexp(1);
 }"
 
-# Get the Xgrid controller hostname and password to be passed to the slave job:
+# Get the Xgrid controller hostname and password to be passed 
+# to the slave job:
 hostname <- Sys.getenv('XGRID_CONTROLLER_HOSTNAME')
 password <- Sys.getenv('XGRID_CONTROLLER_PASSWORD')
 
@@ -399,13 +412,23 @@ f <- function(iteration){
 	library(runjags)
 	
 	# Use xgrid.autorun.jags to run 2 chains until convergence:
-	results <- xgrid.autorun.jags(model=model, monitor=c("m", "c", "precision"), data=data, n.chains=2, plots = FALSE, xgrid.method='separatejobs', wait.interval='1 min', jobname='xgridslavejob')
+	results <- xgrid.autorun.jags(model=model, 
+		monitor=c("m", "c", "precision"), data=data, n.chains=2, 
+		plots = FALSE, xgrid.method='separatejobs', 
+		wait.interval='1 min', jobname='xgridslavejob')
 	
 	return(results)
 }
 
-# Submit the function to xgrid using our ART script to ensure the node can handle the job (the ART script path must be specified as an absolute link as xgrid won't be called in the current working directory):
-name <- xgrid.submit(f, object.list=list(X=X, Y=Y, model=model, data=data, hostname=hostname, password=password), threads=1, niters=1, sub.options=if(Sys.which('mgrid')=="") paste('-art ', getwd(), '/runjagsART.sh', sep='') else paste('-a ', getwd(), '/runjagsART.sh', sep=''), xgrid.method='simple')
+# Submit the function to xgrid using our ART script to ensure the 
+# node can handle the job (the ART script path must be specified as 
+# an absolute link as xgrid won't be called in the current working 
+# directory, and all paths must be enclosed in quotes to preserve spaces):
+name <- xgrid.submit(f, object.list=list(X=X, Y=Y, model=model, 
+	data=data, hostname=hostname, password=password), threads=1, 
+	niters=1, sub.options=if(Sys.which('mgrid')=="") paste('-art "', 
+	getwd(), '/runjagsART.sh"', sep='') else paste('-a "', getwd(), 
+	'/runjagsART.sh"', sep=''), xgrid.method='simple')
 # Cleanup (remove runjagsART file):
 unlink('runjagsART.sh')
 
@@ -417,4 +440,4 @@ results <- xgrid.results(name)$iteration.1
 
 }
 
-\keyword{models}
+\keyword{methods}

@@ -41,6 +41,7 @@ username.
 \seealso{
 
 \code{\link{run.jags}},
+
 \code{\link{findjags}}
 
 }

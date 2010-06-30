@@ -56,7 +56,8 @@ existing files
 \author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
 
 \examples{
-#  Create a file name that is unlikely to exist already, with a .R extension.
+#  Create a file name that is unlikely to exist already, 
+#  with a .R extension.
 new_unique(c("new_file", NA), ".R", ask=FALSE)
 }
 \keyword{methods}

@@ -120,8 +120,11 @@ more information.
 \seealso{
 
 \code{\link{autorun.jagsfile}},
+
 \code{\link{run.jags}},
+
 \code{\link{autorun.jags}},
+
 \code{\link{read.winbugs}}
 
 }
@@ -134,7 +137,8 @@ more information.
 
 \examples{
 
-# run a model to calculate the intercept and slope of the expression y = m x + c, assuming normal observation errors for y:
+# run a model to calculate the intercept and slope of the expression 
+# y = m x + c, assuming normal observation errors for y:
 
 \dontrun{
 
@@ -157,7 +161,8 @@ X <- 1:100
 Y <- rnorm(length(X), 2*X + 10, 1)
 N <- length(X)
 
-initfunction <- function(chain) return(switch(chain, "1"=list(m=-10), "2"=list(m=10)))
+initfunction <- function(chain) return(switch(chain, 
+	"1"=list(m=-10), "2"=list(m=10)))
 
 results <- run.jagsfile(model, n.chains=2, initlist=initfunction)
 

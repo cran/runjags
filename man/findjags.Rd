@@ -26,6 +26,7 @@ Files/JAGS/JAGS-1.0.0/bin/jags-terminal.exe"
 }
 \seealso{
    \code{\link{testjags}},
+   
    \code{\link{run.jags}}
 }
 

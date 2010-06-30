@@ -5,7 +5,7 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 	suppressWarnings(if(is.na(data)) class(data) <- "character")
 	
 	if(!is.na(n.chains)) if(n.chains < 2 & autorun) stop("The number of chains must be 2 or more so that convergence can be assessed")
-	
+
 	if(class(initlist)=="function"){
 		success <- suppressWarnings(try(newinitlist <- initlist(1), silent=TRUE))
 		if(class(success)=="try-error") newinitlist <- initlist()
@@ -17,17 +17,17 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 		if(class(newdatalist)!="list") stop("datalist must return a named list if specified as a function")
 	}
 	
-	fromautorun <- 3
+	fromautorun <- 2
 	
 	if(all(!is.na(inits))){
 		if(any(inits[1]==c("fromautorun", "fromxgrid"))){
-			fromautorun <- 4
+			fromautorun <- 3
 			inits <- NA
 		}
 	}
 	if(all(!is.na(data))){
 		if(any(data[1]==c("fromautorun", "fromxgrid"))){
-			fromautorun <- 4
+			fromautorun <- 3
 			data <- NA
 		}
 	}
@@ -84,6 +84,7 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 			}
 
 		}
+				
 		if(!all(is.na(autoinits))){
 			for(i in 1:n.chains){
 				geninits <- find.parameters(autoinits, initlist, fromautorun, chain=i)

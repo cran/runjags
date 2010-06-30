@@ -40,6 +40,7 @@ the input MCMC objects (if thin=1)
 
 \seealso{
    \code{\link{run.jags}},
+   
    \code{\link{testjags}}
 }
 
@@ -47,7 +48,8 @@ the input MCMC objects (if thin=1)
 
 \examples{
 
-# run a model, then extend the simulation and combine the two MCMC objects, with thinning to 5000 samples.
+# run a model, then extend the simulation and combine the two MCMC 
+#  objects, with thinning to 5000 samples.
 
 \dontrun{
 
@@ -69,9 +71,11 @@ Y <- rnorm(length(X), 2*X + 10, 1)
 N <- length(X)
 
 results1 <- run.jagsfile(model, n.chains=2, burnin=5000, sample=10000)
-results2 <- run.jagsfile(model, inits=results1$end.state, burnin=0, sample=10000)
+results2 <- run.jagsfile(model, inits=results1$end.state, burnin=0, 
+	sample=10000)
 
-results <- combine.mcmc(list(results1$mcmc, results2$mcmc), return.samples=5000)
+results <- combine.mcmc(list(results1$mcmc, results2$mcmc), 
+	return.samples=5000)
 
 # Analyse the results
 summary(results)

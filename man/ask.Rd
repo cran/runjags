@@ -25,7 +25,9 @@ Ignored if type is "logical" or "character"}
 which is returned as NA}
 }
 \seealso{
-   \code{\link[base]{readline}}, \code{\link[utils]{menu}}
+   \code{\link[base]{readline}}, 
+   
+   \code{\link[utils]{menu}}
 }
 
 \author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}

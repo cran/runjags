@@ -1,4 +1,4 @@
-xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, wait.interval="10 min", xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=FALSE, submitandstop=FALSE, tempdir=!submitandstop, keep.files=FALSE, show.output=TRUE, max.filesize="1GB", sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir' else 'mgrid -t $ntasks -i $indir', sub.options="", sub.command=paste(sub.app, sub.options, '$cmd', sep=' '), ...){
+xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, wait.interval="10 min", xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=TRUE, submitandstop=FALSE, tempdir=!submitandstop, keep.files=FALSE, show.output=TRUE, max.filesize="1GB", sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"' else 'mgrid -t $ntasks -i "$indir"', sub.options="", sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), ...){
 		
 	if(class(max.filesize)=="numeric" | class(max.filesize)=="integer"){
 		max.filesize <- max.filesize * 1024^3# DEFAULT IS GB
@@ -44,6 +44,15 @@ xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.
 		}
 	}
 	
+	if(class(object.list)=='character'){
+		new.list <- vector('list')
+		for(i in object.list){
+			new.list <- c(new.list, list(get(i, envir=parent.frame(2))))
+		}
+		names(new.list) <- object.list
+		object.list <- new.list
+	}
+	
 	if(class(object.list)!='list') stop('The object.list supplied must be a named list')
 	if(is.null(names(object.list)) & length(object.list) > 0) stop('The object.list supplied must be a named list')
 	
@@ -62,7 +71,7 @@ xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.
 		separatejobs <- xgrid.method=='separatejobs'
 	
 		if(!any(xgrid.method==c('simple', 'separatejobs', 'separatetasks', 'xgrid.retrieve'))) stop(paste('Unrecognised xgrid.method - "', xgrid.method, '"', sep=''))
-		if(xgrid.method=='separatetasks' & command=='xgrid -job submit -in $indir $cmd') stop('The basic xgrid command cannot be used with the separatetasks method - either install mgrid (this can be found in the "inst" folder in the runjags package source), specify a command to another script file to generate and submit a plist file, or use the simple or separatejobs method')
+		if(xgrid.method=='separatetasks' & length(grep('xgrid -job', command))>0) stop('The basic xgrid command cannot be used with the separatetasks method - either install mgrid (this can be found in the "inst" folder in the runjags package source), specify a command to another script file to generate and submit a plist file, or use the simple or separatejobs method')
 	
 		if(threads > 1 & xgrid.method=='simple') stop("The simple xgrid method is limited to a single thread")
 	
@@ -170,7 +179,7 @@ xgrid.run <- function(f=function(iteration){}, niters, object.list=list(), file.
 			for(s in 1:threads){
 				cat('#!/bin/sh
 pid=$$
-( ( (', Rpath, ' --slave --no-save -e "task <- ', s, '; path <- Sys.getenv(\'PATH\'); path <- paste(path, \':/bin:/usr/local/bin:/usr/bin\', sep=\'\'); Sys.setenv(PATH=path); load(\'Robjects.Rsave\'); load(\'Rfunction.Rsave\'); iteration <- iterations[[task]]; for(i in iteration){ temp <- \'Error\'; try(temp <- f(i)); assign(paste(\'iteration.\', i, sep=\'\'), temp)}; save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\')); filesize <- as.numeric(system(paste(\'ls -l results.\', task, \'.Rsave | awk \\\'{print \\$5}\\\'\', sep=\'\'), intern=TRUE)); if(filesize>max.filesize){ temp <- \'Maximum file size exceeded.  You could either try again using more jobs, reduce the number of objects returned by the function, or save files to a shared drive rather than returning them\'; for(i in iteration) assign(paste(\'iteration.\', i, sep=\'\'), temp); save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\'))};"; echo $? > .retstat.$pid) 2>&1 1>&3 | tee Rerror.$1.txt) 3>&1 1>&2) 2>&1 | tee Rout.$1.txt
+( ( (', Rpath, ' --slave --no-save -e "task <- ', s, '; path <- Sys.getenv(\'PATH\'); path <- paste(path, \':/bin:/usr/local/bin:/usr/bin\', sep=\'\'); Sys.setenv(PATH=path); load(\'Robjects.Rsave\', envir=.GlobalEnv); load(\'Rfunction.Rsave\', envir=.GlobalEnv); iteration <- iterations[[task]]; for(i in iteration){ temp <- \'Error\'; try(temp <- f(i)); assign(paste(\'iteration.\', i, sep=\'\'), temp)}; save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\')); filesize <- as.numeric(system(paste(\'ls -l results.\', task, \'.Rsave | awk \\\'{print \\$5}\\\'\', sep=\'\'), intern=TRUE)); if(filesize>max.filesize){ temp <- \'Maximum file size exceeded.  You could either try again using more jobs, reduce the number of objects returned by the function, or save files to a shared drive rather than returning them\'; for(i in iteration) assign(paste(\'iteration.\', i, sep=\'\'), temp); save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\'))};"; echo $? > .retstat.$pid) 2>&1 1>&3 | tee Rerror.$1.txt) 3>&1 1>&2) 2>&1 | tee Rout.$1.txt
 
 # This makes sure the process has finished before continuing:
 wait
@@ -189,9 +198,9 @@ pid=$$
 
 echo "" > Rout.', if(separatetasks) '$1.' else '1', '.txt
 echo "" > Rerror.', if(separatetasks) '$1.' else '1', '.txt
-', if(separatetasks) '( ( echo "Task "$1":" 2>&1 1>&3 | tee -a Rerror.$1.txt) 3>&1 1>&2) 2>&1 | tee -a Rout.$1.txt', '
+', if(separatetasks) '( ( echo "\\n\\nTask "$1":" 2>&1 1>&3 | tee -a Rerror.$1.txt) 3>&1 1>&2) 2>&1 | tee -a Rout.$1.txt', '
 
-( ( (', Rpath, ' --slave --no-save -e "task <- ', if(separatetasks) '$1' else '1', '; path <- Sys.getenv(\'PATH\'); path <- paste(path, \':/bin:/usr/local/bin:/usr/bin\', sep=\'\'); Sys.setenv(PATH=path); load(\'Robjects.Rsave\'); load(\'Rfunction.Rsave\'); iteration <- iterations[[task]]; for(i in iteration){ temp <- \'Error\'; try(temp <- f(i)); assign(paste(\'iteration.\', i, sep=\'\'), temp)}; save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\')); filesize <- as.numeric(system(paste(\'ls -l results.\', task, \'.Rsave | awk \\\'{print \\$5}\\\'\', sep=\'\'), intern=TRUE)); if(filesize>max.filesize){ temp <- \'Maximum file size per task exceeded.  You could either try again using multiple jobs, reduce the number of objects returned by the function, or save files to a shared drive rather than returning them\'; for(i in iteration) assign(paste(\'iteration.\', i, sep=\'\'), temp); save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\'))};"; echo $? > .retstat.$pid) 2>&1 1>&3 | tee -a Rerror.', if(separatetasks) '$1' else '1', '.txt) 3>&1 1>&2) 2>&1 | tee -a Rout.', if(separatetasks) '$1' else '1', '.txt
+( ( (', Rpath, ' --slave --no-save -e "task <- ', if(separatetasks) '$1' else '1', '; path <- Sys.getenv(\'PATH\'); path <- paste(path, \':/bin:/usr/local/bin:/usr/bin\', sep=\'\'); Sys.setenv(PATH=path); load(\'Robjects.Rsave\', envir=.GlobalEnv); load(\'Rfunction.Rsave\', envir=.GlobalEnv); iteration <- iterations[[task]]; for(i in iteration){ temp <- \'Error\'; try(temp <- f(i)); assign(paste(\'iteration.\', i, sep=\'\'), temp)}; save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\')); filesize <- as.numeric(system(paste(\'ls -l results.\', task, \'.Rsave | awk \\\'{print \\$5}\\\'\', sep=\'\'), intern=TRUE)); if(filesize>max.filesize){ temp <- \'Maximum file size per task exceeded.  You could either try again using multiple jobs, reduce the number of objects returned by the function, or save files to a shared drive rather than returning them\'; for(i in iteration) assign(paste(\'iteration.\', i, sep=\'\'), temp); save(list=paste(\'iteration.\', iteration, sep=\'\'), file=paste(\'results.\', task, \'.Rsave\', sep=\'\'))};"; echo $? > .retstat.$pid) 2>&1 1>&3 | tee -a Rerror.', if(separatetasks) '$1' else '1', '.txt) 3>&1 1>&2) 2>&1 | tee -a Rout.', if(separatetasks) '$1' else '1', '.txt
 
 ', if(separatetasks) '( ( echo "" 2>&1 1>&3 | tee -a Rerror.$1.txt) 3>&1 1>&2) 2>&1 | tee -a Rout.$1.txt', '
 
@@ -227,15 +236,18 @@ indir="', temp.directory, '"
 			#}
 
 				Sys.chmod('starter.sh')
-				success <- system('./starter.sh 2>&1 | tee starteroutput.txt', intern=FALSE)
+				success <- system('( ./starter.sh 2>&3 | tee .starterout.txt) 3>&2 | tee starteroutput.txt', intern=FALSE)
 
-				if(file.exists('jobid.txt')) tjobnum <- paste(readLines('jobid.txt'), collapse='\n') else tjobnum <- paste(readLines('starteroutput.txt'), collapse='\n')
+				if(file.exists('jobid.txt')) tjobnum <- paste(readLines('jobid.txt'), collapse='\n') else tjobnum <- paste(readLines('.starterout.txt'), collapse='\n')
 
 				jobnum[s] <- gsub('[^[:digit:]]', '', paste(tjobnum, collapse=''))
 
 				xgrid.waiting <- TRUE
 				Sys.sleep(2)
 				xgrid.waiting <- FALSE
+				
+				if(jobnum[s]=='' | as.numeric(jobnum[s])>10^6) stop(paste("There was an error submitting job number ", s, " to Xgrid - no Job ID was returned by mgrid/xgrid", sep=''))
+				
 				cat("Job ", s, " of ", threads, " submitted to xgrid\n", sep="")
 
 			}
@@ -254,7 +266,7 @@ indir="', temp.directory, '"
 
 			Sys.chmod('starter.sh')
 
-			success <- system('./starter.sh 2>&1 | tee starteroutput.txt', intern=FALSE)
+			success <- system('( ./starter.sh 2>&3 | tee .starterout.txt) 3>&2 | tee starteroutput.txt', intern=FALSE)
 
 			if(file.exists('jobid.txt')) jobnum <- paste(readLines('jobid.txt'), collapse='\n') else jobnum <- paste(readLines('starteroutput.txt'), collapse='\n')
 
@@ -263,6 +275,8 @@ indir="', temp.directory, '"
 			xgrid.waiting <- TRUE
 			Sys.sleep(2)
 			xgrid.waiting <- FALSE
+			
+			if(jobnum=='' | as.numeric(jobnum)>10^6) stop("There was an error submitting your job to Xgrid - no Job ID was returned")
 			cat('Your job (name: "', jobname, '") has been succesfully uploaded to xgrid\n', sep='')
 
 
@@ -271,13 +285,15 @@ indir="', temp.directory, '"
 	}
 	
 	if(submitandstop){
-		cat(jobnum, file='jobid.txt', sep='\n') 
-		save(list=ls(), file='workingobj.Rsave')
+		cat(jobnum, file='jobid.txt', sep='\n')
+		savelist <- ls()
+		savelist <- savelist[savelist!='keep.files' & savelist!='cleanup' & savelist!='show.output']
+		save(list=savelist, file='workingobj.Rsave')
 		gottoend <- TRUE		
 		return(list(jobname=jobname, jobid=jobnum))
 	}
 	
-	success <- xgrid.retrieve(jobnum, wait=(xgrid.method=='xgrid.run'), wait.interval=wait.interval, silent=!show.output, cleanup=cleanup, directory=temp.directory)
+	xgridoutput <- xgrid.retrieve(jobnum, wait=(xgrid.method=='xgrid.run'), wait.interval=wait.interval, silent=!show.output, cleanup=cleanup, directory=temp.directory)
 	
 	gottoend <- TRUE
 		
@@ -308,20 +324,21 @@ indir="', temp.directory, '"
 			results[[paste('iteration.', i, sep='')]] <- get(paste('iteration.', i, sep=''))
 		}
 	}
-	
+	# Don't think tacking this onto the end of the return is really appropriate...
+	#results <- c(results, list(output=paste(xgridoutput,collapse='\n')))
 	return(results)
 	
 }
 
-xgrid.submit <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', cleanup=FALSE, keep.files=FALSE, show.output=TRUE, max.filesize='1GB', sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in $indir' else 'mgrid -t $ntasks -i $indir', sub.options="", sub.command=paste(sub.app, sub.options, '$cmd', sep=' '),  ...){
+xgrid.submit <- function(f=function(iteration){}, niters, object.list=list(), file.list=character(0), threads=min(niters,100), jobname=NA, xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 'separatejobs' else 'separatetasks',  Rpath='/usr/bin/R', show.output=TRUE, max.filesize='1GB', sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"' else 'mgrid -t $ntasks -i "$indir"', sub.options="", sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '),  ...){
 
-	return(xgrid.run(f=f, niters=niters, object.list=object.list, file.list=file.list, threads=threads, jobname=jobname, sub.command=sub.command, xgrid.method=xgrid.method, Rpath=Rpath, cleanup=cleanup, tempdir=FALSE, keep.files=keep.files, submitandstop=TRUE, show.output=show.output, max.filesize=max.filesize, ...))
+	return(xgrid.run(f=f, niters=niters, object.list=object.list, file.list=file.list, threads=threads, jobname=jobname, sub.command=sub.command, xgrid.method=xgrid.method, Rpath=Rpath, tempdir=FALSE, submitandstop=TRUE, show.output=show.output, max.filesize=max.filesize, ...))
 }
 
 
-xgrid.results <- function(jobname){
+xgrid.results <- function(jobname, cleanup=TRUE, keep.files=FALSE, show.output=TRUE){
 	
 	if(is.list(jobname)) jobname <- jobname$jobname
-	return(xgrid.run(xgrid.method='xgrid.retrieve', jobname=jobname))
+	return(xgrid.run(xgrid.method='xgrid.retrieve', jobname=jobname, cleanup=cleanup, keep.files=keep.files, show.output=show.output))
 
 }
