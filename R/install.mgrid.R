@@ -4,12 +4,12 @@ if(.Platform$OS.type=='windows'){
 	stop('xgrid functions are only available on machines running Mac OS X and with access to an Xgrid controller')
 }
 
-xgridavail <- system('xgrid 2>&1', intern=TRUE)
+xgridavail <- suppressWarnings(system('xgrid 2>&1', intern=TRUE))
 if(length(xgridavail)==1){
 	stop('xgrid is not available on this machine.  mgrid was not installed')
 }
 
-versionstring <- try(system('mgrid -? 2>&1', intern=TRUE)[2])
+versionstring <- suppressWarnings(try(system('mgrid -? 2>&1', intern=TRUE)[2]))
 if(class(versionstring)=='try-error'){
 	oldversion <- '1.x'
 }else{
@@ -24,30 +24,30 @@ if(class(versionstring)=='try-error'){
 	}
 }
 
-sudoa <- length(grep('-A', system('sudo -? 2>&1', intern=TRUE)))>0
+sudoa <- length(grep('-A', suppressWarnings(system('sudo -? 2>&1', intern=TRUE))))>0
 
 if(.Platform$GUI=='AQUA'){
-	cat("An administrator's password is required to ensure the mgrid script is executable and to copy it to /usr/local/bin/ where it can be accessed.  Since you are currently using the GUI version of R with no tty interface, you will have to either enter your password in clear text below or type 'exit' and re-run this function from the command line version of R.  Alternatively, if you would prefer to install mgrid yourself type 'exit' and then copy the script at 'runjags/inst/xgrid/mgrid.sh' to '/usr/local/bin/mgrid', ensuring that the file is executable.  Otherwise, please enter your password below.\n")
+	swcat("An administrator's password is required to ensure the mgrid script is executable and to copy it to /usr/local/bin/ where it can be accessed.  Since you are currently using the GUI version of R with no tty interface, you will have to either enter your password in clear text below or type 'exit' and re-run this function from the command line version of R.  Alternatively, if you would prefer to install mgrid yourself type 'exit' and then copy the script at 'runjags/inst/xgrid/mgrid.sh' to '/usr/local/bin/mgrid', ensuring that the file is executable.  Otherwise, please enter your password below.\n")
 	pass <- readline('sudo (super-user do) password:  ')
 	pass <- paste(pass, '\n', sep='')
 	if(tolower(pass)=='exit') stop('The process was aborted by the user')
-	if(sudoa) out1 <- system(paste('sudo -S chmod 755 ', libpath, '/runjags/xgrid/mgrid.sh', sep=''), input=pass, intern=TRUE) else out1 <- system(paste('sudo chmod 755 ', libpath, '/runjags/xgrid/mgrid.sh', sep=''), input=pass, intern=TRUE)
-	versionstring <- system(paste(libpath, '/runjags/xgrid/mgrid.sh -? 2>&1', sep=""), intern=TRUE)[2]
+	if(sudoa) out1 <- suppressWarnings(system(paste('sudo -S chmod 755 ', libpath, '/runjags/xgrid/mgrid.sh', sep=''), input=pass, intern=TRUE)) else out1 <- suppressWarnings(system(paste('sudo chmod 755 ', libpath, '/runjags/xgrid/mgrid.sh', sep=''), input=pass, intern=TRUE))
+	versionstring <- suppressWarnings(system(paste(libpath, '/runjags/xgrid/mgrid.sh -? 2>&1', sep=""), intern=TRUE)[2])
 }else{
-	cat("An administrator's password is required to ensure the mgrid script is executable
+	swcat("An administrator's password is required to ensure the mgrid script is executable
 and to copy it to /usr/local/bin/ where it can be accessed.  If you would
 prefer to install mgrid yourself type control+c and then copy the script at
 'runjags/inst/xgrid/mgrid.sh' to '/usr/local/bin/mgrid', ensuring that the
 file is executable.  Otherwise, please enter your password at the sudo prompt.\n")
-	versionstring <- system(paste('sudo chmod 755 ', libpath, '/runjags/xgrid/mgrid.sh; ', libpath, '/runjags/xgrid/mgrid.sh -? 2>&1', sep=""), intern=TRUE)[2]
+	versionstring <- suppressWarnings(system(paste('sudo chmod 755 ', libpath, '/runjags/xgrid/mgrid.sh; ', libpath, '/runjags/xgrid/mgrid.sh -? 2>&1', sep=""), intern=TRUE)[2])
 }
 
-cat('\n')
+swcat('\n')
 newversion <- (strsplit(gsub('mgrid -- version ', '', versionstring), ',')[[1]][1])
 
 if(ask){
-	if(oldversion==0) cat('mgrid is not currently installed\n') else cat('Version ', oldversion, ' of mgrid is currently installed\n', sep='')
-	cat('Version ', newversion, ' available at ', libpath, '/runjags/xgrid/mgrid.sh\n', sep='')
+	if(oldversion==0) swcat('mgrid is not currently installed\n') else swcat('Version ', oldversion, ' of mgrid is currently installed\n', sep='')
+	swcat('Version ', newversion, ' available at ', libpath, '/runjags/xgrid/mgrid.sh\n', sep='')
 	instok <- ask(prompt=paste('Install version ', newversion, ' to "/usr/local/bin/mgrid" ?\n', sep=''), type='logical', na.allow=FALSE)
 }else{
 	instok <- TRUE
@@ -55,14 +55,14 @@ if(ask){
 
 if(instok){
 	if(.Platform$GUI=='AQUA'){
-		if(sudoa) out <- system(paste('sudo -S cp ', libpath, '/runjags/xgrid/mgrid.sh /usr/local/bin/mgrid', sep=""), input=pass, intern=TRUE) else out <- system(paste('sudo cp ', libpath, '/runjags/xgrid/mgrid.sh /usr/local/bin/mgrid', sep=""), input=pass, intern=TRUE)
+		if(sudoa) out <- suppressWarnings(system(paste('sudo -S cp ', libpath, '/runjags/xgrid/mgrid.sh /usr/local/bin/mgrid', sep=""), input=pass, intern=TRUE)) else out <- suppressWarnings(system(paste('sudo cp ', libpath, '/runjags/xgrid/mgrid.sh /usr/local/bin/mgrid', sep=""), input=pass, intern=TRUE))
 	}else{
-		out <- system(paste('sudo cp ', libpath, '/runjags/xgrid/mgrid.sh /usr/local/bin/mgrid', sep=""), intern=TRUE)
+		out <- suppressWarnings(system(paste('sudo cp ', libpath, '/runjags/xgrid/mgrid.sh /usr/local/bin/mgrid', sep=""), intern=TRUE))
 	}
-	cat('mgrid version ', newversion, ' installed successfully.  Type "mgrid" from the command line\nor "system(\'mgrid\')" from R to see the manual page\n', sep='')
+	swcat('mgrid version ', newversion, ' installed successfully.  Type "mgrid" from the command line\nor "system(\'mgrid\')" from R to see the manual page\n', sep='')
 	invisible(paste('Version ', newversion, ' installed', sep=''))
 }else{
-	cat('Installation aborted\n')
+	swcat('Installation aborted\n')
 	invisible('Installation aborted')
 }
 

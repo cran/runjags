@@ -21,19 +21,18 @@ autorun.jagsfile(path=stop("No path or model string supplied"),
 \item{path}{either a relative or absolute path to a textfile (including
 the file extension) containing a model in the JAGS language and possibly
 monitored variable names, data and/or initial values, or a character
-string of the same.  A character vector of paths or strings is also
-acceptable, in which case the strings or contents of the files will be
-combined.  No default.  The model must be started with the string
+string of the same.  May also be a vector of paths to different text
+files, possibly separately containing the model, data and intitial
+values.  No default.  The model must be started with the string
 'model\{' and ended with '\}' on new lines.  Data must be similarly
 started with 'data\{', monitored variables with 'monitor\{', and initial
 values as 'inits\{', and all ended with '\}'.  If multiple models are
-found, all but the first one are ignored with a warning.  Multiple data
+found, all but the first one are ignored with a warning. Multiple data
 blocks and monitor blocks are combined, multiple inits blocks are used
 for different chains.  The model block may also contain automatically
-generated data and initial values variables using '#data# variable'
-and '#inits# variable', and more monitored variables using
-'#monitor# variable'.  See \code{\link{read.winbugs}} for more
-information.}
+generated data and initial values variables using '#data# variable' and
+'#inits# variable', and more monitored variables using '#monitor#
+variable'.  See \code{\link{read.winbugs}} for more information.}
 
 \item{datalist}{an optional named list containing variables used as
 data, or alternatively a function (with no arguments) that returns a
@@ -103,7 +102,7 @@ autorun.jags) if FALSE.}
    \code{\link{read.winbugs}}
 }
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 # run a model to calculate the intercept and slope of the expression 
@@ -120,7 +119,7 @@ true.y[i] <- (m * X[i]) + c; #data# X
 m ~ dunif(-1000,1000); #inits# m
 c ~ dunif(-1000,1000);
 precision ~ dexp(1);
-#monitor# m, c, precision
+#monitor# m, c, precision, dic
 }"
 
 # Simulate the data

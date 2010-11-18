@@ -35,8 +35,8 @@ autorun.jags(model=stop("No model supplied"),
    factories=c(""), thin = 1, monitor.deviance = FALSE, 
    monitor.pd = FALSE, monitor.pd.i = FALSE,
    monitor.popt = FALSE, keep.jags.files = FALSE, tempdir=TRUE, 
-   method=if(.Platform$OS.type=='unix' & 
-   .Platform$GUI!="AQUA") 'interruptible' else 'simple')
+   method=if(.Platform$OS.type=='unix' & .Platform$GUI!="AQUA" &
+   Sys.info()['user']!='nobody') 'interruptible' else 'simple')
 }
 \arguments{
 
@@ -45,7 +45,9 @@ default.}
 
 \item{monitor}{a character vector of the names of variables to monitor. 
 For all models, specifying 'deviance' as a monitored variable will
-calculate the model deviance.  No default.}
+calculate the model deviance, and 'dic' will calculate the Deviance
+Information Criterion (implies monitor.deviance etc, and requires more 
+than 1 chain.  No default.}
 
 \item{data}{either a named list or a character string in the R dump
 format containing the data.  If left as NA, the model will be run
@@ -122,14 +124,15 @@ calculating summary statistics and returning the chains.  Thinning very
 long chains allows summary statistics to be calculated more quickly.  If
 TRUE, the chain is thinned to as close to a minimum of startsample
 iterations as possible (i.e. using a thinning interval of
-floor(chain.length/thin.sample) since the value must be an integer).  If
-FALSE the chains are not thinned.  A positive integer can also be
-specified as the desired chain length after thinning; the chains will be
-thinned to as close to this minimum value as possible.  Default TRUE
-(thinned chains of length startsample returned).  This option does NOT
-carry out thinning in JAGS, therefore R must have enough available
-memory to hold the chains BEFORE thinning.  To avoid this problem use
-the 'thin' option instead.}
+floor(chain.length/thin.sample) since the value must be an integer) and
+any excess iterations discarded to ensure the chain length matches
+thin.sample.  If FALSE the chains are not thinned.  A positive integer
+can also be specified as the desired chain length after thinning; the
+chains will be thinned to as close to this minimum value as possible. 
+Default TRUE (thinned chains of length startsample returned).  This
+option does NOT carry out thinning in JAGS, therefore R must have enough
+available memory to hold the chains BEFORE thinning.  To avoid this
+problem use the 'thin' option instead.}
 
 \item{jags}{the system call or path for activating JAGS.  Default calls
 findjags() to attempt to locate JAGS on your system.}
@@ -222,15 +225,26 @@ removed when the function exits for any reason.  Default TRUE.}
 process (the default behaviour for runjags < 0.9.6), 'interruptible'
 allows the JAGS process to be terminated immediately using the interrupt
 signal 'control-c' (terminal/console versions of R only), and 'parallel'
-runs each chain as a separate process on a separate core (this will
-speed up execution of models with multiple tasks at the expense of using
-more RAM, but cannot be used with monitor.pd, monitor.pd.i or
-monitor.popt).  Only the 'simple' method is available for Windows.  On
-machines running Mac OS X and with access to an Apple Xgrid cluster, the
-method may be a list with an element 'xgrid.method="simple"' (see
-\code{\link{xgrid.run.jags}} for more information).  Default
-'interruptible' on terminal/console versions of R, or 'simple' on GUI
-versions of R.}
+runs each chain as a separate process on a separate core.  Note that the
+latter uses separate JAGS instances to speed up execution of models with
+multiple chains (at the expense of using more RAM), but cannot be used
+with monitor.pd, monitor.pd.i or monitor.popt.  Each chain is specified
+using a different random number generator (.RNG.name) for up to 4 chains
+(the number of different RNG available in JAGS), unless .RNG.name is
+specified in the initial values.  Because each chain uses a separate
+JAGS instance, JAGS has no way of ensuring independence between multiple
+chains using the same random number generator (as would normally be done
+when calling a single JAGS instance with multiple chains).  Using more
+than 4 chains with the 'parallel' method without the use of new RNG
+factories may therefore produce dependence between chains, and is not
+recommended (a warning is given if trying to do so).  Only the 'simple'
+method is available for Windows.  On machines running Mac OS X and with
+access to an Apple Xgrid cluster, the method may be a list with an
+element 'xgrid.method="simple"' (see \code{\link{xgrid.run.jags}} for
+more information).  Default 'interruptible' on terminal/console versions
+of R, or 'simple' on GUI versions of R or when running over xgrid
+(methods other than 'simple' require the use of 'ps' which is not
+available when running jobs as 'nobody' via xgrid).}
 
 }
 
@@ -238,9 +252,11 @@ versions of R.}
 
 \value{A list including the following elements:
 
-\item{mcmc}{an MCMC object representing the model output for all
-chain(s).  Renamed pilot.mcmc if the simulation is aborted before
-convergence or before the required sampling length is achieved}
+\item{mcmc}{an MCMC list of MCMC objects representing the chains.  Each
+MCMC object represents the value of each monitored variable (including
+the deviance, if specified) for that chain at each iteration.  Renamed
+pilot.mcmc if the simulation is aborted before convergence or before the
+required sampling length is achieved}
 
 \item{end.state}{the end state of the last simulation extension
 performed.  Can be used as initial values to extend the simulation
@@ -262,6 +278,9 @@ length)}
 the combined chains.  Renamed pilot.summary if pilot.only==TRUE or if
 the simulation is aborted before the required sampling length is
 achieved}
+
+\item{HPD}{the 95\% highest posterior density and median value of each
+monitored variable from the combined chains.}
 
 \item{psrf}{the Gelman Rubin statistic for the monitored variables
 (similar to output of gelman.diag())}
@@ -294,6 +313,27 @@ file), either change the class of each object using for(i in
 combine using the c.trellis method in the latticeExtra package, or
 simply re-generate the plots using the raw mcmc output.    Not produced
 if plots==FALSE.}
+
+\item{pd}{the total effective number of parameters in the model
+calculated using the DIC module for JAGS.  Returned only if
+monitor.pd=TRUE is supplied to the function (or if 'dic' is specified as
+a monitored variable).}
+
+\item{pd.i}{the contribution of each parameter towards the total
+effective number of parameters calculated using the DIC module for JAGS.
+Returned only if monitor.pd.i=TRUE is supplied to the function.}
+
+\item{popt}{the optimism of the expected deviance calculated using the
+DIC module for JAGS.  Returned only if monitor.popt=TRUE is supplied to
+the function (or if 'dic' is specified as a monitored variable).}
+
+\item{dic}{The Deviance Information Criterion (DIC) model fit
+statistics.  Returned only if 'dic' is specified as a monitored
+variable.  The default print method displays the DIC calculated using
+both pd (dic) and popt (ped), using the deviance from the combined
+chains and for each individual chain.  Separate values for the mean pd,
+sum popt and mean deviance is also listed.  For more information on the
+types of DIC calculated, see the JAGS manual. }
 
 }
 
@@ -334,7 +374,7 @@ sample size) or monitor less variables.
    \code{\link[coda]{autocorr.diag}}
 }
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 # run a model to calculate the intercept and slope of the expression 

@@ -63,7 +63,7 @@ timestring <- function(time1, time2=NA, units=NA, show.units=TRUE){
 				return(paste(years, " years", sep=""))
 			}
 		}
-		cat("Error:  Unrecognised unit type '", units, "'\n", sep="")
+		swcat("Error:  Unrecognised unit type '", units, "'\n", sep="")
 	}
 		
 	if(secs < 60){

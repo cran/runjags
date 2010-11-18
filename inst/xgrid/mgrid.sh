@@ -3,7 +3,7 @@
 ##############################################################################################################
 #                                                                                                            #
 #     mgrid                                                                                                  #
-#     Copyright 2010 Matthew Denwood - matthewdenwood@mac.com - Version 3.01 - June 2010                     #
+#     Copyright 2010 Matthew Denwood - matthewdenwood@mac.com - Version 3.02 - July 2010                     #
 #                                                                                                            #
 #     This script is a replacement for xgrid -job submit that provides some extra features, including        #
 #     support for jobs with multiple tasks, use of environmental variables and easier targeting of the job   #
@@ -133,9 +133,9 @@ else
 fi
 
 if [ $uog == 1 ]; then
-	subid='mgrid_UoG_v3.01'
+	subid='mgrid_UoG_v3.02'
 else
-	subid='mgrid_v3.01'
+	subid='mgrid_v3.02'
 fi
 
 
@@ -253,7 +253,7 @@ fi
 #done
 
 if [ $printerror == 1 ]; then
-	printf "\nmgrid -- version 3.01, June 2010\nby Matthew Denwood (matthewdenwood@mac.com)\n\nUsage:\nmgrid [-s stdin] [-i indir] [-d jobid] [-e email-address] \n      [-a art-path | -z art-path] [-b batchname] [-c arch] \n      [-v \"env_variable=env_value [...]\" ] [-q] [-h node_name] \n      [-f] [-r ram_required_(MB)] [-n name] [-t number_of_tasks] \n      cmd [arg1 [...]] ['\$task']]\nmgrid -l [-m] [-u]\nmgrid -?\n(Use 'mgrid' with no arguments to see the manual page)\n\n" >&2
+	printf "\nmgrid -- version 3.02, July 2010\nby Matthew Denwood (matthewdenwood@mac.com)\n\nUsage:\nmgrid [-s stdin] [-i indir] [-d jobid] [-e email-address] \n      [-a art-path | -z art-path] [-b batchname] [-c arch] \n      [-v \"env_variable=env_value [...]\" ] [-q] [-h node_name] \n      [-f] [-r ram_required_(MB)] [-n name] [-t number_of_tasks] \n      cmd [arg1 [...]] ['\$task']]\nmgrid -l [-m] [-u]\nmgrid -?\n(Use 'mgrid' with no arguments to see the manual page)\n\n" >&2
 	exit $EX_USAGE	
 fi
 
@@ -277,7 +277,7 @@ if [ $printhelp == 1 ]; then
 
 
 	printf "
-`embold "mgrid -- version 3.01, June 2010"`
+`embold "mgrid -- version 3.02, July 2010"`
 by Matthew Denwood (matthewdenwood@mac.com)
 
 `embold SYNOPSIS`
@@ -552,16 +552,16 @@ if [ $list == 1 ]; then
 					fi
 					
 					grepstring=`cat $tfile1 | grep "percentDone"`
-					percent=`echo $grepstring | awk '{print $3}' | awk '{print int(($1*10)+0.5)/10}'`
+					percent=`echo $grepstring | awk '{print $3}' | sed 's/;//g' | sed 's/"//g' | awk '{print int(($1*10)+0.5)/10}'`
 					
 					grepstring=`cat $tfile1 | grep "dateSubmitted"`
-					subon=`echo $grepstring | awk '{print $3 " at " $4}'`
+					subon=`echo $grepstring | sed 's/;//g' | sed 's/"//g' | awk '{print $3 " at " $4}'`
 
 					grepstring=`cat $tfile1 | grep "dateStarted"`
-					startedon=`echo $grepstring | awk '{print $3 " at " $4}'`
+					startedon=`echo $grepstring | sed 's/;//g' | sed 's/"//g' | awk '{print $3 " at " $4}'`
 
 					grepstring=`cat $tfile1 | grep "dateStopped"`
-					stoppedon=`echo $grepstring | awk '{print $3 " at " $4}'`
+					stoppedon=`echo $grepstring | sed 's/;//g' | sed 's/"//g' | awk '{print $3 " at " $4}'`
 					
 					grepstring=`cat $tfile1 | grep "name"`
 					jobname=`echo $grepstring | awk '{print $3}' | sed -e "s/[;\"]//g"`

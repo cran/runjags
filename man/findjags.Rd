@@ -30,7 +30,7 @@ Files/JAGS/JAGS-1.0.0/bin/jags-terminal.exe"
    \code{\link{run.jags}}
 }
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 

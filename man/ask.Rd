@@ -30,7 +30,7 @@ which is returned as NA}
    \code{\link[utils]{menu}}
 }
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 #  Ask the user if they want to proceed

@@ -1,5 +1,4 @@
-print.gelman.with.target <- function (x, digits = 3, ...) 
-{
+print.gelman.with.target <- function(x, digits = 3, ...){
     cat("Potential scale reduction factors:\n\n")
     print.default(x$psrf, digits = digits, ...)
     if (!is.null(x$mpsrf)) {
@@ -12,13 +11,34 @@ print.gelman.with.target <- function (x, digits = 3, ...)
     cat("\n")
 }
 
+print.dic.stats <- function(x, digits=3, ...){
+	string <- paste("Model fit statistics\n\nDeviance information criterion [mean(deviance)+mean(pd)]:  ", round(x$dic, digits=digits), "\n", sep="")
+	string <- paste(string, "(Individual chains: ", paste(round(x$dic.chains, digits=digits), collapse=", "), ")\n\n", sep='')
+	string <- paste(string, "Penalized Expected Deviance [mean(deviance)+sum(popt)]):  ", round(x$ped, digits=digits), "\n", sep="")
+	string <- paste(string, "(Individual chains: ", paste(round(x$ped.chains, digits=digits), collapse=", "), ")\n", sep='')
+	
+	swcat(string)
+}
 
-print.plotindpages <- function (x, ...) 
-{
+print.plotindpages <- function(x, ...){
 	if(!exists("dev.new")) dev.new <- x11
 	dev.new()
 	class(x) <- "trellis"
 	print(x, ...)
+}
+
+
+swcat <- function(...){
+	
+	pargs <- list(...)
+	pasted <- do.call(paste, pargs)
+	pasted <- gsub('\r', '\n', pasted)
+	
+	# White space is destroyed by strwrap so preserve \n by splitting on them (and append a ' ' [which is removed by strwrap anyway] to preserve any trailing \n)
+	pasted <- unlist(strsplit(paste(pasted,' ',sep=''), '\n'))
+	pasted <- strwrap(pasted)
+	cat(paste(pasted, collapse='\n'))
+	
 }
 
 
@@ -254,14 +274,14 @@ for(i in 1:nvar(mcmc)){
 	if(all(values==values[1])){
 		if(!anydone){
 			anydone <- TRUE
-			if(warn==TRUE) cat("\n")
+			if(warn==TRUE) swcat("\n")
 		}
 		usevec[i] <- NA
-		if(warn==TRUE) cat(paste("*WARNING* The monitored variable '", parnames[i], "' appears to be non-stochastic.  It will not be included in the convergence diagnostic\n", sep=""))
+		if(warn==TRUE) swcat(paste("*WARNING* The monitored variable '", parnames[i], "' appears to be non-stochastic.  It will not be included in the convergence diagnostic\n", sep=""))
 		if(warn=="warning") warning(paste("The monitored variable '", parnames[i], "' appears to be non-stochastic.  It will not be included in the convergence diagnostic", sep=""))
 	}}
 }
-if(anydone & warn==TRUE) cat("\n")
+if(anydone & warn==TRUE) swcat("\n")
 if(anydone){
 	new.mcmc <- vector('list', length=nchain(mcmc))
 
@@ -278,7 +298,7 @@ if(anydone){
 success <- try({
 if(normalise){
 	
-	use <- sample(1:niter(mcmc)*nvar(mcmc), size=1000, replace=FALSE)
+	if(niter(mcmc)>1000) use <- sample(1:niter(mcmc), size=1000, replace=FALSE) else use <- 1:niter(mcmc)
 	shap.res <- apply(combine.mcmc(mcmc, collapse.chains=TRUE), 2, function(x){
 		if(all(x==x[1])){
 			return(1)
@@ -418,7 +438,7 @@ safe.gelman.diag <- function(x, warn=TRUE,...){
 			stop("An error occured while calculating the Gelman-Rubin statistic")
 		}
 		
-		if(warn) cat("Note:  Unable to calculate the multivariate psrf due to an error calculating the Gelman-Rubin statistic\n")
+		if(warn) swcat("Note:  Unable to calculate the multivariate psrf due to an error calculating the Gelman-Rubin statistic\n")
 		
 		
 		
@@ -433,7 +453,7 @@ safe.gelman.diag <- function(x, warn=TRUE,...){
 }
 
 
-xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directory, jags=FALSE){
+xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directory, partialretrieve, jags=FALSE){
 	
 	if(length(jobnum) > 1) separatejobs <- TRUE else separatejobs <- FALSE
 	nsims <- length(jobnum)
@@ -446,7 +466,7 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 			statusout <- system(paste('xgrid -job attributes -id ', jobnum[s], sep=''), intern=TRUE)
 			if(paste(statusout, collapse='')=="{    error = InvalidJobIdentifier;}"){
 				if(wait){
-					cat("Error:  One of the job ids was not found on xgrid.  This can sometimes occur when a job is being initialised - waiting to try again in one minute...\n")
+					swcat("Error:  One of the job ids was not found on xgrid.  This can sometimes occur when a job is being initialised - waiting to try again in one minute...\n")
 					flush.console()
 					Sys.sleep(60)
 					statusout <- system(paste('xgrid -job attributes -id ', jobnum, sep=''), intern=TRUE)
@@ -460,20 +480,20 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 			if(any(status[s]==c('Finished', 'Canceled', 'Failed'))) done[s] <- TRUE
 		}
 		
-		if(!wait & !all(done)){
+		if(!wait & !all(done) & !partialretrieve){
 			if(!silent){
-				cat('The job outputs (if any) are shown below:\n')
+				swcat('The job outputs (if any) are shown below:\n')
 				for(s in 1:nsims){
 					system(paste('xgrid -job results -id ', jobnum[s], sep=''))
-					cat('\n')
+					swcat('\n')
 				}
-				cat('Jobs not finished.  Statuses are "', paste(status, collapse=', '), '"\n', sep='')
+				swcat('Jobs not finished.  Statuses are "', paste(status, collapse=', '), '"\n', sep='')
 			}
 			stop(paste('Jobs not finished.  Statuses are "', paste(status, collapse=', '), '"', sep=''))
 		}
 		
-		if(!all(done)){
-		cat('Job statuses at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' were "', paste(status, collapse=', '), '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
+		if(wait & !all(done)){
+		swcat('Job statuses at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' were "', paste(status, collapse=', '), '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
 
 		repeat{
 			assign('xgrid.waiting', TRUE, env=parent.frame())
@@ -489,24 +509,24 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 			}
 			
 			if(all(done)) break
-			cat('Job statuses at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' were "', paste(status, collapse=', '), '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
+			swcat('Job statuses at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' were "', paste(status, collapse=', '), '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
 		}
 		}
 
 		if(all(status=='Finished')){
-			cat('The xgrid jobs have finished\n')
+			swcat('The xgrid jobs have finished\n')
 		}else{
-			cat('The xgrid jobs are showing the statuses "', paste(status, collapse=', '), '"\n', sep="")
+			swcat('The xgrid jobs are showing the statuses "', paste(status, collapse=', '), '"\n', sep="")
 			silent <- FALSE
 		}
 		
 		xgridoutput <- vector('list', length=nsims)
 		for(s in 1:nsims){
 			xgridoutput[[s]] <- c(paste('\n', if(jags) 'Chain' else 'Task', ' ', s, ':', sep=''), system(paste('xgrid -job results -id ', jobnum[s], ' -out "', directory, if(jags) '/sim.', if(jags) s, '"', sep=''), intern=TRUE))
-			if(length(xgridoutput[[s]])==0) stop(paste("The job produced no output for chain ", s, "; ensure that the jagspath supplied is accurate", sep=''))
+			if(length(xgridoutput[[s]])==0 & jags) stop(paste("The job produced no output for chain ", s, "; ensure that the jagspath supplied is accurate", sep=''))
 		}
 
-		cat("Job was successfully retreived from xgrid\n")
+		swcat("Job was successfully retreived from xgrid\n")
 		if(!silent)	cat('\nThe xgrid output is displayed below:\n', unlist(xgridoutput), sep='\n')
 		if(cleanup){
 			for(s in 1:nsims){
@@ -520,7 +540,7 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		statusout <- system(paste('xgrid -job attributes -id ', jobnum, sep=''), intern=TRUE)
 		if(paste(statusout, collapse='')=="{    error = InvalidJobIdentifier;}"){
 			if(wait){
-				cat("Error:  The job id was not found on xgrid.  This can sometimes occur when a job is being initialised - waiting to try again in one minute...\n")
+				swcat("Error:  The job id was not found on xgrid.  This can sometimes occur when a job is being initialised - waiting to try again in one minute...\n")
 				flush.console()
 				Sys.sleep(60)
 				statusout <- system(paste('xgrid -job attributes -id ', jobnum, sep=''), intern=TRUE)
@@ -532,17 +552,17 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		status <- statusout[grep('jobStatus', statusout)]
 		status <- gsub('[[:space:]]', '', gsub(';', '', gsub('jobStatus = ', '', status)))
 		
-		if(!wait & !status=='Finished'){
+		if(!wait & !status=='Finished' & !partialretrieve){
 			if(!silent){
-				cat('The job output (if any) is shown below:\n')
+				swcat('The job output (if any) is shown below:\n')
 				system(paste('xgrid -job results -id ', jobnum, sep=''))
-				cat('\nJob not finished.  Status is "', status, '"\n', sep='')
+				swcat('\nJob not finished.  Status is "', status, '"\n', sep='')
 			}
 			stop(paste('Job not finished.  Status is "', status, '"', sep=''))
 		}
 		
-		if(!any(status==c('Finished', 'Canceled', 'Failed'))){
-		cat('Job status at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' was "', status, '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
+		if(!any(status==c('Finished', 'Canceled', 'Failed')) & wait){
+		swcat('Job status at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' was "', status, '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
 		
 		repeat{
 			assign('xgrid.waiting', TRUE, env=parent.frame())
@@ -555,21 +575,22 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 			status <- gsub('[[:space:]]', '', gsub(';', '', gsub('jobStatus = ', '', status)))
 		
 			if(any(status==c('Finished', 'Canceled', 'Failed'))) break
-			cat('Job status at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' was "', status, '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
+			swcat('Job status at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' was "', status, '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
 		}
 		}
 	
 		if(status=='Finished'){
-			cat('The xgrid job has finished\n')
+			swcat('The xgrid job has finished\n')
 		}else{
-			cat('The xgrid job is showing the status "', status, '"\n', sep="")
+			swcat('The xgrid job is showing the status "', status, '"\n', sep="")
 			silent <- FALSE
 		}
 		xgridoutput <- system(paste('xgrid -job results -id ', jobnum, ' -out "', directory, '"', sep=''), intern=TRUE)
 		
-		cat("Job was successfully retreived from xgrid\n")
+		swcat("Job was successfully retreived from xgrid\n")
 		if(!silent){
-			if(length(xgridoutput)==0) cat('\nThe xgrid job did not produce any output to screen\n') else cat('\nThe xgrid output is displayed below:\n', xgridoutput, sep='\n')
+			# Note not using swcat for xgrid output!
+			if(length(xgridoutput)==0) swcat('\nThe xgrid job did not produce any output to screen\n') else cat('\nThe xgrid output is displayed below:\n', xgridoutput, sep='\n')
 		}
 		
 		if(cleanup){

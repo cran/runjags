@@ -71,7 +71,7 @@ below for convinience:
 
 mgrid -- version 3.01, June 2010
 
-by Matthew Denwood (matthewdenwood@mac.com)
+by Matthew Denwood
 
 SYNOPSIS
 
@@ -241,12 +241,6 @@ GNU general public license (see http://www.gnu.org/copyleft/gpl.html).  I am
 therefore not liable for any damage to your computer, xgrid cluster, or sanity
 caused by using it.  
 
-If you find this script useful, or find any bugs, then feel free to email me
-at matthewdenwood@mac.com.  Paypal donations to the same address are also
-gratefully received and may encourage further development of the software....
-
-
-
 }
 
 
@@ -265,7 +259,7 @@ and \code{\link{xgrid.run}} for running arbitrary functions on Xgrid.
 
 
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 
 \keyword{methods}

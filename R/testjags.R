@@ -17,17 +17,19 @@ testjags <- function(jags=findjags(), silent=FALSE){
 	
 	if(os=="windows"){
 		
-		if(file.exists(paste(jags, 'bin/jags-terminal.exe', sep=''))) jags <- paste(jags, 'bin/jags-terminal.exe', sep='')
-		if(file.exists(paste(jags, '/bin/jags-terminal.exe', sep=''))) jags <- paste(jags, '/bin/jags-terminal.exe', sep='')
+		if(file.exists(paste(jags, 'bin', .Platform$file.sep, 'jags-terminal.exe', sep=''))) jags <- paste(jags, 'bin/jags-terminal.exe', sep='')
+		if(file.exists(paste(jags, .Platform$file.sep, 'bin', .Platform$file.sep, 'jags-terminal.exe', sep=''))) jags <- paste(jags, '/bin/jags-terminal.exe', sep='')
 		if(file.exists(paste(jags, 'jags-terminal.exe', sep=''))) jags <- paste(jags, 'jags-terminal.exe', sep='')
-		if(file.exists(paste(jags, '/jags-terminal.exe', sep=''))) jags <- paste(jags, '/jags-terminal.exe', sep='')
-
-		path <- strsplit(jags, split='/bin', fixed=TRUE)
+		if(file.exists(paste(jags, .Platform$file.sep, 'jags-terminal.exe', sep=''))) jags <- paste(jags, '/jags-terminal.exe', sep='')
+		
+		
+		
+		path <- strsplit(jags, split=paste(.Platform$file.sep, 'bin', sep=''), fixed=TRUE)
 
 		firstpath <- path[[1]][1:length(path[[1]])-1]
 
-		binpath <- paste(firstpath, '/bin;%PATH%', sep='')
-		libpath <- paste(firstpath, '/modules', sep='')
+		binpath <- paste(firstpath, .Platform$file.sep, 'bin;%PATH%', sep='')
+		libpath <- paste(firstpath, .Platform$file.sep, 'modules;%LTDL_LIBRARY_PATH%', sep='')
 
 		Sys.setenv(PATH=binpath)
 		Sys.setenv(LTDL_LIBRARY_PATH=libpath)
@@ -82,27 +84,27 @@ testjags <- function(jags=findjags(), silent=FALSE){
     }
     
 	if(silent==FALSE){
-		cat("You are currently logged on as ", username, ", on a ", os, " machine\n", sep="")
-		cat("You are using ", rversion, ", with the ", gui, " GUI", "\n", sep="")
+		swcat("You are currently logged on as ", username, ", on a ", os, " machine\n", sep="")
+		swcat("You are using ", rversion, ", with the ", gui, " GUI", "\n", sep="")
 		#if(os=="windows"){
 		#	cat("WARNING:  JAGS will run more slowly under windows than unix, and suppression of JAGS output may not be available\n")
 		#}
 		if(success==0){
 			if(popen == TRUE){
-				cat("JAGS version ", version, " found successfully using the command ", jags, "\n", sep="")
+				swcat("JAGS version ", version, " found successfully using the command ", jags, "\n", sep="")
 				if(num.version<1){
-					cat("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://www-fis.iarc.fr/~martyn/software/jags/\n")
+					swcat("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://www-fis.iarc.fr/~martyn/software/jags/\n")
 					jags.avail <- FALSE
 				}else{
 					jags.avail <- TRUE
 				}
 			}else{
-				cat("JAGS was found on your system, but the version cannot be verified due to the absence of popen support.  Please ensure that the latest version of JAGS is installed by visiting http://www-fis.iarc.fr/~martyn/software/jags/\n")
+				swcat("JAGS was found on your system, but the version cannot be verified due to the absence of popen support.  Please ensure that the latest version of JAGS is installed by visiting http://www-fis.iarc.fr/~martyn/software/jags/\n")
 				jags.avail <- TRUE
 				num.version <- list("version unknown")
 			}
 		}else{
-			cat("JAGS was not found on your system using the command ", jags, ".  Please ensure that the command is correct and that the latest version of JAGS from http://www-fis.iarc.fr/~martyn/software/jags/ is installed\n", sep="")
+			swcat("JAGS was not found on your system using the command ", jags, ".  Please ensure that the command is correct and that the latest version of JAGS from http://www-fis.iarc.fr/~martyn/software/jags/ is installed\n", sep="")
 			jags.avail <- FALSE
 			popen <- NA
 			num.version <- list("none found")
@@ -111,7 +113,7 @@ testjags <- function(jags=findjags(), silent=FALSE){
 		if(success==0){
 			if(popen == TRUE){
 				if(num.version<1){
-					cat("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://www-fis.iarc.fr/~martyn/software/jags/\n")
+					swcat("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://www-fis.iarc.fr/~martyn/software/jags/\n")
 					jags.avail <- FALSE
 				}else{
 					jags.avail <- TRUE
@@ -132,6 +134,8 @@ testjags <- function(jags=findjags(), silent=FALSE){
 		testpopen <- system('printf " \r"', intern=TRUE)
 		if(testpopen==' \r') popen <- TRUE
 	}
+	
+	if(is.na(num.version)) stop("Unable to ")
 	
 	return(list("os"=os, "JAGS.available"=jags.avail, "JAGS.path"=jags, "popen.support"=popen, "JAGS.version"=num.version, "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username))
 }

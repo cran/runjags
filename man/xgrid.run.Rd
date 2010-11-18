@@ -2,6 +2,7 @@
 \alias{xgrid.run}
 \alias{xgrid.submit}
 \alias{xgrid.results}
+\alias{xapply}
 
 \title{Remote execution of user-specified R functions on Apple Xgrid distributed computing clusters}
 \description{
@@ -24,43 +25,66 @@
    returning the results as an R list object.
 
    'xgrid.submit' submits the job to xgrid, and returns the name of the
-   started job.
+   started job (this is a convinience wrapper for xgrid.run with 
+   submitandstop=TRUE).
 
    'xgrid.results' returns the results of a job started using
-   'xgrid.submit' in the current working directory.
+   'xgrid.submit' in the current working directory.  If the job is not
+   complete the function will return the status of the job, or the
+   results for completed threads (without deleting the job) if
+   partial.retrieve=TRUE
+   
+   'xapply' is a convinience wrapper for 'xgrid.run' which takes
+   arguments akin to lapply
+   
 }
 \usage{
 
 xgrid.run(f=function(iteration){}, niters, 
    object.list=list(), file.list=character(0), 
-   threads=min(niters,100), jobname=NA, wait.interval="10 min", 
-   xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 
-   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', 
+   threads=min(niters,100), arguments=as.list(1:niters), 
+   jobname=NA, wait.interval="10 min", 
+   xgrid.method=if(threads==1) 'simple' else 
+   if(!file.exists(Sys.which('mgrid'))) 'separatejobs' 
+   else 'separatetasks', Rpath='/usr/bin/R', Rbuild='64', 
    cleanup = TRUE, submitandstop = FALSE, tempdir=!submitandstop, 
    keep.files = FALSE, show.output = TRUE, max.filesize="1GB", 
-   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"' 
+   sub.app=if(!file.exists(Sys.which('mgrid'))) 
+   'xgrid -job submit -in "$indir"' 
    else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
-   sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), ...)
+   sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), 
+   ...)
 
 xgrid.submit(f=function(iteration){}, niters, 
    object.list=list(), file.list=character(0), 
-   threads=min(niters,100), jobname=NA, 
-   xgrid.method=if(threads==1) 'simple' else if(Sys.which('mgrid')=="") 
-   'separatejobs' else 'separatetasks', Rpath='/usr/bin/R', 
+   threads=min(niters,100), arguments=as.list(1:niters), 
+   jobname=NA, xgrid.method=if(threads==1) 'simple' else 
+   if(!file.exists(Sys.which('mgrid'))) 'separatejobs' 
+   else 'separatetasks', Rpath='/usr/bin/R', Rbuild='64', 
    show.output = TRUE, max.filesize="1GB", 
-   sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"'
+   sub.app=if(!file.exists(Sys.which('mgrid'))) 
+   'xgrid -job submit -in "$indir"'
    else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
-   sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), ...)
+   sub.command=paste(sub.app, sub.options, '"$cmd"', sep=' '), 
+   ...)
 
-xgrid.results(jobname, cleanup=TRUE, keep.files=FALSE, show.output=TRUE)
+xgrid.results(jobname, partial.retrieve=FALSE, 
+   cleanup=!partial.retrieve, keep.files=FALSE, show.output=TRUE)
+   
+xapply(X, FUN, xgrid.options=list(), ...)
+
 }
 
 \arguments{
 
    \item{f}{the function to be iterated over on Xgrid.  This must take
-   exactly 1 argument, which represents the iteration number.  The
-   value(s) of interest should be returned by this function (an object
-   of any class is permissable).  No default.}
+   at least 1 argument, the first of which represents the value of the
+   'arguments' list to be passed to the function for that iteration,
+   which is the iteration number unless 'arguments' (or 'X' for xapply)
+   is specified.  Any other arguments to be passed to the function can
+   be supplied as additional arguments to xgrid.run/xgrid.submit/xapply.
+   The value(s) of interest should be returned by this function (an
+   object of any class is permissable).  No default.}
 
    \item{niters}{the total number of iterations over which to evaluate
    the function f.  This can be less than the number of threads, in
@@ -102,7 +126,12 @@ source()d within the function. Default blank list (no objects copied).}
    returned by each xgrid job.  Default is equal to the number of
    iterations if this is less than 100, or 100 otherwise.}
 
-   \item{jobname}{ for all functions except xgrid.results.jags, the
+   \item{arguments}{a list of values to be passed as the first argument
+   to the function, with each element of the list specifying the value
+   at that iteration.  Default is as.list(1:niters) which passes only
+   the iteration number to the function.}
+
+   \item{jobname}{for all functions except xgrid.results.jags, the
    jobname can be provided to make identification of the job using Xgrid
    Admin easier.  If none is provided, then one is generated using a
    combination of the username and hostname of the submitting machine.
@@ -142,8 +171,21 @@ source()d within the function. Default blank list (no objects copied).}
    details.  Default '/usr/bin/R' (this is the default install location
    for R).}
 
+   \item{Rbuild}{the preferred binary of R to invoke.  '64' results in 
+   '{Rpath}64' (if it exists), '32' in '{Rpath}32' (if it exists) and '' 
+   (or either of '32' or '64' if they are not found) results in {Rpath}.
+   Notice that this indicates a preference, not a certainty - if the
+   indicated build is not avalable then another will be used.  Also
+   note that specifying '64' may be ignored for PPC nodes depending
+   on what version of R they are running (you can ensure only intel
+   nodes are used with mgrid using sub.options='-c intel').  Default ''.}
+
+   \item{partial.retrieve}{for xgrid.results, option to retrieve results
+   of partially completed jobs.  By default makes cleanup FALSE.  
+   Default TRUE.}
+
    \item{cleanup}{option to delete the job(s) from Xgrid after
-   retrieving result.  Default FALSE.}
+   retrieving result.}
 
    \item{submitandstop}{controls whether job should be run synchronously
    (submitandstop=FALSE), in which case the process will wait for the
@@ -168,7 +210,7 @@ bug fix failing jobs.  Default FALSE.}
    (obtained using cat, writeLine or print for example) at each
    iteration after retrieving the job(s) from xgrid.  If FALSE, the
    output is suppressed.  Default TRUE.}
-  
+      
    \item{max.filesize}{the maximum total size of the objects produced by
    the function for each thread if xgrid.method=separatejobs, or for the
    entire job if xgrid.method=separatetasks.  This is a failsafe
@@ -227,8 +269,17 @@ spaces in them must be quoted when the command is passed to the shell
 (this may mean escaping quotes if necessary).  Default uses the values
 of sub.app and sub.options.}
 
-   \item{...}{objects to be passed to the function provided (equivalent
-   to specifying the objects in the object.list).} 
+\item{X}{for xapply, a vector (atomic or list) over which to apply the
+function provided.  Equivalent to 'arguments' for xgrid.run, with
+niters = length(X).}
+
+\item{FUN}{for xapply, the function to be passed to xgrid.run as 'f'.}
+
+\item{xgrid.options}{for xapply, any arguments (with the exception of
+'f', 'niters' and 'arguments' which are ignored) to be passed to 
+xgrid.run.}
+
+\item{...}{additional arguments to be passed to the function provided.} 
 
 }
 
@@ -282,6 +333,9 @@ returned the error.  If the function returns an object that exceeds the
 that job (or greater than max.filesize/threads for multi-task jobs), the
 results for that thread are replaced with an error message (this is to
 prevent the xgrid controller crashing due to transferring large files).
+The xapply function returns as xgrid.run (or xgrid.submit if
+xgrid.options=list(submitandstop=TRUE) in which case the results can be
+retrieved using xgrid.results).
 
 }
 
@@ -301,7 +355,7 @@ of code over multiple local cores.
 
 
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 
 
@@ -328,6 +382,31 @@ f <- function(iteration){
 results <- xgrid.run(f, niters=100, threads=10)
 
 }
+
+
+
+# A basic example of xapply to calculate the mean of a list of numbers:
+
+\dontrun{
+
+# A list of 3 datasets from which to calculate the mean:
+datasets <- list(c(1,5,6,NA), c(9,2,NA,0), c(-1,4,10,20))
+
+# Standard lapply syntax:
+results1 <- lapply(datasets, mean, na.rm=TRUE)
+
+# Equivalent xapply syntax:
+results2 <- xapply(datasets, mean, 
+xgrid.options=list(wait.interval='15s'), na.rm=TRUE)
+
+# Or submit the job:
+id <- xapply(datasets, mean, xgrid.options=list(submitandstop=TRUE),
+na.rm=TRUE)
+# And retrieve the results:
+results3 <- xgrid.results(id)
+
+}
+
 
 
 # Any packages required by the function need to be installed on the
@@ -375,7 +454,7 @@ if [ ! -f /usr/local/bin/jags ]; then
 echo 0
 exit 0
 fi
-/usr/bin/R --slave -e "suppressMessages(rjsuccess <- require(runjags, quietly=TRUE)); writeLines(as.character(rjsuccess*1))"
+/usr/bin/R --slave -e "suppressMessages(r<-require(runjags,quietly=TRUE));cat(r*1,fill=TRUE)"
 exit 0
 ', file='runjagsART.sh')
 
@@ -414,6 +493,8 @@ f <- function(iteration){
 	# Use xgrid.autorun.jags to run 2 chains until convergence:
 	results <- xgrid.autorun.jags(model=model, 
 		monitor=c("m", "c", "precision"), data=data, n.chains=2, 
+		inits=list(list(.RNG.name='base::Wichmann-Hill'), 
+		list(.RNG.name='base::Marsaglia-Multicarry')), 
 		plots = FALSE, xgrid.method='separatejobs', 
 		wait.interval='1 min', jobname='xgridslavejob')
 	
@@ -423,12 +504,14 @@ f <- function(iteration){
 # Submit the function to xgrid using our ART script to ensure the 
 # node can handle the job (the ART script path must be specified as 
 # an absolute link as xgrid won't be called in the current working 
-# directory, and all paths must be enclosed in quotes to preserve spaces):
+# directory, and all paths must be enclosed in quotes to preserve 
+# spaces):
 name <- xgrid.submit(f, object.list=list(X=X, Y=Y, model=model, 
 	data=data, hostname=hostname, password=password), threads=1, 
-	niters=1, sub.options=if(Sys.which('mgrid')=="") paste('-art "', 
-	getwd(), '/runjagsART.sh"', sep='') else paste('-a "', getwd(), 
-	'/runjagsART.sh"', sep=''), xgrid.method='simple')
+	niters=1, sub.options=if(!file.exists(Sys.which('mgrid'))) 
+	paste('-art "', getwd(), '/runjagsART.sh"', sep='') else 
+	paste('-a "', getwd(), '/runjagsART.sh"', sep=''), 
+	xgrid.method='simple')
 # Cleanup (remove runjagsART file):
 unlink('runjagsART.sh')
 
@@ -436,6 +519,49 @@ unlink('runjagsART.sh')
 results <- xgrid.results(name)$iteration.1
 
 }
+
+
+
+\dontrun{
+
+# Subit an xgrid job just to see which packages are installed 
+# on a particular machine.
+
+# Ensure mgrid is installed:
+if(!file.exists(Sys.which('mgrid'))) install.mgrid()
+
+# A function to harvest details of R version and installed packages:
+f <- function(i){
+
+archavail <- any(dimnames(installed.packages())[[2]]=='Archs')
+
+# To deal with older versions of R:
+if(archavail){
+packagesinst <- installed.packages()[,c('Version', 'Archs', 'Built')]
+}else{
+packagesinst <- installed.packages()[,c('Version', 'OS_type', 'Built')]
+}
+
+Rinst <- unlist(R.version[c('version.string', 'arch', 'platform')])
+names(Rinst) <- c('Version', 'Archs', 'Built')
+return(rbind(R=Rinst, packagesinst))
+
+}
+
+# Or to get more details about a particular package:
+g <- function(i){
+	p <- library(help='bayescount')
+	return(p$info)
+}
+
+# Get the information back from 2 specific machines called 'newnode1' 
+# and 'newnode2':
+
+results <- xgrid.run(f, niters=2, threads=2, 
+sub.options='-h newnode1:newnode2', wait.interval='15 seconds')
+
+}
+
 
 
 }

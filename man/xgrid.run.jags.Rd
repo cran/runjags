@@ -26,13 +26,15 @@ can either be run synchronously using xgrid.(auto)run.jags(file) in
 which case the process will wait for the model to complete before
 returning the results, or asynchronously using xgrid.submit.jags(file)
 in which case the process will terminate on submission of the job and
-results are retrieved at a later time.  Access to an Xgrid cluster with
-JAGS (although not necessarily R) installed is required.  Due to the
-dependance on Xgrid software to perform the underlying submission and
-retrieval of jobs, these functions can only be used on machines running
-Mac OS X.  Further details of required environmental variables and the
-optional mgrid script to enable multi-task jobs can be found in the
-details section.
+results are retrieved at a later time using xgrid.results.jags.  The
+latter function can also be used to check the progress of incomplete
+simulations without stopping or retrieving the full job.  Access to an
+Xgrid cluster with JAGS (although not necessarily R) installed is
+required.  Due to the dependance on Xgrid software to perform the
+underlying submission and retrieval of jobs, these functions can only be
+used on machines running Mac OS X.  Further details of required
+environmental variables and the optional mgrid script to enable
+multi-task jobs can be found in the details section.
 
 }
 
@@ -40,34 +42,38 @@ details section.
 
 xgrid.run.jags(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"'
+sub.app=if(!file.exists(Sys.which('mgrid'))) 
+'xgrid -job submit -in "$indir"'
 else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
 sub.command=paste(sub.app, sub.options, '"$cmd"', 
 sep=' '), ...)
 
 xgrid.run.jagsfile(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"'
+sub.app=if(!file.exists(Sys.which('mgrid'))) 
+'xgrid -job submit -in "$indir"'
 else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
 sub.command=paste(sub.app, sub.options, '"$cmd"', 
 sep=' '), ...)
 
 xgrid.autorun.jags(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"'
+sub.app=if(!file.exists(Sys.which('mgrid'))) 
+'xgrid -job submit -in "$indir"'
 else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
 sub.command=paste(sub.app, sub.options, '"$cmd"', 
 sep=' '), ...)
 
 xgrid.autorun.jagsfile(wait.interval="10 min", xgrid.method='simple',
 jagspath='/usr/local/bin/jags', jobname=NA, cleanup=TRUE,
-sub.app=if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir"'
+sub.app=if(!file.exists(Sys.which('mgrid'))) 
+'xgrid -job submit -in "$indir"'
 else 'mgrid -t $ntasks -i "$indir"', sub.options="", 
 sub.command=paste(sub.app, sub.options, '"$cmd"', 
 sep=' '), ...)
 
 xgrid.submit.jags(xgrid.method='simple', jagspath='/usr/local/bin/jags',
-jobname=NA, sub.app=if(Sys.which('mgrid')=="") 
+jobname=NA, sub.app=if(!file.exists(Sys.which('mgrid'))) 
 'xgrid -job submit -in "$indir"' else 'mgrid -t $ntasks -i "$indir"', 
 sub.options="", sub.command=paste(sub.app, sub.options, '"$cmd"', 
 sep=' '), ...)
@@ -75,7 +81,7 @@ sep=' '), ...)
 
 xgrid.submit.jagsfile(xgrid.method='simple',
 jagspath='/usr/local/bin/jags',
-jobname=NA, sub.app=if(Sys.which('mgrid')=="") 
+jobname=NA, sub.app=if(!file.exists(Sys.which('mgrid'))) 
 'xgrid -job submit -in "$indir"' else 'mgrid -t $ntasks -i "$indir"', 
 sub.options="", sub.command=paste(sub.app, sub.options, '"$cmd"', 
 sep=' '), ...)
@@ -96,18 +102,54 @@ process.  Time units of seconds, minutes, hours, days or weeks can be
 specified.  If no units are given the number is assumed to represent
 minutes.  Default "10 min".}
 
-\item{xgrid.method}{the method of submitting the work to Xgrid - one of
-'simple', 'separatejobs' or 'separatetasks'.  The former runs all chains
-on a single node, whereas 'separatejobs' runs all chains as individual
-xgrid jobs and 'separatetasks' runs all chains as individual tasks
-within the same job (this makes the job information in Xgrid Admin
-easier to read).  The latter method requires a submission script that is
-capable of supporting multi-task jobs, such as the mgrid script included
-with the runjags package (see the details section for more details and
+\item{xgrid.method}{the method of submitting the simulation to Xgrid -
+one of 'simple', 'separatejobs' or 'separatetasks'.  The former runs all
+chains on a single node, whereas 'separatejobs' runs all chains as
+individual xgrid jobs and 'separatetasks' runs all chains as individual
+tasks within the same job (this makes the job information in Xgrid Admin
+easier to read).  Note that the 'seperatejobs' and 'seperatetasks'
+methods use separate JAGS instances to speed up execution of models with
+multiple chains, but cannot be used with monitor.pd, monitor.pd.i or
+monitor.popt.  Each chain is specified using a different random number
+generator (.RNG.name) for up to 4 chains (the number of different RNG
+available in JAGS), unless .RNG.name is specified in the initial values. 
+Because each chain uses a separate JAGS instance, JAGS has no way of
+ensuring independence between multiple chains using the same random
+number generator (as would normally be done when calling a single JAGS
+instance with multiple chains).  Using more than 4 chains with the
+'separatejobs' or 'separatetasks' method without the use of new RNG
+factories may therefore produce dependence between chains, and is not
+recommended (a warning is given if trying to do so).  Also, the
+'separatetasks' method requires a submission script that is capable of
+supporting multi-task jobs, such as the mgrid script included with the
+runjags package (see the details section for more details and
 installation instructions).  If each chain is likely to return a large
-amount of information then 'separatejobs' should be used; this is because jobs
-are retrieved individually which reduces the chances of overloading the
-Xgrid controller.  Default 'simple'.}
+amount of information then 'separatejobs' should be used in preference
+to 'separatetasks'; this is because jobs are retrieved individually
+which reduces the chances of overloading the Xgrid controller.  Default
+'simple'.}
+
+\item{method}{the method with which to call JAGS; one of 'simple',
+'interruptible' or 'parallel'.  The former runs JAGS as a foreground
+process (the default behaviour for runjags < 0.9.6), 'interruptible'
+allows the JAGS process to be terminated immediately using the interrupt
+signal 'control-c' (terminal/console versions of R only), and 'parallel'
+runs each chain as a separate process on a separate core.  Note that the
+latter uses separate JAGS instances to speed up execution of models with
+multiple chains (at the expense of using more RAM), but cannot be used
+with monitor.pd, monitor.pd.i or monitor.popt.  Each chain is specified
+using a different random number generator (.RNG.name) for up to 4 chains
+(the number of different RNG available in JAGS), unless .RNG.name is
+specified in the initial values.  Using more than 4 chains without the
+use of new RNG factories may produce dependence between chains, and is
+not recommended (a warning is given if trying to do so).  Only the
+'simple' method is available for Windows.  On machines running Mac OS X
+and with access to an Apple Xgrid cluster, the method may be a list with
+an element 'xgrid.method="simple"' (see \code{\link{xgrid.run.jags}} for
+more information).  Default 'interruptible' on terminal/console versions
+of R, or 'simple' on GUI versions of R or when running over xgrid
+(methods other than 'simple' require the use of 'ps' which is not
+available when running jobs as 'nobody' via xgrid).}
 
 \item{jagspath}{the path to the JAGS executable on the xgrid machines.
 Note that /usr/local/bin is not included in the path when running Xgrid
@@ -244,7 +286,7 @@ functions on Xgrid.
 
 
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 
 \examples{
@@ -322,10 +364,13 @@ precision ~ dexp(1);
 # be specified as an absolute link as xgrid won't be called 
 # in the current working directory, and all paths must be 
 # enclosed in quotes to preserve spaces):
-name <- xgrid.submit.jags(xgrid.method='separatejobs', 
-	sub.options=paste('-a "' , getwd(), '/jagsART.sh"', sep=''), 
-	model=model, monitor=c("m", "c", "precision"), 
-	data=list(N=length(X), X=X, Y=Y), n.chains=2, plots = FALSE)
+name <- xgrid.submit.jags(xgrid.method='separatejobs',
+sub.options=if(!file.exists(Sys.which('mgrid'))) paste('-art
+"', getwd(), '/jagsART.sh"', sep='') else paste('-a "', getwd(),
+'/jagsART.sh"', sep=''), model=model, monitor=c("m", "c", "precision"),
+data=list(N=length(X), X=X, Y=Y), n.chains=2, plots = FALSE,
+inits=list(list(.RNG.name='base::Wichmann-Hill'), 
+list(.RNG.name='base::Marsaglia-Multicarry')))
 
 # Cleanup (remove jagsART file):
 unlink('jagsART.sh')
@@ -347,7 +392,7 @@ Sys.setenv(XGRID_CONTROLLER_HOSTNAME="<hostname>")
 Sys.setenv(XGRID_CONTROLLER_PASSWORD="<password>")
 
 # Ensure mgrid is installed:
-stopifnot(Sys.which('mgrid')!="")
+if(!file.exists(Sys.which('mgrid'))) install.mgrid()
 
 # Simulate the data
 X <- 1:100
@@ -369,8 +414,9 @@ precision ~ dexp(1);
 results <- xgrid.autorun.jags(xgrid.method='separatetasks', 
 	wait.interval='1 min', sub.options='-h "Bugati:McLaren"', 
 	model=model, monitor=c("m", "c", "precision"), 
-	data=list(N=length(X), X=X, Y=Y), inits=c('.RNG.seed=1', 
-	'.RNG.seed=2'), n.chains=2, plots = FALSE)
+	data=list(N=length(X), X=X, Y=Y), n.chains=2, 
+	inits=list(list(.RNG.name='base::Wichmann-Hill'), 
+	list(.RNG.name='base::Marsaglia-Multicarry')), plots = FALSE)
 
 }
 

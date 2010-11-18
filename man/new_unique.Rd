@@ -53,7 +53,7 @@ existing files
    \code{\link{ask}}
 }
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 #  Create a file name that is unlikely to exist already, 

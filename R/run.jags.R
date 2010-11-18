@@ -1,15 +1,27 @@
-run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000*thin, sample = 10000*thin, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE, tempdir=TRUE, method=if(.Platform$OS.type=='unix' & .Platform$GUI!="AQUA") 'interruptible' else 'simple'){
+run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000*thin, sample = 10000*thin, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE, tempdir=TRUE, method=if(.Platform$OS.type=='unix' & .Platform$GUI!="AQUA" & Sys.info()['user']!='nobody') 'interruptible' else 'simple'){
 
 if(class(method)=='list'){
 	xgrid.options <- method
+	
+	# Disabling partial retrieval of JAGS output for now - I don't think it makes any sense....
+	if(xgrid.options$method=='xgrid.retrieve.part'){
+		#partialretrieve <- TRUE
+		partialretrieve <- FALSE
+		xgrid.options$method <- 'xgrid.retrieve'
+	}else{
+		partialretrieve <- FALSE
+	}
+	
 	method <- xgrid.options$method
+	
+	if(method=='xgrid.retrieve' & tempdir) tempdir <- FALSE
 	
 	# Ensure that we have the defaults for everything in case the list is supplied manually:	
 	if(!any(names(xgrid.options)=="xgrid.method")) xgrid.options$xgrid.method <- "simple"
 	if(!any(names(xgrid.options)=="wait.interval")) xgrid.options$wait.interval <- "10 min"
-	if(!any(names(xgrid.options)=="command")) xgrid.options$command <- if(Sys.which('mgrid')=="") 'xgrid -job submit -in "$indir" "$cmd"' else 'mgrid -i "$indir" -t $ntasks "$cmd"'
+	if(!any(names(xgrid.options)=="command")) xgrid.options$command <- if(!file.exists(Sys.which('mgrid'))) 'xgrid -job submit -in "$indir" "$cmd"' else 'mgrid -i "$indir" -t $ntasks "$cmd"'
 	if(!any(names(xgrid.options)=="jagspath")) xgrid.options$jagspath <- '/usr/local/bin/jags'
-	if(!any(names(xgrid.options)=="cleanup")) xgrid.options$cleanup <- TRUE
+	if(!any(names(xgrid.options)=="cleanup")) xgrid.options$cleanup <- !partialretrieve
 	if(!any(names(xgrid.options)=="separatetasks")) xgrid.options$separatetasks <- FALSE
 	if(!any(names(xgrid.options)=="separatejobs")) xgrid.options$separatejobs <- FALSE
 	if(!any(names(xgrid.options)=="submitandstop")) xgrid.options$submitandstop <- FALSE
@@ -67,7 +79,12 @@ if(.Platform$OS.type=='windows' & method!='simple'){
 	warning('Only the simple method is available on Windows')
 	method <- 'simple'
 }
-if(.Platform$GUI=='AQUA' & method=='interruptible') warning("The JAGS session may not be interruptible using the console version of R - use the terminal version instead for this feature")
+if(.Platform$GUI=='AQUA' & method=='interruptible') warning("The JAGS session may not be interruptible using the console version of R - it is recommended to use the terminal version instead")
+
+if(method=='parallel' | method=='interruptible') if(length(suppressWarnings(system('/bin/ps', intern=TRUE, ignore.stderr=TRUE)))==0 & Sys.info()['user']=='nobody'){
+	warning('The interruptible and parallel methods are unavailable when running over xgrid, using the simple method instead')
+	method <- 'simple'
+}
 
 if(method=='xgrid' | method=='xgrid.retrieve'){
 	# Check xgrid is available
@@ -75,12 +92,12 @@ if(method=='xgrid' | method=='xgrid.retrieve'){
 		warning('The xgrid method is not available.  Only the simple method is available on Windows')
 		method <- 'simple'
 	}else{
-		xgridavail <- system('xgrid 2>&1', intern=TRUE)
+		xgridavail <- suppressWarnings(system('xgrid 2>&1', intern=TRUE))
 		if(length(xgridavail)==1){
 			stop('xgrid is not available on this machine')
 		}
 		
-		xgridlist <- system('xgrid -job list 2>&1', intern=TRUE)
+		xgridlist <- suppressWarnings(system('xgrid -job list 2>&1', intern=TRUE))
 		if(paste(xgridlist, collapse='\n')==paste(xgridavail, collapse='\n')){
 			if(.Platform$GUI=='AQUA') stop('Testing basic xgrid functionality produced an error.  System environmental variables are not accessible from the GUI version of R - either ensure that you have specified the controller hostname and password in the xgrid command or use the console version of R instead') else stop('Testing basic xgrid functionality produced an error.  Ensure that you have either specified the controller hostname and password in the xgrid command or set up envirnomental variables for this.')
 		}
@@ -96,6 +113,21 @@ if(method=='xgrid.retrieve'){
 	method <- 'xgrid.retrieve'
 }else{
 	
+	if(any(tolower(monitor)=='dic')){
+		dic <- TRUE
+		monitor.deviance <- TRUE
+		monitor.pd <- TRUE
+		monitor.popt <- TRUE
+		monitor <- monitor[tolower(monitor)!='dic']
+	}else{
+		dic <- FALSE
+	}
+
+	if(any(tolower(monitor)=='deviance')){
+		monitor.deviance <- TRUE
+		monitor <- monitor[tolower(monitor)!='deviance']
+	}
+
 	if(!require(lattice)){
 		stop("The required library 'lattice' is not installed")
 	}
@@ -105,14 +137,17 @@ if(method=='xgrid.retrieve'){
 
 	jags.status <- testjags(jags, silent=TRUE)
 	if(jags.status[[2]][1]==FALSE & method!='xgrid'){
-		cat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument\n", sep="")
+		swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument\n", sep="")
 		stop("Unable to call JAGS")
 	}
 	
+	if(jags.status$JAGS.version=="version unknown" | is.na(jags.status$JAGS.version)){
+		warning('Unable to verify the version number of JAGS.  If any functions do not work as expected, you could try checking your JAGS installation for problems.')
+		jags.status$JAGS.version <- Inf
+	}
+	
 	if(any(c(monitor.pd, monitor.pd.i, monitor.popt)) & (n.chains < 2 | method=='parallel' | (method=='xgrid' & xgrid.options$separatetasks==TRUE))){
-		warning("The pD, pD.i and popt cannot be assessed with only 1 chain or when using separate or parallel chains")
-		monitor.pd <- FALSE
-		monitor.popt <- FALSE
+		stop("The DIC, pD, pD.i and popt cannot be assessed with only 1 chain (or when using separate or parallel chains)")
 	}
 	
 	if(any(c(monitor.deviance, monitor.pd, monitor.pd.i, monitor.popt)) & jags.status$JAGS.version < 2) stop('Support for the deviance, pD and popt monitors is no longer available for JAGS version 1.x.  Please update to JAGS version 2.x')
@@ -188,14 +223,12 @@ if(method=='xgrid.retrieve'){
 	if(class(monitor)!="character" | all(is.na(monitor))){
 		stop("Monitored variable(s) must be provided in the form of a character vector")
 	}
-
+	
 	modelstring <- paste(model, "\n", sep="")
 	monitorcollapse <- paste(">, thin(", thin, ")\nmonitor set <", sep="")
 	monitors <- paste("monitor set <", paste(monitor, collapse=monitorcollapse), ">, thin(", thin, ")\n", sep="")
 	n.params <- length(monitor)
 	params.names <- monitor
-	
-	initstring <- paste(inits, "\n", sep="")
 	
 	datastring <- paste(data, "\n", sep="")
 	
@@ -210,10 +243,10 @@ if(method=='xgrid.retrieve'){
 		temp.directory <- tempfile('runjagsdir')
 		dir.create(temp.directory)
 	}else{
-		jobname <- new_unique(jobname, touch=TRUE, type='folder')
+		jobname <- new_unique('runjagsfiles', touch=FALSE, type='folder')
 		temp.directory <- if(method=='xgrid' & xgrid.options$submitandstop) jobname else new_unique('runjagsfiles', touch=TRUE, type='folder')
 		if((temp.directory=="Directory not writable")==TRUE){
-			cat("Directory not writable\n")
+			swcat("Directory not writable\n")
 			return(c("Error", "Write permissions"))
 		}
 		temp.directory <- paste(getwd(), '/', temp.directory, sep='')
@@ -245,15 +278,28 @@ if(method=='xgrid.retrieve'){
 
 	if(nsims!=1){
 		if(monitor.pd.i | monitor.popt | monitor.pd){
-			warning("Unaable to set popt, pD.i or pD monitors with parallelised chains")
-			monitor.pd.i=monitor.popt=monitor.pd <- FALSE
+			stop("Unaable to set DIC, popt, pD.i or pD monitors with parallelised chains")
 		}
 		if(.Platform$OS.type=='windows'){
-			warning("Parallelising chains is not supported in Windows")
-			parallelise <- FALSE
-			nsims <- 1
+			stop("Parallelising chains is not supported in Windows")
 		}
+		
+		norng <- grep('.RNG.name', inits, invert=TRUE)
+		if(length(norng)!=0 & length(norng)!=nsims) stop('Attempting to use parallel chains with some (but not all) .RNG.name values specified - make sure you specify a .RNG.name for each chain and try again')
+		rngname <- rep(c('base::Wichmann-Hill', 'base::Marsaglia-Multicarry', 'base::Super-Duper', 'base::Mersenne-Twister'), ceiling(nsims/4))
+
+		if(length(norng)>0){
+			if(nsims <=4) warning('You attempted to start parallel chains without setting different PRNG for each chain, which is not recommended.  Different .RNG.name values have been added to each set of initial values.')
+			if(nsims >4) warning('You are using more than 4 chains in parallel JAGS sessions without specifying a different PRNG for each.  This is not recommended for sampling from the stationary distribution, and may not produce fully independent chains when using the same PRNG.  Different .RNG.name values have been added to the initial values of the first 4 chains so that at least these are independent.  If you need to sample from more than 4 chains in parallel, you will need to use an external factory module to specify a new PRNG for each chain 5 and above and set the .RNG.name initial value for each chain manually.')
+			
+			for(i in 1:nsims){
+				if(is.na(inits[i])) inits[i] <- paste('\n\".RNG.name\" <- \"', rngname[i], '\"\n',sep='') else inits[i] <- paste(inits[i], '\n\".RNG.name\" <- \"', rngname[i], '\"\n', sep='')
+			}
+		}
+		
 	}
+	
+	initstring <- paste(inits, "\n", sep="")
 
 	for(s in 1:nsims){
 
@@ -350,7 +396,7 @@ if(method=='xgrid.retrieve'){
 	
 	}
 
-	cat("Calling the simulation... (this may take some time)\n")
+	swcat("Calling the simulation... (this may take some time)\n")
 
 	jags <- jags.status$JAGS.path
 
@@ -433,7 +479,7 @@ if(method=='interruptible'){
 if(method=='parallel'){
 	pid <- character(nsims)
 	for(s in 1:nsims){
-		success <- system(paste('cd sim.', s, '; ./scriptlauncher.sh', sep=''), wait=TRUE, intern=FALSE)
+		success <- suppressWarnings(system(paste('cd sim.', s, '; ./scriptlauncher.sh', sep=''), wait=TRUE, intern=FALSE))
 		Sys.sleep(1)
 		suppressWarnings(output <- readLines(paste('sim.', s, '/jagspid.txt', sep='')))
 		pid[s] <- output[1]
@@ -552,7 +598,7 @@ indir="', paste(temp.directory, "/sim.", s, sep=""), '"
 			xgrid.waiting <- FALSE
 			
 			if(jobnum[s]=='' | as.numeric(jobnum[s])>10^6) stop(paste("There was an error submitting job number ", s, " to Xgrid - no Job ID was returned", sep=''))
-			cat("Job ", s, " of ", nsims, " submitted to xgrid\n", sep="")
+			swcat("Job ", s, " of ", nsims, " submitted to xgrid\n", sep="")
 			
 			
 		}
@@ -583,7 +629,7 @@ indir="', temp.directory, '"
 		
 		if(jobnum=='' | as.numeric(jobnum)>10^6) stop("There was an error submitting your job to Xgrid - no Job ID was returned")
 		
-		cat("Job submitted to xgrid\n")
+		swcat("Job submitted to xgrid\n")
 		
 		
 	}
@@ -591,7 +637,7 @@ indir="', temp.directory, '"
 	if(xgrid.options$submitandstop){
 		cat(jobnum, file='jobid.txt', sep='\n')
 		savelist <- ls()
-		savelist <- savelist[savelist!='cleanup' & savelist!='keep.jags.files' & savelist!='check.conv' & savelist!='plots' & savelist!='psrf.target' & savelist!='normalise.mcmc' & savelist!='check.stochastic' & savelist!='silent.jags'] 
+		savelist <- savelist[savelist!='cleanup' & savelist!='keep.jags.files' & savelist!='partialretrieve' & savelist!='check.conv' & savelist!='plots' & savelist!='psrf.target' & savelist!='normalise.mcmc' & savelist!='check.stochastic' & savelist!='silent.jags'] 
 		save(list=ls(), file='workingobj.Rsave')
 		gottoend <- TRUE
 		return(list(jobname=jobname, jobid=jobnum))
@@ -601,7 +647,7 @@ indir="', temp.directory, '"
 }
 
 if(method=='xgrid.retrieve' | method=='xgrid.run'){
-	success <- xgrid.retrieve(jobnum, wait=(method=='xgrid.run'), wait.interval=xgrid.options$wait.interval, silent=silent.jags, cleanup=xgrid.options$cleanup, directory=temp.directory, jags=TRUE)
+	success <- xgrid.retrieve(jobnum, wait=(method=='xgrid.run'), wait.interval=xgrid.options$wait.interval, silent=silent.jags, cleanup=xgrid.options$cleanup, directory=temp.directory, partialretrieve=partialretrieve, jags=TRUE)
 	
 	if(xgrid.options$separatejobs){
 		for(s in 1:nsims){
@@ -634,11 +680,11 @@ if(method=='xgrid.retrieve' | method=='xgrid.run'){
 
 if (file.exists("CODAindex.txt") == FALSE){
   	if (file.exists("JAGS.out") == TRUE){
- 		cat("You are using a version of JAGS prior to 0.99.0, which is no longer supported.  Please update JAGS and try again\n")
+ 		swcat("You are using a version of JAGS prior to 0.99.0, which is no longer supported.  Please update JAGS and try again\n")
    		stop("JAGS version not supported")
    	}else{
    		if(silent.jags) suppressWarnings(try(cat(jagsoutput, sep="\n"), silent=TRUE))
-		if(jags.status$JAGS.version<2) cat("\nERROR:  The coda files were not found\n") else cat("\nUnable to load coda files or model output.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given are valid and do not conflict with the data.\n")
+		if(jags.status$JAGS.version<2) swcat("\nERROR:  The coda files were not found\n") else swcat("\nUnable to load coda files or model output.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given are valid and do not conflict with the data.\n")
    		
 		dontfinish <- TRUE
 		setwd(save.directory)
@@ -666,10 +712,10 @@ if((.Platform$GUI == "AQUA" || .Platform$OS.type == "windows") && silent.jags==F
 	flush.console()
 }
 
-if(!silent.jags) cat("\n")
+if(!silent.jags) swcat("\n")
 
 
-cat("Simulation complete.  Reading coda files...\n")
+swcat("Simulation complete.  Reading coda files...\n")
 
 suppressWarnings(inputsuccess <- try(input.data <- read.openbugs(quiet=TRUE), silent=TRUE))
 
@@ -692,44 +738,45 @@ if((class(inputsuccess)=="try-error")){
 		}
 		if(tempdir) unlink(temp.directory, recursive = TRUE)
 		
-		cat("Unable to load coda files or output of a crashed model.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given are valid and do not conflict with the data.\n")
+		swcat("Unable to load coda files or output of a crashed model.  The model may not have compiled correctly, or the monitored nodes may not exist.  Also check that the initial values or prior distributions given are valid and do not conflict with the data.\n")
 		results <- c("Unable to load coda files")
 		return(results)
 	}else{
-		cat("The model crashed during the burnin period.  Ensure that the syntax is correct and that appropriate prior distributions and starting values have been given.\n")
+		swcat("The model crashed during the burnin period.  Ensure that the syntax is correct and that appropriate prior distributions and starting values have been given.\n")
 		achieved <- 0
 		input.data <- "The model crashed during the burnin period"
 	}
 }else{
-	cat("Coda files loaded successfully\n")
+	swcat("Coda files loaded successfully\n")
 	achieved <- niter(input.data)
 }	
 
 otheroutputs <- vector("list")
 
 suppressWarnings({
-if(monitor.deviance){
-	if(FALSE){
+#if(monitor.deviance){
+#	if(FALSE){
 		# Deviance now part of the MCMC chains.
 	
-	deviance <- try(dget("deviance.Rdump"), silent=TRUE)
-	if(class(deviance)=="try-error"){
-		warning("There was an error reading the individual parameter deviance")
-		deviance <- "There was an error reading the individual parameter deviance"
-	}else{
-		for(i in 1:length(deviance)){
-			dimnames(deviance[[i]]) <- list(1:nrow(deviance[[i]]), paste("chain_", 1:chains, sep=""))
-		}
-	}
-	}
+#	deviance <- try(dget("deviance.Rdump"), silent=TRUE)
+#	if(class(deviance)=="try-error"){
+#		warning("There was an error reading the individual parameter deviance")
+#		deviance <- "There was an error reading the individual parameter deviance"
+#	}else{
+#		for(i in 1:length(deviance)){
+#			dimnames(deviance[[i]]) <- list(1:nrow(deviance[[i]]), paste("chain_", 1:chains, sep=""))
+#		}
+#	}
+#	}
 	
-	deviance <- 'The deviance monitor is included as part of the MCMC chains (the final monitored variable)'
-	otheroutputs <- c(otheroutputs, deviance=list(deviance))
-}
+	#deviance <- 'The deviance monitor is included as part of the MCMC chains (the final monitored variable)'
+	#otheroutputs <- c(otheroutputs, deviance=list(deviance))
+#}
 if(monitor.pd){
 	pd <- try(read.coda('codachain0.txt','codaindex0.txt'), silent=TRUE)
 	if(class(pd)=="try-error"){
 		warning("There was an error reading the pD")
+		dic <- FALSE
 		pd <- "There was an error reading the pD"
 	}else{
 	#	for(i in 1:length(deviance)){
@@ -745,7 +792,7 @@ if(monitor.pd.i){
 		pd.i <- "There was an error reading the pd.i"
 	}else{
 		pd.i <- as.matrix(pdtab[,2])
-		dimnames(pd.i) <- list(pdtab[,1], 'popt')
+		dimnames(pd.i) <- list(pdtab[,1], 'mean pd.i')
 	}
 	otheroutputs <- c(otheroutputs, pd.i=list(pd.i))
 }
@@ -753,6 +800,7 @@ if(monitor.popt){
 	popttab <- try(read.table('popttable0.txt', header=FALSE), silent=TRUE)
 	if(class(popttab)=="try-error"){
 		warning("There was an error reading the popt")
+		dic <- FALSE
 		popt <- "There was an error reading the popt"
 	}else{
 		popt <- as.matrix(popttab[,2])
@@ -760,7 +808,15 @@ if(monitor.popt){
 	}
 	otheroutputs <- c(otheroutputs, popt=list(popt))
 }
-
+if(dic){
+	meandeviance.chain <- sapply(input.data, function(x) return(mean(x[,'deviance'])))
+	meandeviance <- mean(combine.mcmc(input.data, collapse.chains=TRUE)[,'deviance'])
+	meanpd <- mean(pd)
+	sumpopt <- sum(popt)
+	dic.stats <- list(dic=meandeviance+meanpd, dic.chains=meandeviance.chain+meanpd, ped=meandeviance+sumpopt, ped.chains=meandeviance.chain+sumpopt, meandeviance=meandeviance, meandeviance.chains=meandeviance.chain, meanpd=meanpd, sumpopt=sumpopt)
+	class(dic.stats) <- 'dic.stats'
+	otheroutputs <- c(otheroutputs, dic=list(dic.stats))
+}
 })
 
 # stuff removed from here for unequal chain lengths
@@ -769,7 +825,7 @@ achieved <- achieved * thin
 	
 if(achieved!=updates){
 	crashed <- TRUE
-	if(achieved!=0) cat("Simulation crashed at ", achieved, " iterations\n", sep="")
+	if(achieved!=0) swcat("Simulation crashed at ", achieved, " iterations\n", sep="")
 	if(silent.jags == TRUE && jags.status$popen.support==TRUE){
 		if(class(success)=="character") cat(paste("The following model trace output may reveal the cause of the crash:\n\n", paste(success, collapse="\n"), "\n\n", sep=""))
 	}
@@ -779,7 +835,7 @@ if(achieved!=updates){
 		filename <- paste("jags.dump", i, ".R", sep="")
 		suppressWarnings(inputsuccess <- try(tempinput <- readLines(filename)))
 		if(class(inputsuccess)=="try-error"){
-			cat("Error reading crash point of chain ", i, ".\n", sep="")
+			swcat("Error reading crash point of chain ", i, ".\n", sep="")
 			crash.end[i] <- NA
 		}else{
 			crash.end[i] <- ""
@@ -795,7 +851,7 @@ if(achieved!=updates){
 		filename <- paste("out", i, ".Rdump", sep="")
 		suppressWarnings(inputsuccess <- try(tempinput <- readLines(filename)))
 		if(class(inputsuccess)=="try-error"){
-			cat("Error reading end point of chain ", i, ".\n", sep="")
+			swcat("Error reading end point of chain ", i, ".\n", sep="")
 			input.end[i] <- NA
 		}else{
 			input.end[i] <- ""
@@ -827,7 +883,7 @@ gottoend <- TRUE
 			results <- c("Process interrupted by user")
 			return(results)
 		}else{
-			if(xgrid.waiting) cat("The execution was halted while waiting for the xgrid job to finish - the job has not been deleted\n")
+			if(xgrid.waiting) swcat("The execution was halted while waiting for the xgrid job to finish - the job has not been deleted\n")
 		}
 	}
 	}
@@ -854,7 +910,7 @@ if(any(is.na(unlist(input.data)))){
 		
 	}
 	
-	cat(paste("\nOne or more of the values for the monitored variable(s) '", nastring, "' was invalid (missing data).  Ensure that the model syntax is correct and that appropriate starting values have been given.", sep=""))
+	swcat(paste("\nOne or more of the values for the monitored variable(s) '", nastring, "' was invalid (missing data).  Ensure that the model syntax is correct and that appropriate starting values have been given.\n", sep=""))
 	results <- c("Unable to load coda files")
 	return(results)
 }
@@ -882,7 +938,7 @@ if(plots==TRUE & achieved!=0){
 	final.mcmc <- input.data
 	plot1 = plot2 = vector('list', length=length(varnames(final.mcmc)))
 	names(plot1) = names(plot2) <- varnames(final.mcmc)
-	thinned.mcmc <- combine.mcmc(list(final.mcmc), collapse.chains=FALSE, return.samples=1000)
+	thinned.mcmc <- combine.mcmc(list(final.mcmc), collapse.chains=FALSE, return.samples=min(1000, niter(final.mcmc)))
 
 	#startdev <- dev.list()
 
@@ -895,7 +951,7 @@ if(plots==TRUE & achieved!=0){
 		varnames(plotdata)[2] <- 'dummy' # Different name prevents warning about duplicate factors
 		plot1[[i]] <- xyplot(plotdata, layout=c(1,1), ylab="Value", xlab="Iteration")
 		class(plot1[[i]]) <- "plotindpages"
-		plot2[[i]] <- densityplot(plotdata, layout=c(1,1), ylab="Density", xlab="Value")
+		plot2[[i]] <- densityplot(plotdata, plot.points=FALSE, layout=c(1,1), ylab="Density", xlab="Value")
 		class(plot2[[i]]) <- "plotindpages"
 		
 		# ...and then remove the index for the unnecessary second plot afterwards:
@@ -931,7 +987,7 @@ if(check.conv==TRUE & achieved!=0){
 	}
 
 	if(chains > 1){
-		cat("Calculating the Gelman-Rubin statistic for ", nvar(input.data), " variables....\n", sep="")
+		swcat("Calculating the Gelman-Rubin statistic for ", nvar(input.data), " variables....\n", sep="")
 		convergence <- safe.gelman.diag(normalise.mcmcfun(input.data, normalise = normalise.mcmc, warn=TRUE, check.stochastic = check.stochastic), transform=FALSE, autoburnin=TRUE)
 		
 		convergence <- c(convergence, psrf.target=psrf.target)
@@ -977,28 +1033,28 @@ if(check.conv==TRUE & achieved!=0){
 	
 	if(!is.na(param.conv)){
 		if(unconverged > 0){
-			if(n.params==1) cat("Convergence failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else cat("Convergence failed for this run for ", unconverged, " parameter", if(unconverged>1) "s", " after ", updates, " iterations", mpsrfstring, "\n", sep="")
+			if(n.params==1) swcat("Convergence failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else swcat("Convergence failed for this run for ", unconverged, " parameter", if(unconverged>1) "s", " after ", updates, " iterations", mpsrfstring, "\n", sep="")
 		}else{
-			if(n.chains > 1) cat("The Gelman-Rubin statistic is below 1.05 for all parameters\n")
-			if(n.chains==0) cat("The Gelman-Rubin statistic could not be calculated for these chains\n")
+			if(n.chains > 1) swcat("The Gelman-Rubin statistic is below 1.05 for all parameters\n")
+			if(n.chains==0) swcat("The Gelman-Rubin statistic could not be calculated for these chains\n")
 		}
 	}else{
-		cat("The Gelman-Rubin statistic could not be calculated for these chains\n")
+		swcat("The Gelman-Rubin statistic could not be calculated for these chains\n")
 	}
 	
 	if(!is.na(param.autocorr)){
 		if(autocorrelated > 0){
-			cat("IMPORTANT:  There was a high degree of autocorrelation for ", autocorrelated, " parameter", if(autocorrelated>1) "s", "\n", sep="")
+			swcat("IMPORTANT:  There was a high degree of autocorrelation for ", autocorrelated, " parameter", if(autocorrelated>1) "s", "\n", sep="")
 		}else{
 			#cat("Convergence achieved for this run\n")
 		}
 	}else{
-		cat("Autocorrelation could not be calculated for these chains\n")
+		swcat("Autocorrelation could not be calculated for these chains\n")
 	}
 	
 	}, silent=FALSE)
 	if(class(success)=="try-error"){
-		cat("An error occured when assessing convergence\n")
+		swcat("An error occured when assessing convergence\n")
 		convergence <- "An error occured when assessing convergence"
 		autocorrelation <- "An error occured when assessing convergence and autocorrelation"
 	}
@@ -1007,18 +1063,23 @@ if(check.conv==TRUE & achieved!=0){
 	suppressWarnings(tsummary <- summary(combine.mcmc(input.data, collapse.chains=FALSE)))
 	options(show.error.messages = TRUE)	
 	
+	options(show.error.messages = FALSE)
+	suppressWarnings(thpd <- HPDinterval(combine.mcmc(input.data, collapse.chains=TRUE)))
+	thpd <- cbind(lower95=thpd[,1], median=apply(combine.mcmc(input.data, collapse.chains=TRUE),2,median), upper95=thpd[,2])
+	options(show.error.messages = TRUE)	
+	
 	if(crashed==TRUE){
-		return(c(list(mcmc=input.data, crash.end=inits.out, burnin=burnin+adapt, sample=achieved, thin=thin,  summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2), otheroutputs))
+		return(c(list(mcmc=input.data, crash.end=inits.out, burnin=burnin+adapt, sample=achieved, thin=thin,  summary=tsummary, HPD=thpd, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2), otheroutputs))
 	}else{
-		return(c(list(mcmc=input.data, end.state=inits.out, burnin=burnin+adapt, sample=sample, thin=thin, summary=tsummary, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2), otheroutputs))
+		return(c(list(mcmc=input.data, end.state=inits.out, burnin=burnin+adapt, sample=sample, thin=thin, summary=tsummary, HPD=thpd, psrf=convergence, autocorr=autocorrelation, trace=plot1, density=plot2), otheroutputs))
 	}
 	
 }else{
 
 	if(crashed==TRUE){
-		return(c(list(mcmc=input.data, crash.end=inits.out, burnin=burnin+adapt, sample=achieved, thin=thin, summary="Summary not produced when check.conv==FALSE", psrf="Potential scale reductionf factors not produced when check.conv==FALSE", autocorr="Autocorrelation statistics not produced when check.conv==FALSE", trace=plot1, density=plot2), otheroutputs))
+		return(c(list(mcmc=input.data, crash.end=inits.out, burnin=burnin+adapt, sample=achieved, thin=thin, summary="Summary not produced when check.conv==FALSE", HPD="HPD intervals not produced when check.conv==FALSE", psrf="Potential scale reductionf factors not produced when check.conv==FALSE", autocorr="Autocorrelation statistics not produced when check.conv==FALSE", trace=plot1, density=plot2), otheroutputs))
 	}else{
-		return(c(list(mcmc=input.data, end.state=inits.out, burnin=burnin+adapt, sample=sample, thin=thin, summary="Summary not produced when check.conv==FALSE", psrf="Potential scale reductionf factors not produced when check.conv==FALSE", autocorr="Autocorrelation statistics not produced when check.conv==FALSE", trace=plot1, density=plot2), otheroutputs))
+		return(c(list(mcmc=input.data, end.state=inits.out, burnin=burnin+adapt, sample=sample, thin=thin, summary="Summary not produced when check.conv==FALSE", HPD="HPD intervals not produced when check.conv==FALSE", psrf="Potential scale reductionf factors not produced when check.conv==FALSE", autocorr="Autocorrelation statistics not produced when check.conv==FALSE", trace=plot1, density=plot2), otheroutputs))
 	}
 
 }

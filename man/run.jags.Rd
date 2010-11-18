@@ -29,28 +29,28 @@ version of R (located in the Program Files/R/bin/ folder).
 
 \usage{
 
-run.jags(model=stop("No model supplied"),
-monitor = stop("No monitored variables supplied"),
-data = NA, n.chains = 2, inits = replicate(n.chains, NA),
-burnin = 5000*thin, sample = 10000*thin,
-adapt=if(burnin<200) 100 else 0, jags=findjags(),
-silent.jags = FALSE, check.conv = TRUE, plots = TRUE,
-psrf.target = 1.05, normalise.mcmc = TRUE,
-check.stochastic = TRUE, modules=c(""), factories=c(""), 
-thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE,
-monitor.pd.i = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE,
-tempdir=TRUE, method=if(.Platform$OS.type=='unix' &
-.Platform$GUI!="AQUA") 'interruptible' else 'simple')}
-
+run.jags(model=stop("No model supplied"), 
+monitor = stop("No monitored variables supplied"), data=NA, n.chains=2,
+inits = replicate(n.chains, NA), burnin = 5000*thin, 
+sample = 10000*thin, adapt=if(burnin<200) 100 else 0, jags = findjags(),
+silent.jags = FALSE, check.conv = TRUE, plots = TRUE, 
+psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, 
+modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, 
+monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, 
+keep.jags.files = FALSE, tempdir=TRUE, method=if(.Platform$OS.type=='unix' 
+& .Platform$GUI!="AQUA" & Sys.info()['user']!='nobody') 'interruptible'
+else 'simple') }
 
 \arguments{
 
 \item{model}{a character string of the model in the JAGS language.  No
 default.}
 
-\item{monitor}{a character vector of the names of variables to monitor. 
-For all models, specifying 'deviance' as a monitored variable will
-calculate the model deviance.  No default.}
+\item{monitor}{a character vector of the names of variables to monitor.
+For all models, specifying 'deviance' as a monitored variable implies
+monitor.deviance, and 'dic' will calculate the Deviance Information
+Criterion (implies monitor.deviance/monitor.pd/monitor.popt and requires
+more than 1 chain).  No default.}
 
 \item{data}{a character string in the R dump format (or a named list)
 containing the data.  If left as NA, no external data is used in the
@@ -74,11 +74,11 @@ generators in JAGS.  Default NA.}
 \item{burnin}{the number of burnin iterations (not sampled) to use
 (numeric).  Default 5000 iterations.}
 
-\item{sample}{the number of sampling iterations to use (numeric). 
+\item{sample}{the number of sampling iterations to use (numeric).
 Default 10000 iterations.}
 
 \item{adapt}{advanced option to control the length of the adaptive phase
-directly, which is otherwise half the length of the burnin period. 
+directly, which is otherwise half the length of the burnin period.
 Default is 0, unless burnin is less than 200 in which case 100 adapitve
 iterations are used.}
 
@@ -86,7 +86,7 @@ iterations are used.}
 findjags() to attempt to locate JAGS on your system.}
 
 \item{silent.jags}{should the JAGS output be suppressed? (logical)  If
-TRUE, no indication of the progress of individual models is supplied. 
+TRUE, no indication of the progress of individual models is supplied.
 Default FALSE.}
 
 \item{check.conv}{should the convergence be assessed after the model has
@@ -99,7 +99,7 @@ required to assess convergence.  Default TRUE.}
 monitored variable?  If TRUE, the returned list will include elements
 'trace' and 'density' which consist of a list of lattice objects.  The
 alternative is to use plot(results$mcmc) to look at the density and
-traceplots for each variable using the traditional graphics system. 
+traceplots for each variable using the traditional graphics system.
 Default TRUE.}
 
 \item{psrf.target}{the value of the point estimate for the potential
@@ -180,24 +180,37 @@ removed when the function exits for any reason.  Default TRUE.}
 process (the default behaviour for runjags < 0.9.6), 'interruptible'
 allows the JAGS process to be terminated immediately using the interrupt
 signal 'control-c' (terminal/console versions of R only), and 'parallel'
-runs each chain as a separate process on a separate core (this will
-speed up execution of models with multiple tasks at the expense of using
-more RAM, but cannot be used with monitor.pd, monitor.pd.i or
-monitor.popt).  Only the 'simple' method is available for Windows.  On
-machines running Mac OS X and with access to an Apple Xgrid cluster, the
-method may be a list with an element 'xgrid.method="simple"' (see
-\code{\link{xgrid.run.jags}} for more information).  Default
-'interruptible' on terminal/console versions of R, or 'simple' on GUI
-versions of R.}
+runs each chain as a separate process on a separate core.  Note that the
+latter uses separate JAGS instances to speed up execution of models with
+multiple chains (at the expense of using more RAM), but cannot be used
+with monitor.pd, monitor.pd.i or monitor.popt.  Each chain is specified
+using a different random number generator (.RNG.name) for up to 4 chains
+(the number of different RNG available in JAGS), unless .RNG.name is
+specified in the initial values.  Because each chain uses a separate
+JAGS instance, JAGS has no way of ensuring independence between multiple
+chains using the same random number generator (as would normally be done
+when calling a single JAGS instance with multiple chains).  Using more
+than 4 chains with the 'parallel' method without the use of new RNG
+factories may therefore produce dependence between chains, and is not
+recommended (a warning is given if trying to do so).  Only the 'simple'
+method is available for Windows.  On machines running Mac OS X and with
+access to an Apple Xgrid cluster, the method may be a list with an
+element 'xgrid.method="simple"' (see \code{\link{xgrid.run.jags}} for
+more information).  Default 'interruptible' on terminal/console versions
+of R, or 'simple' on GUI versions of R or when running over xgrid
+(methods other than 'simple' require the use of 'ps' which is not
+available when running jobs as 'nobody' via xgrid).}
 
 }
 
 
 
 \value{The results of the simulation are returned as list including the
-following items (omitting the last 3 items if check.conv==FALSE):
+following items (omitting some items if check.conv==FALSE):
 
-\item{mcmc}{an MCMC list of MCMC objects representing the chains}
+\item{mcmc}{an MCMC list of MCMC objects representing the chains.  Each
+MCMC object represents the value of each monitored variable (including
+the deviance, if specified) for that chain at each iteration.}
 
 \item{end.state}{a character vector of length equal to the number of
 chains representing a description of the model state in the R dump
@@ -214,6 +227,9 @@ the previous simulation ended.}
 \item{summary}{the summary of each monitored variable from the combined
 chains, equivalent to summary(combine.mcmc(mcmc,
 collapse.chains=TRUE)).}
+
+\item{HPD}{the 95\% highest posterior density and median value of each
+monitored variable from the combined chains.}
 
 \item{psrf}{the output of the Gelman Rubin dignostic (similar [but not
 exactly equivalent] to gelman.diag(mcmc)).}
@@ -247,6 +263,26 @@ combine using the c.trellis method in the latticeExtra package, or
 simply re-generate the plots using the raw mcmc output.    Not produced
 if plots==FALSE.}
 
+\item{pd}{the total effective number of parameters in the model
+calculated using the DIC module for JAGS.  Returned only if
+monitor.pd=TRUE is supplied to the function (or if 'dic' is specified as
+a monitored variable).}
+
+\item{pd.i}{the contribution of each parameter towards the total
+effective number of parameters calculated using the DIC module for JAGS.
+Returned only if monitor.pd.i=TRUE is supplied to the function.}
+
+\item{popt}{the optimism of the expected deviance calculated using the
+DIC module for JAGS.  Returned only if monitor.popt=TRUE is supplied to
+the function (or if 'dic' is specified as a monitored variable).}
+
+\item{dic}{The Deviance Information Criterion (DIC) model fit
+statistics.  Returned only if 'dic' is specified as a monitored
+variable.  The default print method displays the DIC calculated using
+both pd (dic) and popt (ped), using the deviance from the combined
+chains and for each individual chain.  Separate values for the mean pd,
+sum popt and mean deviance is also listed.  For more information on the
+types of DIC calculated, see the JAGS manual. }
 
 
 }
@@ -275,7 +311,7 @@ if plots==FALSE.}
 
 
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 
 
@@ -291,33 +327,33 @@ X <- 1:100
 Y <- rnorm(length(X), 2*X + 10, 1)
 
 # Model in the JAGS format
-model <- "model {
-for(i in 1 : N){
-Y[i] ~ dnorm(true.y[i], precision);
+model <- "model { 
+for(i in 1 : N){ 
+Y[i] ~ dnorm(true.y[i], precision); 
 true.y[i] <- (m * X[i]) + c;
-}
-m ~ dunif(-1000,1000);
-c ~ dunif(-1000,1000);
-precision ~ dexp(1);
+} 
+m ~ dunif(-1000,1000); 
+c ~ dunif(-1000,1000); 
+precision ~ dexp(1); 
 }"
 
 # Use dump.format to convert the data and initial values files 
 # into the R dump format, with explicit control over the random 
-# number generator used for each chain (optional):
-data <- dump.format(list(X=X, Y=Y, N=length(X)))
-inits1 <- dump.format(list(m=1, c=1, precision=1, 
-	.RNG.name="base::Super-Duper", .RNG.seed=1))
-inits2 <- dump.format(list(m=0.1, c=10, precision=1, 
-	.RNG.name="base::Wichmann-Hill", .RNG.seed=2))
+# number generator used for each chain (optional): 
+data <- dump.format(list(X=X, Y=Y, N=length(X))) 
+inits1 <- dump.format(list(m=1, c=1, precision=1,
+.RNG.name="base::Super-Duper", .RNG.seed=1)) 
+inits2 <- dump.format(list(m=0.1, c=10, precision=1,
+.RNG.name="base::Wichmann-Hill", .RNG.seed=2))
 
-# Run the model and produce plots
+# Run the model and produce plots 
 results <- run.jags(model=model, monitor=c("m", "c", "precision"), 
-	data=data, n.chains=2, inits=c(inits1,inits2), plots = TRUE)
+data=data, n.chains=2, inits=c(inits1,inits2), plots = TRUE)
 
-# Density plots of the monitored variables:
+# Density plots of the monitored variables: 
 results$density
 
-# Analyse the results
+# Analyse the results 
 results$summary
 
 }

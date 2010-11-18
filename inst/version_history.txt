@@ -1,4 +1,4 @@
-This version of the function is still being developed, and as such will almost certainly contain numerous bugs.  If you find one or more (gasp!), or if you have any comments/criticisms/questions about the function, then please feel free to email me at m.denwood@vet.gla.ac.uk.  Thanks!
+This version of the function is still being developed, and as such will almost certainly contain numerous bugs.  If you find one, or if you have any comments/criticisms/questions about the function, then please feel free to email me at matthew.denwood@glasgow.ac.uk  Thanks!
 
 
 OPEN ISSUES
@@ -17,6 +17,63 @@ None planned.
 
 
 VERSION HISTORY
+
+
+Version 0.9.9  (sourceforge revision 19, date: 18/11/2010)
+
+NEW FEATURES
+
+The development version of runjags is now being hosted on sourceforge using svn
+
+Setting a monitor of 'dic' now results in DIC calculations being returned (monitor 'deviance' can also be used as an alternative to monitor.deviance)
+
+An 'xapply' function (convenience wrapper for xgrid.run) has been added
+
+All feedback using cat now wraps to the screen width nicely
+
+combine.mcmc (and therefore autorun.jags) now returns the exact number of iterations specified to return.samples rather than just the closest ceiling
+
+The xgrid.results function can now return partially completed jobs
+
+run.jags now checks that it is not being run on Xgrid to resolve a problem with the interruptible method when being run as 'nobody'
+
+The parallel and xgrid JAGS methods now ensure that up to 4 chains have different RNG names and give a warning if more than 4 chains are used.  The issue of chain independence is discussed in the help files
+
+The run.jags function now aborts if attempting to monitor DIC, pd, popt or pd.i with a single chain (or parallel or separate chains)
+
+JAGS functions now return HPD intervals as well as summary statistics
+
+Introduced a new autocorr.diag function which will be much faster for models with lots of monitored variables
+
+Introduced the capability to specify R64 over R32 etc with Rbuild
+
+
+BUG FIXES
+
+A warning message about start values not being changed has been removed
+
+The name of pd.i has been corrected on model outputs
+
+Fixed scoping bug that could cause functions sent to Xgrid to fail to find variables that should be available
+
+Bug preventing monitoring pd.i for large models fixed
+
+Fixed a bug in autorun.jags which crashed the function if the time limit was exceeded
+
+Bug fixed preventing tempdir=FALSE from working
+
+Potential bug when attempting to parallelise chains in Windows fixed
+
+Fixed an issue that could cause errors when normalising chains of less than 1000 iterations
+
+Misuse of the Sys.which function corrected
+
+Fixed issues with backslashes and over-writing global variables in Windows that could cause modules to fail to load
+
+Improved error handling for potentially misconfigured JAGS installations
+
+Many other miscellaneous code tweaks and bug fixes.
+
 
 
 Version 0.9.7

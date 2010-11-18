@@ -90,6 +90,6 @@ clusters for remote execution of user specified R code
 
 
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \keyword{methods}

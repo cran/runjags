@@ -98,15 +98,18 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 	if(!is.na(return.samples)){
 		if(return.samples > rowlengths){
 			thin <- 1
+			warning('Specified return.samples was longer than the chains provided - returning shorter MCMC object length')
 		}else{
 			thin <- rowlengths / (return.samples-1)
 		}
+	}else{
+		return.samples <- Inf
 	}
 	
 	currentthin <- thin(newobjects)
 	thin <- floor(thin)*currentthin
-
-	suppressWarnings(newobjects <- window(newobjects, thin=thin))
+	
+	suppressWarnings(newobjects <- window(newobjects, thin=thin, end=(start(newobjects)+(thin*return.samples))-1))
 
 	
 	return(newobjects)

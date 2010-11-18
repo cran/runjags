@@ -47,7 +47,7 @@ new_unique <- function(name=NA, suffix="", ask=FALSE, prompt="A file or director
 	}
 	permissions <- file.exists(paste(temp, suffix, sep=""))
 	if(permissions==FALSE){
-		cat("Error:  Directory not writable\n")
+		swcat("Error:  Directory not writable\n")
 		return("Directory not writable")
 	}else{
 		if(!touch) unlink(paste(temp, suffix, sep=""), recursive = TRUE)

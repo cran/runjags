@@ -34,17 +34,18 @@ autorun=FALSE, ...)
 \item{path}{either a relative or absolute path to a textfile (including
 the file extension) containing a model in the JAGS language and possibly
 monitored variable names, data and/or initial values, or a character
-string of the same.  No default.  The model must be started with the
-string 'model\{' and ended with '\}' on new lines.  Data must be
-similarly started with 'data\{', monitored variables with 'monitor\{',
-and initial values as 'inits\{', and all ended with '\}'.  If multiple
-models are found, all but the first one are ignored with a warning. 
-Multiple data blocks and monitor blocks are combined, multiple inits
-blocks are used for different chains.  The model block may also contain
-automatically generated data and initial values variables using
-'#data# variable' and '#inits# variable', and more monitored
-variables using '#monitor# variable'.  See \code{\link{read.winbugs}}
-for more information.}
+string of the same.  May also be a vector of paths to different text
+files, possibly separately containing the model, data and intitial
+values.  No default.  The model must be started with the string
+'model\{' and ended with '\}' on new lines.  Data must be similarly
+started with 'data\{', monitored variables with 'monitor\{', and initial
+values as 'inits\{', and all ended with '\}'.  If multiple models are
+found, all but the first one are ignored with a warning. Multiple data
+blocks and monitor blocks are combined, multiple inits blocks are used
+for different chains.  The model block may also contain automatically
+generated data and initial values variables using '#data# variable' and
+'#inits# variable', and more monitored variables using '#monitor#
+variable'.  See \code{\link{read.winbugs}} for more information.}
 
 \item{datalist}{an optional named list containing variables used as
 data, or alternatively a function (with no arguments) that returns a
@@ -131,7 +132,7 @@ more information.
 
 
 
-\author{Matthew Denwood \email{m.denwood@vet.gla.ac.uk}}
+\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 
 

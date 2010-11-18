@@ -17,7 +17,7 @@ ask <- function (prompt="?", type="logical", bounds=c(-Inf, Inf), na.allow=FALSE
 			if((result == "F") | (result == "FALSE") | (result == "False") | (result == "false") | (result == "f") | (result == "n") | (result == "NO") | (result == "no") | (result == "No") | (result == "N")){
 				return(FALSE)
 			}
-			cat("ERROR:  Please enter 'y' or 'n'\n")
+			swcat("ERROR:  Please enter 'y' or 'n'\n")
 		}
 	}
 	
@@ -29,10 +29,10 @@ ask <- function (prompt="?", type="logical", bounds=c(-Inf, Inf), na.allow=FALSE
 			}
 			suppressWarnings(result <- as.numeric(result))
 			if(is.na(result)){
-				cat("ERROR:  Please enter a number\n")
+				swcat("ERROR:  Please enter a number\n")
 			}else{
 				if((result > bounds[2]) | (result < bounds[1])){
-					cat("ERROR:  Please enter a number between ", bounds[1], " and ", bounds[2], "\n", sep="")
+					swcat("ERROR:  Please enter a number between ", bounds[1], " and ", bounds[2], "\n", sep="")
 				}else{
 					return(result)
 				}
@@ -52,10 +52,10 @@ ask <- function (prompt="?", type="logical", bounds=c(-Inf, Inf), na.allow=FALSE
 			}
 			suppressWarnings(result <- as.numeric(result))
 			if(is.na(result) | (as.integer(result) != result)){
-				cat("ERROR:  Please enter a whole number\n")
+				swcat("ERROR:  Please enter a whole number\n")
 			}else{
 				if((result > bounds[2]) | (result < bounds[1])){
-					cat("ERROR:  Please enter a whole number between ", bounds[1], " and ", bounds[2], "\n", sep="")
+					swcat("ERROR:  Please enter a whole number between ", bounds[1], " and ", bounds[2], "\n", sep="")
 				}else{
 					return(result)
 				}
