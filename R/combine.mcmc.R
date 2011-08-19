@@ -1,5 +1,5 @@
 combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=if(length(mcmc.objects)==1) TRUE else FALSE){
-	
+
 	if(class(mcmc.objects)!="list"){
 		if(any(class(mcmc.objects)==c("mcmc.list", "mcmc"))){
 			mcmc.objects <- list(mcmc.objects)
@@ -7,7 +7,7 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 			stop("Data must be provided as a list of or single mcmc object(s), or a list of or single mcmc.list(s) (for multiple chains)")
 		}
 	}
-	
+
 	no.objects <- length(mcmc.objects)
 	
 	if(length(mcmc.objects)==0) stop("The list provided cannot be empty")
@@ -69,7 +69,8 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 			newobjects[[i]] <- matrix(NA, nrow=0, ncol=n.params, dimnames=list(NULL, dimnames(mcmc.objects[[1]][[1]])[[2]]))
 		
 			for(j in 1:no.objects){
-			
+				
+				if(is.null(dim(mcmc.objects[[j]][[i]]))) dim(mcmc.objects[[j]][[i]]) <- c(niter(mcmc.objects[[j]][[i]]), 1)
 				newobjects[[i]] <- rbind(newobjects[[i]], mcmc.objects[[j]][[i]])
 				#newobjects[[i]][start.points[j]:(sum(rowlengths[1:j])),] <- as.matrix(window(mcmc.objects[[j]][[i]]))
 			
@@ -87,13 +88,12 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 		
 		newobjects <- mcmc.objects[[1]]
 	}
-	
-	if(collapse.chains & class(newobjects)=="mcmc.list"){
-		class(newobjects) <- "list"
-		newobjects <- combine.mcmc(newobjects)
-	}
 
 	rowlengths <- niter(newobjects)
+
+	# For combine.mcmc part later, more efficient to thin out first if we are doing that anyway (recursive call will thin further as required):
+	startretsamples <- return.samples
+	startthin <- thin	
 		
 	if(!is.na(return.samples)){
 		if(return.samples > rowlengths){
@@ -105,12 +105,19 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 	}else{
 		return.samples <- Inf
 	}
+
 	
 	currentthin <- thin(newobjects)
 	thin <- floor(thin)*currentthin
-	
-	suppressWarnings(newobjects <- window(newobjects, thin=thin, end=(start(newobjects)+(thin*return.samples))-1))
+	endat <- (start(newobjects)+(thin*return.samples))-1
 
+	suppressWarnings(newobjects <- window(newobjects, thin=thin, end=endat))
+
+	# If collapse chains recursive call (after thinning to approx double what we will need, for efficiency):
+	if(collapse.chains & class(newobjects)=="mcmc.list"){
+		class(newobjects) <- "list"
+		newobjects <- combine.mcmc(newobjects, collapse.chains=TRUE, return.samples=startretsamples, thin=startthin)
+	}
 	
 	return(newobjects)
 	

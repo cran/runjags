@@ -445,7 +445,7 @@ results
 # (b) JAGS is installed, and (c) the runjags package is installed 
 # on the node:
 cat('#!/bin/bash
-#!/bin/bash
+
 if [ ! -f /usr/bin/R ]; then 
 echo 0
 exit 0
@@ -454,7 +454,7 @@ if [ ! -f /usr/local/bin/jags ]; then
 echo 0
 exit 0
 fi
-/usr/bin/R --slave -e "suppressMessages(r<-require(runjags,quietly=TRUE));cat(r*1,fill=TRUE)"
+/usr/bin/R --slave -e "suppressMessages(r<-require(runjags,quietly=T));cat(r*1,fill=T)"
 exit 0
 ', file='runjagsART.sh')
 

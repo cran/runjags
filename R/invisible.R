@@ -496,10 +496,10 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		swcat('Job statuses at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' were "', paste(status, collapse=', '), '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
 
 		repeat{
-			assign('xgrid.waiting', TRUE, env=parent.frame())
+			assign('xgrid.waiting', TRUE, envir=parent.frame())
 			flush.console()
 			Sys.sleep(wait.interval)
-			assign('xgrid.waiting', FALSE, env=parent.frame())
+			assign('xgrid.waiting', FALSE, envir=parent.frame())
 			for(s in 1:nsims){
 				statusout <- system(paste('xgrid -job attributes -id ', jobnum[s], sep=''), intern=TRUE)
 				if(paste(statusout, collapse='')=="{    error = InvalidJobIdentifier;}") stop("One or more of the jobs has been deleted from xgrid")
@@ -565,10 +565,10 @@ xgrid.retrieve <- function(jobnum, wait, wait.interval, silent, cleanup, directo
 		swcat('Job status at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' was "', status, '".  Will try again on ', format(Sys.time()+wait.interval, "%b %d %H:%M"), '\n', sep='')
 		
 		repeat{
-			assign('xgrid.waiting', TRUE, env=parent.frame())
+			assign('xgrid.waiting', TRUE, envir=parent.frame())
 			flush.console()
 			Sys.sleep(wait.interval)
-			assign('xgrid.waiting', FALSE, env=parent.frame())
+			assign('xgrid.waiting', FALSE, envir=parent.frame())
 			statusout <- system(paste('xgrid -job attributes -id ', jobnum, sep=''), intern=TRUE)
 			if(paste(statusout, collapse='')=="{    error = InvalidJobIdentifier;}") stop("The job has been deleted from xgrid")
 			status <- statusout[grep('jobStatus', statusout)]

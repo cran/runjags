@@ -39,7 +39,7 @@ modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE,
 monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, 
 keep.jags.files = FALSE, tempdir=TRUE, method=if(.Platform$OS.type=='unix' 
 & .Platform$GUI!="AQUA" & Sys.info()['user']!='nobody') 'interruptible'
-else 'simple') }
+else 'simple', batch.jags=silent.jags) }
 
 \arguments{
 
@@ -200,6 +200,11 @@ more information).  Default 'interruptible' on terminal/console versions
 of R, or 'simple' on GUI versions of R or when running over xgrid
 (methods other than 'simple' require the use of 'ps' which is not
 available when running jobs as 'nobody' via xgrid).}
+
+\item{batch.jags}{option to call JAGS in batch mode, rather than using
+input redirection.  On JAGS >= 3.0.0, this suppresses output of the status
+which may be useful in some situations.  Default TRUE if silent.jags is
+TRUE, or FALSE otherwise.}
 
 }
 

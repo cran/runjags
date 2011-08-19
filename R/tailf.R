@@ -1,10 +1,27 @@
+getRversion <- function(){
+	vers <- R.version$version.string
+	version.string <- gsub("\\(.*?\\)","",vers,perl=FALSE)
+	return(getversion(version.string))
+}
+
+getversion <- function(version.string){
+	vers <- gsub("[[:space:]]","",gsub("[[:alpha:]]","",version.string))
+	vers <- gsub("[[:punct:]]", "", gsub("."," ",vers, fixed=TRUE))
+	vers <- strsplit(vers," ",fixed=TRUE)[[1]]
+	version <- (10^((length(vers)-1):0))^3 * as.numeric(vers)
+	version <- sum(version)
+	return(version)
+}
+
 tailf <- function(file, start=1, refresh=0.1, min.static=1, max.static=Inf, stop.when=function() return(FALSE), print=TRUE, return=!print){
 
 done <- FALSE
 
+# Allow the simulation to start:
+Sys.sleep(0.5)
+
 tryCatch({
 if(!file.exists(file)) stop("The named file does not exist")
-suppressWarnings(output <- readLines(file))
 
 linesto <- start+1
 going <- TRUE
@@ -17,6 +34,13 @@ repeat{
 Sys.sleep(refresh)
 
 suppressWarnings(output <- readLines(file))
+# Catch occasional error with na being introduced:
+if(is.na(lastline)) lastline <- ""
+if(length(output)==0){
+	static <- static+1
+	if(static > max.static) break
+}
+
 if(length(output)==(linesto-1)){
 	if(output[length(output)]==lastline){
 		static <- static+1

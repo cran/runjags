@@ -131,7 +131,7 @@ are unique for this script:
     'intel' or 'ppc'.
 
 -v  A space seperated string of environmental variable(s) in the form of 
-    "var_one=value_one var_two=value_two" to be set locally before running the
+    "var_1=value_1 var_2=value_2" to be set locally before running the
     command.
 
 -q  Wait for nodes running OS X server to become available rather than running 

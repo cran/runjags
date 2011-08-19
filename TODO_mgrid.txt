@@ -1,0 +1,155 @@
+"In Mac OS X 10.0, the NeXTSTEP format was deprecated, and a new XML format was introduced, with a public DTD defined by Apple." ... "Since XML files, however, are not the most space-efficient means of storage, Mac OS X 10.2 introduced a new format where property list files are stored as binary files. Starting with Mac OS X 10.4, this is the default format for preference files."
+
+Instead of running plist -s in your script, we could just run plist -convert binary1 and it would have the same effect (checking the syntax) but would convert the file straight to the most modern format at the same time. Looking at the logs this warning happens all of the time, so it might be a good idea...
+
+
+
+make mgrid get totalprocessor count as well so it doesn't think they all have 24 cores etc
+
+mgrid typo in help (double fullstop):
+to the -a option.  Supplying " " or "none" as the argument.
+    disables node ranking and the ranking ART script for submission of this job.
+check artpath exists and catch if not
+
+For score profiling job:  (or put email address in if supplied)
+echo "applicationIdentifier = \"`whoami`"@"$HOSTNAME#@#no_email\";" >> $batchname
+
+when the nodelist is pending, mgrid shows an error (not fatal) - handle it properly
+
+-h and -f (at least with -b) results in a force.sh script being left in the working directory
+
+remove scoring script (unless custom) from job submission
+
+mgrid should binary plists as per RR suggestion
+
+mgrid -lm %complete is wrong - DONE
+Add | sed -e 's/"//g' -e 's/;//g'  to every grepstring to take unwanted " (out of the date) and ; out of it (make sure I'm not removing them unnecessarily though) - DONE except maybe not necessary for some?
+
+feedback glitch for tasks \n\n rather than actually doing 2 new lines fixed
+
+This probably should be done automatically when the script detects that the number of tasks exceeds the number of available nodes, or maybe just prevent the RAM free and CPUs free part of the script from giving it a score of 0....  Actually, this could be default behaviour without any obvious drawbacks - just assign them a score of 1 then they won't be given a tas
+--- ALSO CHANGE THE DEFAULT SCORING SCRIPT
+
+
+
+A single script using mgrid could queery controller (you would have to input name of controller) and then get a list of the job ids and then upload a node_list and then check and delete any of the old ids for a node_list
+
+
+OLD STUFF:
+
+Look at how to check the AVAILABLE ram - some things are massive ram hogs.
+
+
+Remove duplicate entries from node list?
+
+There are 0 cores on 0 machines available for your job
+Job assigned to 
+There were more tasks than cores available; some tasks were not given scheduler hints as it would have been ignored by xgrid
+
+
+New xgrid plans:
+
+Hydra keeps a list of active nodes in a file somewhere in matt (or locally if matt doesn't exist on hydra)
+Every night, cron makes it send out a job excluding all known nodes then waits for 10 mins then gets the results (and repeats if necessary)
+If the node list has changed, (or if some idiot has deleted the old 'node_list') hydra then deletes and re-submits a dummy xgrid job called 'node_list' which just writes the list to stdout
+All clients then retrieve this job to get the node list (keep a copy locally as backup?) - will have to loop through retrieving job attributes (start with newest first) until the name matches 'node_list'
+Or:
+xgrid -job run -art hydra.sh -artid hydra -artmin 1 -artmax 1 /usr/bin/sqlite3 /var/xgrid/controller/datastore.db "select name from agents;"
+!!!! Returns error:
+SQL error: database is locked
+
+
+REMEMBER TO PUT DETAILS OF USER INTO submissionIdentifier
+some combination of:  whoami and echo $HOSTNAME
+modify xgrid.status to print this info if -u option (or something)
+
+
+Have a wrapper for igrid called xgrid.score (with flags -c -q -a) that gives -b dev/null so we can look at the scores.
+
+Have a list file buried somewhere in ~/library that contains all names of nodes that have previously responded
+igrid and xgrid.start check the date of this file (have the date on line 1 and update line 1) and if > 1 month old ask the user to update the list when the job has finished (or before running the job if the file doesn't exist)
+To do this, a shell script keeps sending jobs with an ART file that excludes all nodes on the list.  If it returns something, get the name from the schedulerHint and add it to the list of nodes and repeat until the job is pending for 1 minute then stop.
+
+
+sysctl -n hw.ncpu
+/Library/Preferences/com.apple.xgrid.agent.plist
+MaximumTaskCount=1
+cat /etc/xgrid/agent/com.apple.xgrid.agent.plist.default | less
+
+
+Append information on art.score (if [ -f art.score.sh ]) and machine name to start of R shell script and add to default shell script
+
+Not ignored if artmin=artmx=artequal='' - 0 is still not allowed
+
+Have the ruby script in the folder with the others and always use it
+
+
+Hydra has a text file of nodes (all on new lines with Desktops: half way down) in a place readable by nobody - sandbox?  Each node retrieves this list using:
+xgrid -job run getnodenames.sh -a onlyrunonhyrda
+
+/Documents/xgrid/getnodelistbatch.txt retrieves the node list from /tmp/nodelist
+Maybe better to have the node list somewhere not writable by nobody, or else set the permissions when creating the file
+
+also works: (need to set -artid, can take a while to return):
+xgrid -job run -art hydrascript.sh -artid hscript -artequal 1 /usr/sbin/system_profiler SPSoftwareDataType | /usr/bin/grep 'Computer Name'
+xgrid -job run -art hydrascript.sh -artid hscript -artequal 1 /bin/cat /tmp/nodelist
+
+
+Use combination of logged in name and command to generate the job name?  Have submission identifier as logged in name and IP address or similar?
+
+
+For manual ranking script:
+
+execute custom shell script (if present) and server selector (if -q) in ruby script for ranking (no ART scripts)
+Substitute spaces for _ and remove commenting characters but keep a record of actual names for hint strings
+Keep a record of desktop names and server names
+
+Then use all 3 (or just ruby script) as ART scores all with artmin=1
+
+For one job just send to highest scored server node or highest scored desktop if all servers busy
+Ask Richard to limit max jobs to 8 on servers?
+Don't use anything that returns a score of 0, but anything that doesn't return a score just assume it is busy and assign a score of 1 (so lowest priority) with 0 available cores
+If all returned scores are 0 and a custom shell script is supplied ask if they want to continue, otherwise just submit with hints for only things that didn't return a score (given a score of 1)
+For several tasks loop through servers in score order until all available cores full then loop through desktops in score order until all available cores full then loop through servers continually until all tasks have a hint (the last ones will probably be ignored anyway)
+Feedback how many machines returned a score of >0 and how many available cores, then if tasks=1 say which machine its sent to otherwise say distributing xx tasks over the dedicated server/all available cores
+
+
+tengrid.com
+
+MGRID STUFF:
+
+get number of bytes in a page automatically in case it changes with hardware
+
+add facility to check version of mgrid in runjags and warn if newer version
+mgrid installer function - system(input=pass, intern=TRUE) for sudo pswd and ensure its right
+
+support files somewhere more sensible that doesn't require sudo?
+
+
+vtri-ws2:~ matthewdenwood$ mgrid -f -h hydra /usr/bin/sqlite3 /var/xgrid/controller/datastore.db "select name from agents;"
+ 
+Generating xgrid job
+Submitting your job to xgrid (this may take some time)...
+Job submission successful, your job ID is 962
+Finished
+
+vtri-ws2:~ matthewdenwood$ xgrid -job results -id 962hydra
+ppc8
+l mac pro
+ppc3
+ppc10
+ppc6
+ppc2
+ppc4
+ppc7
+ppc9
+PowerMac_MD
+ppc5
+ppc11
+Dan’s Mac Pro
+boydorr.ibls.gla.ac.uk
+intel4
+r-reeve.zoology.gla.ac.uk
+boydorr-gkb.ibls.gla.ac.uk
+Rowland Kao’s Mac Pro
+vtri-ws2:~ matthewdenwood$ 

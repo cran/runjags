@@ -1,4 +1,4 @@
-run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000*thin, sample = 10000*thin, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE, tempdir=TRUE, method=if(.Platform$OS.type=='unix' & .Platform$GUI!="AQUA" & Sys.info()['user']!='nobody') 'interruptible' else 'simple'){
+run.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), burnin = 5000*thin, sample = 10000*thin, adapt=if(burnin<200) 100 else 0, jags = findjags(), silent.jags = FALSE, check.conv = TRUE, plots = TRUE, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, keep.jags.files = FALSE, tempdir=TRUE, method=if(.Platform$OS.type=='unix' & .Platform$GUI!="AQUA" & Sys.info()['user']!='nobody') 'interruptible' else 'simple', batch.jags=silent.jags){
 
 if(class(method)=='list'){
 	xgrid.options <- method
@@ -380,7 +380,7 @@ if(method=='xgrid.retrieve'){
 			#filecon <- file('scriptlauncher.sh', 'w')
 			cat('#!/bin/sh
 
-			', jags, ' < script.cmd > jagsoutput.txt 2>&1 &
+			', jags, if(!batch.jags) ' <', ' script.cmd > jagsoutput.txt 2>&1 &
 
 			echo $! > jagspid.txt
 			', sep='', file='scriptlauncher.sh')
@@ -413,23 +413,21 @@ tryCatch({
 if(method=='simple'){
 
 if (jags.status$os == "windows"){
-	if(jags.status$popen.support == TRUE){
-		success <- system(paste(jags, " script.cmd", sep = ""), intern=silent.jags, wait=TRUE, ignore.stderr = FALSE, show.output.on.console = !silent.jags)
-	}else{
-		success <- system(paste(jags, " script.cmd", sep = ""), ignore.stderr = FALSE, wait=TRUE, show.output.on.console = !silent.jags)
-	}
+	
+	success <- shell(paste(jags, if(!batch.jags) " <", " script.cmd", sep = ""), intern=silent.jags, wait=TRUE, ignore.stderr = FALSE, translate=TRUE, mustWork=TRUE)
+
 }else{
 	if(silent.jags == FALSE && jags.status$popen.support==TRUE){
-		success <- system(paste(jags, "< script.cmd 2>&1", sep=""), ignore.stderr = FALSE)
+		success <- system(paste(jags, if(!batch.jags) " <", " script.cmd 2>&1", sep=""), ignore.stderr = FALSE)
 	}
 	if(silent.jags == TRUE && jags.status$popen.support==TRUE){
-		success <- system(paste(jags, "< script.cmd 2>&1", sep=""), intern=TRUE, ignore.stderr = FALSE)
+		success <- system(paste(jags, if(!batch.jags) " <", " script.cmd 2>&1", sep=""), intern=TRUE, ignore.stderr = FALSE)
 	}
 	if(silent.jags == FALSE && jags.status$popen.support==FALSE){
-		success <- system(paste(jags, "< script.cmd", sep=""), ignore.stderr = FALSE)
+		success <- system(paste(jags, if(!batch.jags) " <", " script.cmd", sep=""), ignore.stderr = FALSE)
 	}
 	if(silent.jags == TRUE && jags.status$popen.support==FALSE){
-		success <- system(paste(jags, "< script.cmd > /dev/null", sep=""), ignore.stderr = TRUE)
+		success <- system(paste(jags, if(!batch.jags) " <", " script.cmd > /dev/null", sep=""), ignore.stderr = TRUE)
 	}
 }
 
@@ -444,7 +442,7 @@ if(method=='interruptible'){
 	filecon <- file('scriptlauncher.sh', 'w')
 	cat('#!/bin/sh
 	
-	', jags, ' < script.cmd > jagsoutput.txt 2>&1 &
+	', jags, if(!batch.jags) ' <', ' script.cmd > jagsoutput.txt 2>&1 &
 	
 	echo $! > jagspid.txt
 	exit 0

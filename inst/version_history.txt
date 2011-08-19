@@ -18,8 +18,21 @@ None planned.
 
 VERSION HISTORY
 
+Version 0.9.9-2
 
-Version 0.9.9  (sourceforge revision 19, date: 18/11/2010)
+BUG FIXES
+
+Improved compatibility with JAGS version 3 and JAGS executable finding for Windows (includes support for disabling/enabling jags batch mode as output is now handled differently for batch mode and non batch mode by JAGS)
+
+The combine.mcmc function should now be faster at thinning and collapsing chains
+
+Fixed issue with combine.mcmc and a single object
+
+Fixed a (rarely observed) bug in interruptible and parallel methods (unix only)
+
+
+
+Version 0.9.9
 
 NEW FEATURES
 

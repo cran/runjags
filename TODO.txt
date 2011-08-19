@@ -1,0 +1,151 @@
+Fix:
+checking R code for possible problems ... NOTE
+xgrid.retrieve: warning in assign("xgrid.waiting", TRUE, env =
+parent.frame()): partial argument match of 'env' to 'envir'
+xgrid.retrieve: warning in assign("xgrid.waiting", FALSE, env =
+parent.frame()): partial argument match of 'env' to 'envir'
+
+
+
+Have xgrid name and password options to functions - use Sys.setenv() inside functions
+mgrid - have 2 versions, with and without ranking, include rank job submission and list of nodes
+
+
+
+
+For xgrid.jags have a version control - ">1" or ">=1" or "=1" etc (convert x.x.x to x*10000+x*100+x to get stable comparisons for version numbers) - getRversion() and getversion('') functions now available internally
+-- do the same for R and a list for R packages -- all to use job unsuitable for node to avoid having to use ARTs
+
+Put 'xgrid' in short description so it searches on cran
+
+Check windows version lookup and trim for 1.x/2.x stuff
+
+Fix run.jags for windows - no longer displays batch so use shell(paste(jags, " < script")) instead of system(paste(jags, "script")) on Windows (and use shQuote rather than manually adding \" ?):
+http://www.inside-r.org/r-doc/base/shell
+-- Test under windows jags 1 and 3
+
+Add some chat about version compatibility (especially for popt etc)
+
+Fixed issue When combine.mcmc has an mcmc ovject with 1 variable (TEST THOROUGHLY)
+
+
+
+the following are intercepted by the controller on the standard out:
+<xgrid>{control = statusUpdate; percentDone = %d.0; }</xgrid>  #Where %d is an integer
+<xgrid>{control = taskError; taskError = failJob; }</xgrid>
+<xgrid>{control = taskError; taskError = retryJob; }</xgrid>
+<xgrid>{control = taskError; taskError = retryTask; }</xgrid>
+<xgrid>{control = taskError; taskError = agentUnsuitableForJob; }</xgrid>
+<xgrid>{control = taskError; taskError = agentUnsuitableForTask; }</xgrid>
+
+<xgrid>{control = statusUpdate; percentDone = ", floor(i/n*100), ".0\ ; }</xgrid>
+
+This even works for multiple tasks!  Definitely incorporate the percentDone part, and probably make use of failJob, retryJob and agentUnsuitableForJob
+
+Wrap taskError things in special functions - and make the function available to the remote job (ie fail.task(retry=FALSE, all.tasks=FALSE) and fail.node(all.tasks=TRUE) or whatever)
+This will be awesome for ensuring required packages are loaded
+
+For statusUpdate have task.status(proportiondone=0).  This must know how many other pseudo-tasks there are in the single actual task, so that the proportion written to xgrid is adjusted automatically (maybe redefine the task.status in the loop where the function is called?).  Call task.status(1) after the function call in each loop so at a minimum pseudo-tasks are registered separately.
+
+
+Separate runjags into runjags and mgrid?
+
+
+
+Have a 'dont submit' option for xgrid.submit which just creates the folder - there could be a submitme.sh and testme.R and retrieveme.R file in there (and add to help).  Then you could send the zipped file to someone else to submit for you.
+And also a 'dont retrieve' option for xgrid.results which imports an existing folder (after checking for r1.Rsave or something)
+
+Bring back the idea of checking JAGS version and R / packages versions?  As a named list?  Always requires mgrid and none of the options can be art.
+
+convinience to convenience
+
+check if anything is a data.frame in dump.format and warn (and convert to matrix?) if it is
+
+(on old powerbook) wait for jags to stop before reporting errors (RGUI)
+
+For UoG - I could have a CRON job that updated a text file with all currently active jobs, might be useful.
+
+Fix this:
+> r <- xgrid.results('matt.bigrecap.sl',cleanup=FALSE,keep.files=TRUE)
+Retrieving the following xgrid job: "matt.bigrecap.sl"
+Error in if (!wait & !status == "Finished" & !partialretrieve) { : 
+  argument is of length zero
+In addition: Warning message:
+running command 'xgrid -job attributes -id 4208' had status 1 
+
+
+if mgrid is installed then print list of jobs for xgrid.retrieve if job hasnt started. - dont think so
+
+xgrid.results() thinks suspended jobs show the status 'Running' - can't find the error
+
+have a require R art and require JAGS art option for xgrid functions - don't think so
+
+
+Examples:
+
+xgrid.run (and xgrid.run.jags?) example runjagsART (test on Xgrid nodes!):
+
+cat('#!/bin/bash 
+
+# Check R is installed and return 0 if not:
+if [ ! -f /usr/bin/R ]; then 
+echo 0 
+exit 0 
+fi
+
+# Check JAGS is installed and return 0 if not:
+if [ ! -f /usr/local/bin/jags ]; then 
+echo 0 
+exit 0 
+fi 
+
+# Get the installed version of JAGS:
+jvers=`echo exit | /usr/local/bin/jags | grep "Welcome to JAGS"`
+# Get the major version (ignore minor versions):
+majorvers=`echo $jvers | awk \'{print $4}\' | awk -F "." \'{print $1}\'`
+# And return 0 if not version 2.0.0 or later:
+if [ `echo "$majorvers >= 2" | bc` -eq 0 ]; then
+echo 0
+exit 0
+fi
+
+# Check the required R packages are installed.  This code could be
+# duplicated for as many packages as needed.
+codainst=`/usr/bin/R --slave -e "
+r<-require(coda, quietly=TRUE); writeLines(as.character(r*1))
+" 2>/dev/null`
+
+runjagsinst=`/usr/bin/R --slave -e "
+r<-require(runjags, quietly=TRUE); writeLines(as.character(r*1))
+" 2>/dev/null`
+
+# If any of the required packages are not installed then return 0
+if [ $[$runjagsinst*$codainst] == 0 ]; then
+echo 0
+exit 0 
+fi
+
+# Get the installed version of runjags. Again, this could be 
+# duplicated for as many packages as required (although if the 
+# package is not installed it will return an error so make sure 
+# you have checked this for each package above).
+rjversion=`/usr/bin/R --slave -e "
+cat(installed.packages()[\'runjags\',\'Version\'])
+" | sed "s/[.-]/ /g" | sed "s/ /./" | sed "s/ //g"`
+
+# And return 0 if not 0.9.7 or later.
+if [ `echo "$rjversion >= 0.97" | bc` -eq 0 ]; then
+echo 0
+exit 0
+fi
+
+# Finally, if all the requirements are met return success!
+echo 1
+exit 0
+', file='runjagsART.sh') 
+
+system('chmod 755 runjagsART.sh')
+system('./runjagsART.sh')
+
+
+
