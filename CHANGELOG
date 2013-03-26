@@ -1,4 +1,4 @@
-This version of the function is still being developed, and as such will almost certainly contain numerous bugs.  If you find one, or if you have any comments/criticisms/questions about the function, then please feel free to email me at matthew.denwood@glasgow.ac.uk  Thanks!
+This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.
 
 
 OPEN ISSUES
@@ -11,12 +11,41 @@ None known.
 
 FEATURES TO BE IMPLEMENTED
 
-None planned.
+A utility function to generate pairwise comparisons within fixed effects.
 
 
 
 
 VERSION HISTORY
+
+
+Version 1.0.0-5
+
+This is the first 'release' version of runjags with major changes over the 0.9.x versions.
+
+
+NEW FEATURES
+
+Substantial re-write of internal methods
+
+New methods to improve distributed computing and multi-core capapilities of runjags, and a new rjags method which can be used if rjags is installed
+
+Improved compatibility with the rjags package
+
+New run.jags.study function to facilitate validation of models using simulated data, and drop-k type cross validation studies
+
+New runjags class (and other classes) with associated S3 methods for runjags objects to facilitate summarising and plotting results of function calls
+
+New version of mgrid (with substantial changes and new features) included, and no longer requires installation by the user
+
+Several other enhancements and new features
+
+
+BUG FIXES
+
+Numerous...
+
+
 
 Version 0.9.9-2
 

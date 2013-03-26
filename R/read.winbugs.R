@@ -1,4 +1,3 @@
-
 read.winbugs <- function(path){
 
 exists = likelystring <- logical(length(path))
@@ -49,7 +48,10 @@ string <- gsub(";[[:space:]]*\n", "\n", string)
 # Remove excess white space at the start of lines:
 string <- gsub("\n[[:space:]]*", "\n", string)
 
-model <- paste("model{\n", winbugs.extract.big("model", string)[[1]], "\n}\n", sep="")
+# Get rid of all commented out lines:
+nohashstring <- paste(lapply(strsplit(string, "[\n\r]")[[1]], function(x) gsub("#.*", "", x)), collapse="\n")
+
+model <- paste("model{\n", winbugs.extract.big("model", nohashstring)[[1]], "\n}\n", sep="")
 
 # No helpful conversion of = to <- any more (was it doing this beforehand?)
 
@@ -59,7 +61,7 @@ if(length(model)>1){
 	model <- model[1]
 }
 
-maindata <- winbugs.extract.big("data", string)
+maindata <- winbugs.extract.big("data", nohashstring)
 datalistfound <- maindata[[2]]
 maindata <- maindata[[1]]
 

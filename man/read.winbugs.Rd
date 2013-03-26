@@ -1,8 +1,6 @@
-
 \name{read.winbugs}
 
 \alias{read.winbugs}
-
 \alias{read.WinBUGS}
 
 \title{Extract Any Models, Data, Monitored Variables or Initial Values
@@ -12,7 +10,7 @@ As Character Vectors from a Winbugs Type Textfile}
 
 Read a user specified WinBUGS type textfile or character variable and
 extract any models, data, monitored variables or initial values as
-character vectors.  Used by (auto)run.jagsfile to interpret the input
+character vectors.  Used by (auto)run.jags to interpret the input
 file(s) or strings.
 
 }
@@ -48,7 +46,7 @@ data or initial values with a value taken by \code{\link{run.jagsfile}}
 from datalist, initlist or R objects as appropriate.  '#inits#',
 '#data#' and '#monitor#' statements can appear on the same line as model
 code, but no more than one of these statements should be used on the
-same line.  Examples of acceptable model syntax is given below.}
+same line.  Examples of acceptable model syntax are given below.}
 
 }
 
@@ -76,7 +74,7 @@ block is allowed, and each will be differentiated independently.
 
 \seealso{
 
-\code{\link{run.jagsfile}}
+\code{\link{run.jags}}
 
 }
 

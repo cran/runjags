@@ -1,4 +1,3 @@
-
 \name{timestring}
 
 \alias{timestring}
@@ -22,7 +21,7 @@ timestring(time1, time2=NA, units=NA, show.units=TRUE)
 \arguments{
 
 \item{time1}{either the time index (from Sys.time()) at the start of the
-time period, or a length of time in seconds.}
+time period, a length of time in seconds, or an object of class 'difftime'.}
 
 \item{time2}{either the time index (from Sys.time()) at the end of the
 time period, or missing data if converting a single length of time. 

@@ -1,6 +1,7 @@
 \name{findjags}
 \alias{findjags}
 \alias{findJAGS}
+
 \title{Attempt to Locate a JAGS Install}
 \description{
    Search the most likely locations for JAGS to be installed on the
@@ -14,17 +15,29 @@
    support is enabled).
 }
 \usage{
+
 findjags(ostype = .Platform$OS.type, 
-look_in = if(ostype=="windows") c("/Program Files/","/") else NULL)}
+look_in = if(ostype=="windows") c("/Program Files/","/Windows/Program Files/","C:/Program Files/","C:/Windows/Program Files/","/") else NULL, 
+from.variable = ".jagspath")
+
+}
 \arguments{
    \item{ostype}{the operating system type.  There is probably no reason
    to want to change this...}
+   
    \item{look_in}{for Windows only, the path to a folder (or vector of 
    folders) which contains another folder with name containing 'JAGS', 
    where the JAGS executable(s) are to be found.  findjags() will attempt 
    to find the highest version, assuming that the version number is 
    somewhere in the file path to the executable (as per default installation).}
+   
+   \item{from.variable}{a global variable that may contain the path to
+   JAGS.  This provides a 'set and forget' solution if you have a
+   non-standard JAGS install, by assigning the variable ".jagspath" (the
+   default argument value) to the path to JAGS in your R profile file
+   (this will be read every time R starts).}
 }
+
 \value{A path or command for the most likely location of the desired JAGS 
 executable on the system.  On unix this will always be 'jags', on Windows 
 for example "C:/Program Files/JAGS/bin/jags-terminal.exe" or 
@@ -38,9 +51,4 @@ for example "C:/Program Files/JAGS/bin/jags-terminal.exe" or
 
 \author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
-\examples{
-
-findjags()
-
-}
 \keyword{methods}

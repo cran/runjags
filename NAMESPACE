@@ -1,5 +1,107 @@
-export(ask, autorun.jags, autorun.JAGS, autorun.jagsfile, autorun.JAGSfile, combine.mcmc, combine.MCMC, dump.format, findjags, findJAGS, new_unique, read.winbugs, read.WinBUGS, run.jags, run.JAGS, run.jagsfile, run.JAGSfile, testjags, testJAGS, timestring, xgrid.run.JAGS, xgrid.run.jags, xgrid.autorun.JAGS, xgrid.autorun.jags, xgrid.run.JAGSfile, xgrid.run.jagsfile, xgrid.autorun.JAGSfile, xgrid.autorun.jagsfile, xgrid.submit.JAGS, xgrid.submit.jags, xgrid.submit.JAGSfile, xgrid.submit.jagsfile, xgrid.results.JAGS, xgrid.results.jags, xgrid.run, xgrid.submit, xgrid.results, xapply, install.mgrid)
+import(
 
+	lattice,
+	coda,
+	parallel
+	
+)
+
+export(
+
+autoextend.jags,
+autoextend.JAGS,
+
+run.jags,
+autorun.jags,
+run.jagsfile,
+autorun.jagsfile,
+
+run.jags.study,
+run.JAGS.study,
+
+run.JAGS,
+autorun.JAGS,
+run.JAGSfile,
+autorun.JAGSfile,
+results.jags,
+results.JAGS,
+
+combine.mcmc,
+combine.MCMC,
+
+dump.format,
+list.format,
+
+extend.jags,
+extend.JAGS,
+
+read.winbugs,
+read.WinBUGS,
+
+as.jags,
+as.runjags,
+
+ask,
+findjags,
+new_unique,
+timestring,
+testjags,
+findJAGS,
+testJAGS,
+
+xgrid.run.jags,
+xgrid.autorun.jags,
+xgrid.extend.jags,
+xgrid.autoextend.jags,
+xgrid.submit.jags,
+xgrid.run.jagsfile,
+xgrid.autorun.jagsfile,
+xgrid.submit.jagsfile,
+xgrid.results.jags,
+xgrid.run.JAGS,
+xgrid.autorun.JAGS,
+xgrid.extend.JAGS,
+xgrid.autoextend.JAGS,
+xgrid.submit.JAGS,
+xgrid.run.JAGSfile,
+xgrid.autorun.JAGSfile,
+xgrid.submit.JAGSfile,
+xgrid.results.JAGS,
+
+xgrid.run,
+xgrid.submit,
+xgrid.results,
+xapply,
+
+xgrid.jobs,
+xgrid.delete,
+
+failedjags
+
+)
+
+S3method(print, runjags)
+S3method(summary, runjags)
+
+S3method(print, runjags.model)
+S3method(print, runjags.data)
+S3method(print, runjags.inits)
+S3method(print, mcse.stats)
+S3method(print, crosscorr.stats)
 S3method(print, gelman.with.target)
-S3method(print, plotindpages)
 S3method(print, dic.stats)
+S3method(print, runjags.study)
+S3method(print, runjags.bginfo)
+
+S3method(as.mcmc, runjags)
+S3method(as.mcmc.list, runjags)
+
+S3method(as.runjags, default)
+S3method(as.jags, default)
+S3method(as.runjags, jags)
+S3method(as.jags, runjags)
+
+S3method(plot, runjags)
+S3method(plot, runjags.plots)
+S3method(plot, runjags.bginfo)
+S3method(print, runjags.plots)

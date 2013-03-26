@@ -1,14 +1,14 @@
 citHeader("To cite package 'runjags' in publications use:")
 
-desc <- packageDescription("runjags")
-year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", desc$Date)
-vers <- paste("R package version", desc$Version)
+year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date)
+vers <- paste("R package version", meta$Version)
 
 citEntry(entry="Manual",
-         title = "runjags: Run Bayesian MCMC Models in the BUGS syntax from Within R",
+         title = "runjags: Interface utilities for MCMC models in Just Another Gibbs Sampler (JAGS) using parallel and distributed computing methods",
          author = personList(as.person("M. J. Denwood")),
-         year = year,
-         note = vers,
-url = "http://cran.r-project.org/web/packages/runjags/",
-         textVersion =
-         paste("M. J. Denwood (", year, "). runjags: Run Bayesian MCMC Models in the BUGS syntax from Within R. ", vers, ".", sep=""))
+         year = 2013,
+		 url = "http://cran.r-project.org/web/packages/runjags/",
+         textVersion = "M. J. Denwood (2013). runjags: Interface utilities for MCMC models in Just Another Gibbs Sampler (JAGS) using parallel and distributed computing methods.  http://cran.r-project.org/web/packages/runjags/"
+		 )
+
+

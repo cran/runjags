@@ -1,24 +1,34 @@
 Package: runjags
-Version: 0.9.9-2
-Date: 2011-19-08
-Title: Interface utilities for JAGS (using BUGS syntax) and Apple Xgrid
-        distributed computing clusters
+Version: 1.0.0-6
+Date: 2013-03-26
+Title: Interface utilities for MCMC models in Just Another Gibbs
+        Sampler (JAGS) using parallel and distributed computing methods
 Author: Matthew Denwood <matthew.denwood@glasgow.ac.uk>
 Maintainer: Matthew Denwood <matthew.denwood@glasgow.ac.uk>
-Depends: R (>= 2.13), coda, lattice, stats, utils
+Depends: R (>= 2.14), coda (>= 0.16-1), lattice (>= 0.20-10), parallel
+Imports: coda, lattice, parallel, stats, utils
 Suggests: rjags
 SystemRequirements: jags (see http://mcmc-jags.sourceforge.net)
-Description: A set of utility functions to run BUGS models using JAGS
-        from within R, and for JAGS or arbitrary R code submission to
-        Xgrid clusters (requires Mac OS X).  Automatic control of model
-        run length, calculation of autocorrealtion and Gelman Rubin
-        statistic diagnostics, generation of trace and density plots,
-        calculation of DIC, and automatic retrieval of R objects as
-        data are supported.  Utilities to run user-supplied R functions
-        on Xgrid (using xapply as a replacement for lapply) are also
-        included, and do not require JAGS.
+Description: This package provides high-level interface utilities for
+        JAGS, either running locally (via the rjags package or using
+        multiple cores in parallel) or via distributed computing
+        clusters such as those provided by snow (a Simple Network Of
+        Workstations), Apple Xgrid distributed computing clusters (Mac
+        OS X 10.5-10.7 only), and possibly others via user specified
+        functions.  The primary motivation is to facilitate running
+        relatively simple JAGS models to convergence, including
+        evaluating the performance of a model against simulated data,
+        and compatibility with the WinBUGS syntax of model files with
+        data and initial values lists.  Runjags interface functions
+        also provide convenience wrappers for automatic control of
+        model convergence assessment and run length diagnostics,
+        calculation of relevant summary statistics, generation of trace
+        and density plots, calculation of DIC, and automatic retrieval
+        of R objects as data and initial values.  Running of arbitrary
+        R commands (not involving JAGS) over Xgrid is also supported.
 License: GPL
 URL: http://cran.r-project.org/web/packages/runjags/
-Packaged: 2011-08-19 16:10:50 UTC; matthewdenwood
+Packaged: 2013-03-26 13:22:18 UTC; matthewdenwood
+NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2011-08-19 17:21:41
+Date/Publication: 2013-03-26 14:43:36

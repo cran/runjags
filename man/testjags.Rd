@@ -1,11 +1,8 @@
-
 \name{testjags}
 
-\alias{testjags}
+\alias{testjags} \alias{testJAGS}
 
-\alias{testJAGS}
-
-\title{Analyse the System to Check That Jags Is Installed}
+\title{Analyse the System to Check That JAGS Is Installed}
 
 \description{
 
@@ -31,12 +28,8 @@ JAGS executable or the enclosing /bin or /JAGS folder is required.}
 
 }
 
-\value{The following self-explanatory information is returned:  os,
-JAGS.available (logical), JAGS.path, popen.support (internalisation of
-terminal output), JAGS.version, R.version, R.GUI, R.package.type,
-username.
-
-}
+\value{ A named list of values containing information about the JAGS
+installs found on the user's system. }
 
 \seealso{
 
@@ -52,9 +45,9 @@ username.
 
 
 
-\examples{
-# Run the function to determine if JAGS is installed:
-results <- testjags()
+\examples{ 
+# Run the function to determine if JAGS is installed: 
+results <- testjags() 
 }
 
 \keyword{methods}

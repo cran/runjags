@@ -1,6 +1,8 @@
 \name{ask}
 \alias{ask}
+
 \title{Obtain Input from User With Error Handling}
+
 \description{
    A simple function to detect input from the user, and keep prompting
    until a response matching the class of input required is given.
