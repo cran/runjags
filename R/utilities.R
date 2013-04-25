@@ -68,8 +68,10 @@ ask <- function (prompt="?", type="logical", bounds=c(-Inf, Inf), na.allow=FALSE
 	}			
 }
 
-findjags <- function(ostype = .Platform$OS.type, look_in = if(ostype=="windows") c("/Program Files/","/Windows/Program Files/","C:/Program Files/","C:/Windows/Program Files/","/") else NULL, from.variable=".jagspath"){
+findjags <- function(ostype = .Platform$OS.type, look_in = NA, from.variable=".jagspath"){
 	
+	if(is.na(look_in)) look_in <- if(ostype=="windows") c("/Program Files/","/Windows/Program Files/","C:/Program Files/","C:/Windows/Program Files/","/") else NULL
+		
 	if(! ostype %in% c("unix","windows")) stop(paste("Unrecognised OS type '", ostype, "'.  Use either 'unix' or 'windows'", sep=""))
 	
 	if(is.na(from.variable) | is.null(from.variable) | from.variable=="" | length(from.variable)==0){
@@ -391,7 +393,7 @@ testjags <- function(jags=findjags(), silent=FALSE){
     	}
     }
     
-	if(any(.packages(FALSE)=="rjags")){
+	if(any(.packages(TRUE)=="rjags")){
 		rjags.avail <- TRUE
 	}else{
 		rjags.avail <- FALSE

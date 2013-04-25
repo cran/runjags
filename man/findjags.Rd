@@ -16,9 +16,7 @@
 }
 \usage{
 
-findjags(ostype = .Platform$OS.type, 
-look_in = if(ostype=="windows") c("/Program Files/","/Windows/Program Files/","C:/Program Files/","C:/Windows/Program Files/","/") else NULL, 
-from.variable = ".jagspath")
+findjags(ostype = .Platform$OS.type, look_in = NA, from.variable = ".jagspath")
 
 }
 \arguments{

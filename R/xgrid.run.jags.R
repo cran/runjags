@@ -1,4 +1,4 @@
-xgrid.run.jags <- function(model=stop("No model supplied"), max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
+xgrid.run.jags <- function(model, max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
 	
 	if(max.threads < 1) stop("The maximum number of threads must be greater than 0")
 		
@@ -58,7 +58,7 @@ xgrid.run.jags <- function(model=stop("No model supplied"), max.threads=Inf, JAG
 }
 
 
-xgrid.autorun.jags <- function(model=stop("No model supplied"), max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
+xgrid.autorun.jags <- function(model, max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
 	
 	if(max.threads < 1) stop("The maximum number of threads must be greater than 0")
 		
@@ -111,7 +111,7 @@ xgrid.autorun.jags <- function(model=stop("No model supplied"), max.threads=Inf,
 	return(res)
 }
 
-xgrid.extend.jags <- function(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
+xgrid.extend.jags <- function(runjags.object, max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
 	
 	checkvalidrunjagsobject(runjags.object)
 
@@ -164,7 +164,7 @@ xgrid.extend.jags <- function(runjags.object=stop("The output of a runjags funct
 	return(res)
 }
 
-xgrid.autoextend.jags <- function(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
+xgrid.autoextend.jags <- function(runjags.object, max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
 	
 	checkvalidrunjagsobject(runjags.object)
 
@@ -214,7 +214,7 @@ xgrid.autoextend.jags <- function(runjags.object=stop("The output of a runjags f
 	return(res)
 }
 
-xgrid.submit.jags <- function(model=stop("No model supplied"), max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
+xgrid.submit.jags <- function(model, max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10, jobname=NA, jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"), hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"), password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...){
 	
 	if(max.threads < 1) stop("The maximum number of threads must be greater than 0")
 		
@@ -275,7 +275,7 @@ xgrid.submit.jags <- function(model=stop("No model supplied"), max.threads=Inf, 
 }
 
 
-xgrid.results.jags <- function(background.runjags.object=stop("An object produced by an xgrid.submit call must be supplied"), wait=TRUE, cleanup=TRUE){
+xgrid.results.jags <- function(background.runjags.object, wait=TRUE, cleanup=TRUE){
 	
 	if(class(background.runjags.object)!="runjags.bginfo") stop("An object produced by a background runjags method must be supplied (see the manual page for more details)")
 	if(background.runjags.object$method!="xgrid"){

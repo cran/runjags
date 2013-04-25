@@ -41,52 +41,51 @@ development and testing of these functions will be extremely limited
 
 \usage{
 
-xgrid.run.jags(model=stop("No model supplied"), max.threads=Inf,
-JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA,
-minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
-ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE,
-jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid",
-"mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
+xgrid.run.jags(model, max.threads=Inf, JAGSversion=">=2.0.0", 
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, 
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
+	ramrequired=10, jobname=NA, cleanup=TRUE, 
+	showprofiles=FALSE, jagspath='/usr/local/bin/jags', 
+	mgridpath=system.file("xgrid","mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
 
-xgrid.autorun.jags(model=stop("No model supplied"), max.threads=Inf,
-JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA,
-minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
-ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE,
-jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid",
-"mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
+xgrid.autorun.jags(model, max.threads=Inf, JAGSversion=">=2.0.0", 
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, 
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
+	ramrequired=10, jobname=NA, cleanup=TRUE, 
+	showprofiles=FALSE, jagspath='/usr/local/bin/jags', 
+	mgridpath=system.file("xgrid","mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
 
-xgrid.extend.jags(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), 
-max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA,
-minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
-ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE,
-jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid",
-"mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
+xgrid.extend.jags(runjags.object, max.threads=Inf, JAGSversion=">=2.0.0", 
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, 
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
+	ramrequired=10, jobname=NA, cleanup=TRUE, 
+	showprofiles=FALSE, jagspath='/usr/local/bin/jags', 
+	mgridpath=system.file("xgrid","mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
 
-xgrid.autoextend.jags(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), 
-max.threads=Inf, JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA,
-minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
-ramrequired=10, jobname=NA, cleanup=TRUE, showprofiles=FALSE,
-jagspath='/usr/local/bin/jags', mgridpath=system.file("xgrid",
-"mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
+xgrid.autoextend.jags(runjags.object, max.threads=Inf, JAGSversion=">=2.0.0", 
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, 
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
+	ramrequired=10, jobname=NA, cleanup=TRUE, 
+	showprofiles=FALSE, jagspath='/usr/local/bin/jags', 
+	mgridpath=system.file("xgrid","mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
 
-xgrid.submit.jags(model=stop("No model supplied"), max.threads=Inf,
-JAGSversion=">=2.0.0", email=NA, profiling=TRUE, cpuarch=NA,
-minosversion=NA, queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
-ramrequired=10, jobname=NA, jagspath='/usr/local/bin/jags',
-mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
+xgrid.submit.jags(model, max.threads=Inf, JAGSversion=">=2.0.0", 
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA, 
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE,
+	ramrequired=10, jobname=NA, jagspath='/usr/local/bin/jags',
+	mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), ...)
 
-xgrid.results.jags(background.runjags.object=stop("An object produced by an xgrid.submit call must be supplied"), 
-wait=TRUE, cleanup=TRUE)
+xgrid.results.jags(background.runjags.object, wait=TRUE, cleanup=TRUE)
 
 }
 

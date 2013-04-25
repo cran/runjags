@@ -8,8 +8,7 @@
    until a response matching the class of input required is given.
 }
 \usage{
-ask(prompt="?", type="logical", bounds=c(-Inf, Inf), 
-   na.allow=FALSE)
+ask(prompt="?", type="logical", bounds=c(-Inf, Inf),  na.allow=FALSE)
 }
 \arguments{
 

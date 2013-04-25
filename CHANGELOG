@@ -1,4 +1,4 @@
-This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.
+This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.
 
 
 OPEN ISSUES
@@ -18,8 +18,30 @@ A utility function to generate pairwise comparisons within fixed effects.
 
 VERSION HISTORY
 
+Version 1.0.1
 
-Version 1.0.0-5
+
+NEW FEATURES
+
+run.jags.study now reports the time taken for simulation studies
+
+
+BUG FIXES
+
+Issue resolved that required rjags to be loaded to use the snow method
+
+Bug fixed in testjags that would incorrectly report that rjags wasn't installed if it wasn't loaded
+
+Bug fixed in dump.format that caused an issue with missing values in large arrays - thanks to Jan Gläscher for spotting this!
+
+Bug fixed that could cause runjags to crash when attempting to process MCMC results containing -/+Inf values
+
+Bug fixed that prevented data being log/logit transformed (if necessary to improve normality) before calculating the Gelman Rubin statistic
+
+Tidied up formatting of the PDF manual
+
+
+Version 1.0.0-6
 
 This is the first 'release' version of runjags with major changes over the 0.9.x versions.
 
@@ -36,14 +58,14 @@ New run.jags.study function to facilitate validation of models using simulated d
 
 New runjags class (and other classes) with associated S3 methods for runjags objects to facilitate summarising and plotting results of function calls
 
-New version of mgrid (with substantial changes and new features) included, and no longer requires installation by the user
+New version of mgrid (with substantial changes and new features) included to facilitate integration with Xgrid, and no longer requires installation by the user
 
 Several other enhancements and new features
 
 
 BUG FIXES
 
-Numerous...
+Too numerous to note...
 
 
 

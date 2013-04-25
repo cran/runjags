@@ -99,8 +99,8 @@ value files from failed simulations for inspection by the user.
 	\method{as.mcmc.list}{runjags}(x, vars=NA, ...)
 
 	\method{as.jags}{runjags}(x, ...)
-	\method{as.runjags}{jags}(x, monitor = stop("No monitored variables supplied"), 
-	modules=c(""), factories=c(""), check=TRUE, jags = findjags(), ...)
+	\method{as.runjags}{jags}(x, monitor, modules=c(""), factories=c(""), 
+	check=TRUE, jags = findjags(), ...)
 	
 }
 

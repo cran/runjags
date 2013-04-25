@@ -1,6 +1,6 @@
 Package: runjags
-Version: 1.0.0-6
-Date: 2013-03-26
+Version: 1.0.1-1
+Date: 2013-04-25
 Title: Interface utilities for MCMC models in Just Another Gibbs
         Sampler (JAGS) using parallel and distributed computing methods
 Author: Matthew Denwood <matthew.denwood@glasgow.ac.uk>
@@ -28,7 +28,7 @@ Description: This package provides high-level interface utilities for
         R commands (not involving JAGS) over Xgrid is also supported.
 License: GPL
 URL: http://cran.r-project.org/web/packages/runjags/
-Packaged: 2013-03-26 13:22:18 UTC; matthewdenwood
+Packaged: 2013-04-25 15:29:26 UTC; matthewdenwood
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2013-03-26 14:43:36
+Date/Publication: 2013-04-25 22:42:58

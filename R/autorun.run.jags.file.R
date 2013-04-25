@@ -1,4 +1,4 @@
-run.jags <- function(model=stop("No model supplied"), monitor = NA, data=NA, n.chains=NA, inits = NA, burnin = 5000, sample = 10000, adapt=max(200-burnin, 0), datalist=NA, initlist=NA, jags = findjags(), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, check.conv = summarise, keep.jags.files = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=if('rjags' %in% .packages()) 'rjags' else 'interruptible', method.options=list()){
+run.jags <- function(model, monitor = NA, data=NA, n.chains=NA, inits = NA, burnin = 5000, sample = 10000, adapt=max(200-burnin, 0), datalist=NA, initlist=NA, jags = findjags(), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE, monitor.popt = FALSE, check.conv = summarise, keep.jags.files = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=if('rjags' %in% .packages()) 'rjags' else 'interruptible', method.options=list()){
 	
 	# Translate monitor.pd/popt/pd.i/deviance/check.conv (legacy code):
 	monitor <- c(monitor, if(monitor.deviance) "deviance", if(monitor.pd) "pd", if(monitor.popt) "popt", if(monitor.pd.i) "pd.i")
@@ -26,7 +26,7 @@ run.jags <- function(model=stop("No model supplied"), monitor = NA, data=NA, n.c
 }
 
 
-autorun.jags <- function(model=stop("No model supplied"), monitor = NA, data=NA, n.chains=NA, inits = NA, startburnin = 5000, startsample = 10000, datalist=NA, initlist=NA, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=if('rjags' %in% .packages()) 'rjags' else 'interruptible', method.options=list()){
+autorun.jags <- function(model, monitor = NA, data=NA, n.chains=NA, inits = NA, startburnin = 5000, startsample = 10000, datalist=NA, initlist=NA, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, modules=c(""), factories=c(""), raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = 1, monitor.deviance = FALSE, monitor.pd = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=if('rjags' %in% .packages()) 'rjags' else 'interruptible', method.options=list()){
 
 	# Translate monitor.pd and deviance (legacy code):
 	monitor <- c(monitor, if(monitor.deviance) "deviance", if(monitor.pd) "pd")
@@ -49,7 +49,7 @@ autorun.jags <- function(model=stop("No model supplied"), monitor = NA, data=NA,
 }
 	
 
-run.jagsfile <- function(path=stop("No path or model string supplied"), datalist = NA, initlist = NA, n.chains=NA, data=NA, model=NA, inits=NA, monitor=NA, modules=c(""), factories=c(""), jags = findjags(), ...){
+run.jagsfile <- function(path, datalist = NA, initlist = NA, n.chains=NA, data=NA, model=NA, inits=NA, monitor=NA, modules=c(""), factories=c(""), jags = findjags(), ...){
 	
 	warning("Use of the run.jagsfile function is deprecated - use run.jags directly with the 'model' argument replacing the 'path' argument")
 	
@@ -82,7 +82,7 @@ run.jagsfile <- function(path=stop("No path or model string supplied"), datalist
 
 }
 
-autorun.jagsfile <- function(path=stop("No path or model string supplied"), datalist = NA, initlist = NA, n.chains=NA, data=NA, model=NA, inits=NA, monitor=NA, modules=c(""), factories=c(""), jags = findjags(), ...){
+autorun.jagsfile <- function(path, datalist = NA, initlist = NA, n.chains=NA, data=NA, model=NA, inits=NA, monitor=NA, modules=c(""), factories=c(""), jags = findjags(), ...){
 	
 	warning("Use of the autorun.jagsfile function is deprecated - use autorun.jags directly with the 'model' argument replacing the 'path' argument")
 	

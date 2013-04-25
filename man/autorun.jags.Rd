@@ -31,8 +31,8 @@ Requires Just Another Gibbs Sampler (JAGS), see
 
 \usage{
 
-autorun.jags(model=stop("No model supplied"), monitor = NA, data=NA,
-	n.chains=NA, inits = NA, startburnin = 5000, startsample = 10000,
+autorun.jags(model, monitor = NA, data=NA, n.chains=NA, 
+	inits = NA, startburnin = 5000, startsample = 10000,
 	datalist=NA, initlist=NA, psrf.target = 1.05, normalise.mcmc = TRUE,
 	check.stochastic = TRUE, modules=c(""), factories=c(""),
 	raftery.options = list(), crash.retry=1, summarise = TRUE,
@@ -43,8 +43,8 @@ autorun.jags(model=stop("No model supplied"), monitor = NA, data=NA,
 	batch.jags=silent.jags, method=if ('rjags' \%in\% .packages())
 	'rjags' else 'interruptible', method.options=list())
 
-autoextend.jags(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), 
-    add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0),
+autoextend.jags(runjags.object, add.monitor=character(0), 
+	drop.monitor=character(0), drop.chain=numeric(0),
 	combine=length(c(add.monitor,drop.monitor,drop.chain))==0,
 	startburnin = 0, startsample = 10000, psrf.target = 1.05,
 	normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options =

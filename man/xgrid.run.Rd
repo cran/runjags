@@ -32,36 +32,35 @@
 
 
 xgrid.run(f=function(iteration){}, niters=1, object.list=list(),
-file.list=character(0), max.threads=100, arguments=as.list(1:niters),
-Rversion="", packages=list(), artfun=function() writeLines("1"),
-email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA,
-queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10,
-jobname=NA, cleanup=TRUE, showprofiles=FALSE, Rpath='/usr/bin/R',
-Rbuild='64', max.filesize="1GB", 
-mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), tempdir=FALSE,
-keep.files=FALSE, show.output=TRUE, threads=min(niters, max.threads),
-...)
+	file.list=character(0), max.threads=100, arguments=as.list(1:niters),
+	Rversion="", packages=list(), artfun=function() writeLines("1"),
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA,
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10,
+	jobname=NA, cleanup=TRUE, showprofiles=FALSE, Rpath='/usr/bin/R',
+	Rbuild='64', max.filesize="1GB", 
+	mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), tempdir=FALSE,
+	keep.files=FALSE, show.output=TRUE, threads=min(niters, max.threads), ...)
 
 xgrid.submit(f=function(iteration){}, niters=1, object.list=list(),
-file.list=character(0), max.threads=100, arguments=as.list(1:niters),
-Rversion="", packages=list(), artfun=function() writeLines("1"),
-email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA,
-queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10,
-jobname=NA, Rpath='/usr/bin/R', Rbuild='64', max.filesize="1GB",
-mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), show.output=TRUE,
-separate.jobs=FALSE, threads=min(niters, max.threads), ...)
+	file.list=character(0), max.threads=100, arguments=as.list(1:niters),
+	Rversion="", packages=list(), artfun=function() writeLines("1"),
+	email=NA, profiling=TRUE, cpuarch=NA, minosversion=NA,
+	queueforserver=FALSE, hostnode=NA, forcehost=FALSE, ramrequired=10,
+	jobname=NA, Rpath='/usr/bin/R', Rbuild='64', max.filesize="1GB",
+	mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"), show.output=TRUE,
+	separate.jobs=FALSE, threads=min(niters, max.threads), ...)
 
 xgrid.results(jobinfo, wait=TRUE, partial.retrieve=!wait,
-cleanup=!partial.retrieve, show.output=TRUE)
+	cleanup=!partial.retrieve, show.output=TRUE)
 
 xgrid.jobs(comment=FALSE, user=FALSE, jobs=10,
-mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
-hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
-password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"))
+	mgridpath=system.file("xgrid", "mgrid.sh", package="runjags"),
+	hostname=Sys.getenv("XGRID_CONTROLLER_HOSTNAME"),
+	password=Sys.getenv("XGRID_CONTROLLER_PASSWORD"))
 
 xgrid.delete(jobinfo, keep.files=FALSE)
 

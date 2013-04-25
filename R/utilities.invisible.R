@@ -295,8 +295,18 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.st
 	vnames <- lapply(mcmc, dimnames)
 	
 	if(check.stochastic){
-		anyvariancezero <- sapply(mcmc.list, function(x) return(apply(x,2,var)==0), simplify="array")
-		if(!is.matrix(anyvariancezero)) anyvariancezero <- matrix(anyvariancezero, nrow=1)
+		variances <- sapply(mcmc.list, function(x){			
+			return(apply(x,2,function(y){
+				
+				usey <- y[y!=Inf & y!=-Inf & !is.na(y)]
+				if(length(usey)==0) v <- 0 else v <- var(usey)
+				return(v)
+				
+			}))}, simplify='array')
+		
+		dim(variances) <- c(nvar(mcmc.list),nchain(mcmc.list))
+		anyvariancezero <- variances==0
+
 		if(any(apply(anyvariancezero,1,any)!=apply(anyvariancezero,1,all))) warning("Variance of one or more parameters is zero in one chain but non-zero in another chain")
 		nonstochastic <- apply(anyvariancezero,1,any)
 		if(all(nonstochastic)) stop("All monitored variables appear to be non-stochastic; try adding monitored variables either using #monitor# in the model code or by specifying a monitor argument (even if this is just 'deviance') to run.jags", call.=FALSE)
@@ -314,21 +324,21 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.st
 		if(niter(mcmc)>1000) use <- sample(1:niter(mcmc), size=1000, replace=FALSE) else use <- 1:niter(mcmc)
 		shap.res <- apply(combine.mcmc(mcmc, collapse.chains=TRUE), 2, function(x){
 			rv <- 1
-			if(var(x)!=0){
+			if(!any(x==Inf | x==-Inf | is.na(x)) && var(x)!=0){
 				# We might get an error if we sample 1000 funny values - in which case leave them alone (likely to be small variance so transform probably unnecessary anyway)
 				suppressWarnings(success <- try({
 					if(all(x > 0)){
 						if(all(x < 1)){
-							if(shapiro.test(x[use])$statistic > shapiro.test(log(x[use]/(1-x[use])))$statistic) rv <- 3
+							if(shapiro.test(x[use])$p.value < shapiro.test(log(x[use]/(1-x[use])))$p.value) rv <- 3
 						}else{
-							if(shapiro.test(x[use])$statistic > shapiro.test(log(x[use]))$statistic) rv <- 2
+							if(shapiro.test(x[use])$p.value < shapiro.test(log(x[use]))$p.value) rv <- 2
 						}
 					}
 				}, silent=TRUE))
 			}
 			return(rv)
 		})
-	
+
 		change <- which(shap.res!=1)
 		for(parameter in change){
 			for(chain in 1:nchain(mcmc)){
@@ -615,18 +625,11 @@ checkvalidforjags <- function(object){
 		
 	problems <- sapply(object, function(x){
 		
-		# NA values are permitted....
-		#if(any(is.nan(x))){
-		#	return("NaN")
-		#}
-		#if(any(is.na(x))){
-		#	return("NA")
-		#}
-		x <- na.omit(x)
+		# Catch potential problems with the data being passed through:
 		if(length(x)==0){
 			return("")
 		}
-		if(any(is.null(x))){
+		if(is.null(x)){
 			return("NULL")
 		}
 		if(class(x)=="data.frame"){
@@ -635,19 +638,19 @@ checkvalidforjags <- function(object){
 		if(length(x)==0){
 			return("length zero")
 		}
-		if(class(x)=="logical"){
+		if(class(x)=="logical" && !all(is.na(x))){
 			return("TRUE/FALSE")
 		}
-		if(class(x)=="character"){
+		if(class(x)=="character" && !all(is.na(x))){
 			return("character")
 		}
-		if(class(x)=="factor"){
+		if(class(x)=="factor" && !all(is.na(x))){
 			return("factor")
 		}
-		if(any(x==Inf)){
+		if(any(x==Inf, na.rm=TRUE)){
 			return("Inf")
 		}
-		if(any(x==-Inf)){
+		if(any(x==-Inf, na.rm=TRUE)){
 			return("Inf")
 		}
 		return("")

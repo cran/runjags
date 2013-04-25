@@ -1,4 +1,4 @@
-extend.jags <- function(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, burnin = 0, sample = 10000, adapt=max(200-burnin, 0), jags = findjags(), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, thin = runjags.object$thin, keep.jags.files = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, burnin = 0, sample = 10000, adapt=max(200-burnin, 0), jags = findjags(), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, thin = runjags.object$thin, keep.jags.files = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 	# We may be passed some unevaluated function arguments from parent functions using getargs so evaluate everything here:
 	argnames <- names(formals(extend.jags))
@@ -303,7 +303,7 @@ extend.jags <- function(runjags.object=stop("The output of a runjags function (w
 }
 
 
-results.jags <- function(background.runjags.object=stop("An object produced by a background runjags method must be supplied")){
+results.jags <- function(background.runjags.object){
 	
 	if(class(background.runjags.object)!="runjags.bginfo") stop("An object produced by a background runjags method must be supplied (see the manual page for more details)")
 	if(background.runjags.object$method=="xgrid"){

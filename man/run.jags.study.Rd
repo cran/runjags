@@ -146,7 +146,8 @@ datafun <- function(s){
 cl <- makeCluster(20)
 
 # Call the 20 simulations over the snow cluster:
-results <- run.jags.study(simulations=20, model=themodel, datafunction=datafun, targets=list(Y=Y, m=2, c=1), runjags.options=list(n.chains=2), cl=cl)
+results <- run.jags.study(simulations=20, model=themodel, datafunction=datafun, 
+targets=list(Y=Y, m=2, c=1), runjags.options=list(n.chains=2), cl=cl)
 
 # Examine the results:
 

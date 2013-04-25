@@ -1,4 +1,4 @@
-autoextend.jags <- function(runjags.object=stop("The output of a runjags function (with class 'runjags') must be supplied"), add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = runjags.object$thin, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = runjags.object$thin, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 
 	# We may be passed some unevaluated function arguments so evaluate everything here:
@@ -50,7 +50,7 @@ autoextend.jags <- function(runjags.object=stop("The output of a runjags functio
 		swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument, or using the rjags method.  Use the testjags() function for more detailed diagnostics.\n", sep="")
 		stop("Unable to call JAGS", call.=FALSE)
 	}
-	if(!jags.status$rjags.found && method%in%c("rjags","snow")){
+	if(method=="rjags" && !require(rjags)){
 		swcat("The rjags package was not found, either install the rjags package or use another method\n", sep="")
 		stop("The rjags package was not found", call.=FALSE)
 	}

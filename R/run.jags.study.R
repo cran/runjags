@@ -23,7 +23,7 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	runjags.options$batch.jags <- TRUE
 	
 	if(!any(names(runjags.options)=="method")){
-		runjags.options$method <- if('rjags' %in% .packages()) 'rjags' else 'interruptible'
+		runjags.options$method <- expression(if('rjags' %in% .packages(TRUE)) 'rjags' else 'interruptible')
 	}else{
 		runjags.options$method <- getrunjagsmethod(runjags.options$method)
 	}
@@ -58,6 +58,9 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	modelsetup <- setup.jagsfile(model,n.chains=1,call.setup=FALSE,failincomplete=FALSE,method=runjags.options$method)
 	modeldata <- modelsetup$data
 	if(is.na(modeldata)) modeldata <- list() else modeldata <- list.format(modeldata)
+	
+	st <- Sys.time()
+	swcat(paste("\nStarting a JAGS study at", format(st, format="%H:%M"), "\n"))
 	
 	# Now check that the datafunction gives us some data and if it does include it with the setup call
 	if(!is.null(datafunction)){
@@ -156,6 +159,7 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	X <- 1:simulations
 	FUN <- function(x, DATAS=DATAS, runjags.options=runjags.options){
 		
+		runjags.options$method <- eval(runjags.options$method)
 		if(!require(runjags) || package_version(installed.packages()['runjags','Version'])<1) stop(paste("The runjags package (version >=1.0.0) is not installed on the cluster node '", Sys.info()['nodename'], "'", sep="")) 
 		if(runjags.options$method=='rjags' && !require(rjags)) stop(paste("The rjags package is not installed on the cluster node '", Sys.info()['nodename'], "' - try specifying runjags.options=list(method='simple')", sep="")) 
 		if(numeric_version(installed.packages()['runjags','Version']) < 1) stop("The runjags package (version >=1.0.0) must be installed on each cluster node")
@@ -229,7 +233,10 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	
 	class(retval) <- "runjags.study"
 	
+	et <- Sys.time()
 	swcat("Finished summarising results\n")
+	
+	swcat(paste("Finished JAGS study at ", format(et, format="%H:%M"), " (total time taken:  ", timestring(st, et), ")\n\n", sep=""))
 	
 	return(retval)
 	
@@ -251,7 +258,8 @@ summarise.jags.study <- function(results, targets, confidence){
 	if(length(usevars)==0) stop(paste("None of the target variable(s) '", paste(names(fullvars),collapse="','"), "' were found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
 
 	if(length(usevars)!=length(fullvars)) warning(paste("One or more of the target variable(s) '", paste(names(fullvars),collapse="','"), "' were not found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
-
+	
+	usevars <- usevars[match(varnames(results[[1]]$mcmc),names(usevars))]
 	stopifnot(all(names(usevars)==varnames(results[[1]]$mcmc)[useindex]))
 	
 	simulations <- length(results)

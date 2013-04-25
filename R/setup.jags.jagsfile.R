@@ -1,4 +1,4 @@
-setup.jags <- function(model=stop("No model supplied"), monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), modules=c(""), factories=c(""), jags = findjags(), method="simple"){
+setup.jags <- function(model, monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), modules=c(""), factories=c(""), jags = findjags(), method="simple"){
 	
 	if(method %in% c("rjags")) rjagsmethod <- TRUE else rjagsmethod <- FALSE
 	
@@ -30,7 +30,7 @@ setup.jags <- function(model=stop("No model supplied"), monitor = stop("No monit
 		swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument, or using the rjags method.  Use the testjags() function for more detailed diagnostics.\n", sep="")
 		stop("Unable to call JAGS", call.=FALSE)
 	}
-	if(!jags.status$rjags.found && method%in%c("rjags","snow")){
+	if(method=="rjags" && !require(rjags)){
 		swcat("The rjags package was not found, either install the rjags package or use another method\n", sep="")
 		stop("The rjags package was not found", call.=FALSE)
 	}
@@ -270,7 +270,7 @@ setup.jags <- function(model=stop("No model supplied"), monitor = stop("No monit
 }
 
 
-setup.jagsfile <- function(model=stop("No path or model string supplied"), datalist = NA, initlist = NA, n.chains=NA, data=NA, inits=NA, monitor=NA, modules=c(""), factories=c(""), jags=findjags(), method="simple", call.setup=TRUE, failincomplete=TRUE){
+setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, data=NA, inits=NA, monitor=NA, modules=c(""), factories=c(""), jags=findjags(), method="simple", call.setup=TRUE, failincomplete=TRUE){
 	
 	# We may be passed some unevaluated function arguments so evaluate everything here:
 	argnames <- names(formals(setup.jagsfile))
