@@ -133,6 +133,19 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	}
 	if((method=="rjags")){
 		
+		# Module loading MUST be done before model compilation:
+		for(m in modules){
+			if(m!=""){
+				if(m=="runjags"){
+					success <- try(load.module.runjags())
+				}else{
+					success <- try(load.module(m))
+				}
+			
+				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
+			}
+		}		
+		
 		if(! 'rjags' %in% names(method.options)){
 			method.options <- c(method.options, list(rjags=as.jags(runjags.object)))
 		}

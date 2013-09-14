@@ -5,6 +5,8 @@
 #     mgrid                                                                                                  #
 #     Copyright 2010-2013 Matthew Denwood - matthewdenwood@mac.com - Version 4.01 - January 2013             #
 #                                                                                                            #
+#     This file is part of runjags                                                                           #
+#                                                                                                            #
 #     This script is a replacement for xgrid -job submit that provides some extra features, including        #
 #     support for jobs with multiple tasks, use of environmental variables and easier targeting of jobs to   #
 #     specific nodes or hardware requirements.  To run, this script requires XGRID_CONTROLLER_HOSTNAME and   #

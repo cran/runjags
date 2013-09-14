@@ -76,7 +76,8 @@ xapply,
 xgrid.jobs,
 xgrid.delete,
 
-failedjags
+failedjags,
+runjags.options
 
 )
 
@@ -86,9 +87,10 @@ S3method(summary, runjags)
 S3method(print, runjags.model)
 S3method(print, runjags.data)
 S3method(print, runjags.inits)
+S3method(print, runjags.output)
 S3method(print, mcse.stats)
 S3method(print, crosscorr.stats)
-S3method(print, gelman.with.target)
+S3method(print, gelman.target)
 S3method(print, dic.stats)
 S3method(print, runjags.study)
 S3method(print, runjags.bginfo)
@@ -103,5 +105,4 @@ S3method(as.jags, runjags)
 
 S3method(plot, runjags)
 S3method(plot, runjags.plots)
-S3method(plot, runjags.bginfo)
 S3method(print, runjags.plots)

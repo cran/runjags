@@ -1,4 +1,4 @@
-This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.
+This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Torrin Liddell, Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.
 
 
 OPEN ISSUES
@@ -18,8 +18,29 @@ A utility function to generate pairwise comparisons within fixed effects.
 
 VERSION HISTORY
 
-Version 1.0.1
 
+Version 1.1.0
+
+NEW FEATURES
+
+The runjags package now contains a JAGS extension module providing the Pareto family of distributions
+
+Improved crash handling
+
+Simulation results should now be loaded much more quickly
+
+
+BUG FIXES
+
+Issue resolved that prevented some simulations from being loaded correctly
+
+Bug fixed that prevented model code with trailing commas from being read correctly
+
+Other minor bug fixes
+
+
+
+Version 1.0.1
 
 NEW FEATURES
 

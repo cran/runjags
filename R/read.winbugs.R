@@ -42,9 +42,6 @@ string <- gsub("\t", "", string, fixed=TRUE)
 # Convert carriage returns and form feeds to \n
 string <- gsub("\f", "\n", string, fixed=TRUE)
 string <- gsub("\r", "\n", string, fixed=TRUE)
-# Remove commas and semi-colons from end of lines (allowing for as many spaces as you like between, and \n)
-string <- gsub(",[[:space:]]*\n", "\n", string)
-string <- gsub(";[[:space:]]*\n", "\n", string)
 # Remove excess white space at the start of lines:
 string <- gsub("\n[[:space:]]*", "\n", string)
 
@@ -54,6 +51,11 @@ nohashstring <- paste(lapply(strsplit(string, "[\n\r]")[[1]], function(x) gsub("
 model <- paste("model{\n", winbugs.extract.big("model", nohashstring)[[1]], "\n}\n", sep="")
 
 # No helpful conversion of = to <- any more (was it doing this beforehand?)
+
+# Remove commas and semi-colons from end of lines (allowing for as many spaces as you like between, and \n) - for data and init files:
+nohashstring <- gsub(",[[:space:]]*\n", "\n", nohashstring)
+nohashstring <- gsub(";[[:space:]]*\n", "\n", nohashstring)
+
 
 if(length(model)==0) stop("No model block was found")
 if(length(model)>1){
@@ -70,10 +72,13 @@ jagsdata = listdata <- character()
 # For regexp matching - '.' means any character, * means match the preceeding character any number of times
 
 for(i in 1:length(maindata)){
+
+tdata <- maindata[i]
+	
 # This would be greedy:
 #tdata <- gsub("#.*\n", "\n", maindata[i])
 # This is non-greedy matching:
-tdata <- gsub("#(.*?)\n", "\n", maindata[i], perl=TRUE)
+tdata <- gsub("#(.*?)\n", "\n", tdata, perl=TRUE)
 
 # Replaces any '),' with ')\n' (allowing for spaces in between) so that multiple vars on 1 line are allowed:
 tdata <- gsub(") *?,", ")\n", tdata)

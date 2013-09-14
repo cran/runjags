@@ -1,0 +1,15 @@
+######################################################################################################
+###
+###  This file is based on that in the rjags package (version 3-10) with minor modifications
+###  [objects to be compiled]
+###  Matthew Denwood, 5th August 2013
+###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
+###
+######################################################################################################
+
+# This requires the JAGS_ROOT variable to be set:
+PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include" 
+PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-3
+
+OBJECTS= distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHCauchy.o runjags.o testrunjags.o
+

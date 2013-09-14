@@ -31,7 +31,7 @@ runjags.summaries <- function(mcmclist, pd, popt, pd.i, monitor, plots, psrf.tar
 			convergence <- safe.gelman.diag(normalisedmcmc, transform=FALSE, autoburnin=FALSE)
 		
 			convergence <- c(convergence, psrf.target=psrf.target)
-			class(convergence) <- "gelman.with.target"
+			class(convergence) <- "gelman.target"
 		
 			n.params <- nrow(convergence$psrf)
 
@@ -84,7 +84,7 @@ runjags.summaries <- function(mcmclist, pd, popt, pd.i, monitor, plots, psrf.tar
 		
 		if(!is.na(param.conv)){
 			if(unconverged > 0){
-				if(n.params==1 & !silent) swcat("Convergence failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else swcat("Convergence failed for this run for ", unconverged, " parameter", if(unconverged>1) "s", " after ", updates, " iterations", mpsrfstring, "\n", sep="")
+				if(n.params==1 & !silent) swcat("Convergence may have failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else swcat("Convergence may have failed for this run for ", unconverged, " parameter", if(unconverged>1) "s", " after ", updates, " iterations", mpsrfstring, "\n", sep="")
 			}else{
 				if(n.chains > 1 & !silent) swcat("The Gelman-Rubin statistic is below ", psrf.target, " for all parameters\n", sep="")
 				if(n.chains==1 & !silent) swcat("Calculating the Gelman-Rubin statistic requires two or more chains\n")

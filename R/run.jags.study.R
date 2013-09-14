@@ -2,9 +2,10 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	
 	# ... is passed either to autorun.jags (add.monitor not allowed, combine not allowed, maybe others) or to parallel.method function
 	
-	# Only allow simple or parallel method for autorun.jags - can't start/stop anyway
+	# Reset failed study:
+	failedjags$study <- "No failed study available!"
 	
-	if(!require(parallel)) stop("The parallel package is not installed")
+	# Only allow simple or parallel method for autorun.jags - can't start/stop anyway
 	
 	if(!is.numeric(simulations) || length(simulations)!=1 || simulations!=as.integer(simulations) || simulations<1) stop("The value for simulations must be a single positive integer")
 	
@@ -124,6 +125,8 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	args <- runjags.options[which(names(runjags.options) %in% names(formals(setup.jagsfile)))]
 	obj <- do.call("setup.jagsfile", args=args)
 	
+	if(any(obj$modules=="runjags") && runjags.options$method!="rjags") stop("")
+	
 	if(any(c("popt", "pd.i") %in% obj$monitor)){
 		warning("Cannot monitor popt or pd.i with automatic run length functions - the specified monitor(s) have been removed")
 		obj$monitor <- obj$monitor[obj$monitor!="pd.i"]
@@ -160,9 +163,23 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	FUN <- function(x, DATAS=DATAS, runjags.options=runjags.options){
 		
 		runjags.options$method <- eval(runjags.options$method)
+		# Detect common problems:
 		if(!require(runjags) || package_version(installed.packages()['runjags','Version'])<1) stop(paste("The runjags package (version >=1.0.0) is not installed on the cluster node '", Sys.info()['nodename'], "'", sep="")) 
 		if(runjags.options$method=='rjags' && !require(rjags)) stop(paste("The rjags package is not installed on the cluster node '", Sys.info()['nodename'], "' - try specifying runjags.options=list(method='simple')", sep="")) 
 		if(numeric_version(installed.packages()['runjags','Version']) < 1) stop("The runjags package (version >=1.0.0) must be installed on each cluster node")
+		if(runjags.options$method=='rjags'){
+			for(module in runjags.options$modules){
+				if(module=="runjags"){
+					success <- try(load.module.runjags())
+				}else{
+					success <- try(load.module(module))				
+				}
+				if(class(success)=="try-error") stop(paste("The required module '", module, "' is not installed on the cluster node '", Sys.info()['nodename'], "'", sep=""))
+			}
+		}else{
+			if(any(runjags.options$modules=="runjags")) stop("The runjags module is only available using the rjags method; to use the functions provided with other methods install (and specify using the module argument) the 'runjagsmodule' standalone module")
+			
+		}
 		
 		thedata <- DATAS[[x]]
 		runjags.options$runjags.object$data <- thedata
@@ -217,7 +234,8 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	
 	errors <- sapply(results, class)=="try-error"
 	if(all(errors)){
-		if(test) stop("All simulations returned an error - ensure that the model runs using run.jags on the first dataset, and try using lapply as the parallel.method to debug") else stop("All simulations returned an error - ensure that the model runs using run.jags on the first dataset")
+		failedjags$study <- results
+		if(test) stop("All simulations returned an error (see failedjags$study) - ensure that the model runs using run.jags on the first dataset, and try using lapply as the parallel.method to debug") else stop("All simulations returned an error (see failedjags$study) - ensure that the model runs using run.jags on the first dataset")
 	}
 	if(any(errors)) warning(paste("An error was returned from ", sum(errors), " out of ", length(errors), " simulations:  the errors will be returned along with the runjags objects"))
 	
@@ -260,7 +278,9 @@ summarise.jags.study <- function(results, targets, confidence){
 	if(length(usevars)!=length(fullvars)) warning(paste("One or more of the target variable(s) '", paste(names(fullvars),collapse="','"), "' were not found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
 	
 	usevars <- usevars[match(varnames(results[[1]]$mcmc),names(usevars))]
-	stopifnot(all(names(usevars)==varnames(results[[1]]$mcmc)[useindex]))
+	if(!(all(names(usevars)==varnames(results[[1]]$mcmc)[useindex]))){
+		stop(paste("Sorry - something has gone wrong with indexing the variables; I was expecting to see ", paste(names(usevars),collapse=","), " but saw ", paste(varnames(results[[1]]$mcmc)[useindex],collapse=","), " - please submit a bug report!", sep=""))
+	}
 	
 	simulations <- length(results)
 	sumtable <- vapply(results,function(result){

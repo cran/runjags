@@ -16,7 +16,7 @@
 }
 \usage{
 
-findjags(ostype = .Platform$OS.type, look_in = NA, from.variable = ".jagspath")
+findjags(ostype = .Platform$OS.type, look_in = NA, ...)
 
 }
 \arguments{
@@ -29,11 +29,7 @@ findjags(ostype = .Platform$OS.type, look_in = NA, from.variable = ".jagspath")
    to find the highest version, assuming that the version number is 
    somewhere in the file path to the executable (as per default installation).}
    
-   \item{from.variable}{a global variable that may contain the path to
-   JAGS.  This provides a 'set and forget' solution if you have a
-   non-standard JAGS install, by assigning the variable ".jagspath" (the
-   default argument value) to the path to JAGS in your R profile file
-   (this will be read every time R starts).}
+   \item{...}{provided for compatibility with deprecated arguments.}
 }
 
 \value{A path or command for the most likely location of the desired JAGS 

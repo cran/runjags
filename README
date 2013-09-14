@@ -1,0 +1,72 @@
+######################################################################################################
+###
+###  runjags package
+###  Matthew Denwood, 5th August 2013
+###
+###  Installation from source - help and tips
+###
+######################################################################################################
+
+The runjags package itself is entirely written in R, but it does contain
+a JAGS module that provides additional distributions that must be
+compiled for your system.  If you have a functional JAGS installation,
+this *should* be done automatically in Unix when using R CMD INSTALL from
+the source package.  If not, or for installing from source in windows,
+see the notes below.
+
+Note that if you want to install runjags without the additional JAGS
+module you can simply remove the configure file and entire src directory
+(alternatively there is a version of runjags with the JAGS module removed
+hosted on the sourceforge page for runjags at:
+http://sourceforge.net/projects/runjags/).
+
+
+###  The instructions below are taken from the rjags package
+###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
+
+Windows
+-------
+
+At compile time, there is no way for Windows to guess where the JAGS
+library is installed, so you must supply the location yourself using
+the make variable JAGS_ROOT, defining it in the file HOME/.R/Makevars.win
+like so:
+
+JAGS_ROOT=c:\Program Files\JAGS\JAGS-3.3.0
+
+Unix
+----
+
+The configure script will try to guess the location of the JAGS
+library installation. It will look in /<prefix>/<lib>, where
+
+- <prefix> is the determined from the location of the jags
+  script that launches the command line interface.
+
+  For example, if this is "/usr/local/bin/jags", then prefix will
+  be "/usr/local"
+
+- <lib> is derived from the value of "LIBnn", returned by 
+  "R CMD config LIBnn".
+
+  This is particularly important on 64-bit unix, where R is 
+  installed by default in /usr/local/lib64 and LIBnn is "lib64"
+
+The configure script will also look for JAGS headers in
+/<prefix>/include/JAGS
+
+If the configure script fails to find the JAGS headers or library,
+you can set the environment variables JAGS_INCLUDE and JAGS_LIB
+to point to the correct directory.
+
+Alternatively, you can use the configure options
+
+--with-jags-include=/path/to/jags/headers 
+                    (default /usr/local/include/JAGS)
+
+--with-jags-lib=/path/to/jags/library
+                (default /usr/local/[lib|lib64])
+
+These options are onto the rjags configure script with:
+"R CMD INSTALL --configure-args='--with-jags...'
+

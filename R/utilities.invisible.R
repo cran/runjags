@@ -305,6 +305,7 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.st
 			}))}, simplify='array')
 		
 		dim(variances) <- c(nvar(mcmc.list),nchain(mcmc.list))
+		dimnames(variances) <- list(vnames[[1]][[2]], NULL)
 		anyvariancezero <- variances==0
 
 		if(any(apply(anyvariancezero,1,any)!=apply(anyvariancezero,1,all))) warning("Variance of one or more parameters is zero in one chain but non-zero in another chain")
@@ -552,13 +553,18 @@ tailf <- function(file, start=1, refresh=0.1, min.static=1, max.static=Inf, stop
 		})
 }
 
-prettifytable <- function(x, digits=5, colsequal=FALSE, nastring="", colsep="  "){
-	# Stops ridiculously small things:
-	x <- round(x, digits=10)
+prettifytable <- function(x, digits=5, colsequal=FALSE, nastring=""){
+
 	formatted <- formatC(x, format="fg", digits=digits, width=-1)
+	absx <- abs(x)
+	absx[is.na(absx)] <- 1
+	formatted[absx<10^-digits] <- formatC(x[absx<10^-digits], digits=digits, width=-1)
+	
 	formatted <- gsub("NA",nastring,formatted)
-	formatted <- rbind(dimnames(x)[[2]], formatted)
-	dimnames(formatted) <- NULL
+	
+	# Put column names on as well:
+	formatted <- rbind(dimnames(formatted)[[2]],formatted)
+	dimnames(formatted) <- list(dimnames(formatted)[[1]],rep("",ncol(formatted)))
 	
 	if(colsequal){
 		retval <- format(formatted, justify="right")
@@ -566,9 +572,11 @@ prettifytable <- function(x, digits=5, colsequal=FALSE, nastring="", colsep="  "
 		retval <- apply(formatted, 2, format, justify="right")
 	}	
 	
-	return(apply(cbind(format(c("",dimnames(x)[[1]]), justify="left"), retval), 1, paste, collapse=colsep))
-
+	# noquote suppresses the "" from the character string:
+	return(noquote(retval))
+	
 }
+
 
 checkvalidrunjagsobject <- function(runjags.object){
 	if(class(runjags.object)!="runjags") stop("The output of a runjags function (with class 'runjags') must be supplied", call.=FALSE)
@@ -684,4 +692,46 @@ getrunjagsmethod <- function(method){
 	}
 	
 	return(method)
+}
+
+# Namespace issues with coda means that calls to lattice plots aren't done properly...
+safe.crosscorr.plot <- function (x, col = topo.colors(10), ...) 
+{
+    Nvar <- nvar(x)
+    pcorr <- crosscorr(x)
+    dens <- ((pcorr + 1) * length(col))%/%2 + (pcorr < 1) + (pcorr < 
+        -1)
+    cutoffs <- format(seq(from = 1, to = -1, length = length(col) + 
+        1), digits = 2)
+    leg <- paste("(", cutoffs[-1], ",", cutoffs[-length(cutoffs)], 
+        "]", sep = "")
+    oldpar <- NULL
+    on.exit(par(oldpar))
+    oldpar <- c(par(pty = "s", adj = 0.5), oldpar)
+    plot(0, 0, type = "n", xlim = c(0, Nvar), ylim = c(0, Nvar), 
+        xlab = "", ylab = "", xaxt = "n", yaxt = "n", ...)
+    if (!is.R()) {
+        par(adj = 1)
+    }
+    axis(1, at = 1:Nvar - 0.5, labels = abbreviate(varnames(x, 
+        allow.null = FALSE), minlength = 7))
+    axis(2, at = 1:Nvar - 0.5, labels = abbreviate(varnames(x, 
+        allow.null = FALSE), minlength = 7)[Nvar:1])
+    for (cl in 1:Nvar) {
+        for (rw in 1:(Nvar - cl + 1)) polygon(y = c(cl - 1, cl - 
+            1, cl, cl, cl - 1), x = c(rw - 1, rw, rw, rw - 1, 
+            rw - 1), col = col[dens[nrow(dens) - cl + 1, rw]])
+    }
+    yval <- seq(from = Nvar/2, to = Nvar, length = length(col) + 
+        1)
+    ydelta <- Nvar/(2 * (length(col) + 1))
+    for (i in 1:length(col)) {
+        polygon(y = c(yval[i], yval[i + 1], yval[i + 1], yval[i], 
+            yval[i]), col = col[i], x = c(Nvar - ydelta, Nvar - 
+            ydelta, Nvar, Nvar, Nvar - ydelta))
+    }
+    text(Nvar - ydelta, Nvar, "1", adj = c(1, 1))
+    text(Nvar - ydelta, 0.5 * Nvar, "-1", adj = c(1, 0))
+    text(Nvar - ydelta, 0.75 * Nvar, "0", adj = c(1, 0.5))
+    invisible()
 }

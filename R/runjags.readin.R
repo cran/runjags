@@ -5,174 +5,237 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 	
 	on.exit({
 		setwd(save.directory)
-		})
+	})
 	
 	setwd(temp.directory)
 	
-	simfolders <- sort(list.files()[grepl("sim.[[:digit:]]",list.files())])
-	success <- logical(length(simfolders))
-
-	if(length(simfolders)==0){
-		warning("No simulation sub-folders found in the provided directory - looking for chain outputs in the root folder...")
-	}else{
-				
-		for(s in 1:length(simfolders)){
-			if(!paste("sim", s, sep=".")==simfolders[s]) stop("One or more of the simulation sub-folders appears to be missing from the provided directory")
-			
-			setwd(simfolders[s])
-			
-		  	if (file.exists("JAGS.out")){
-		   		stop("You are using a version of JAGS prior to 0.99.0, which is no longer supported.  Please update JAGS and try again")
-			}
-			
-			if(file.exists("CODAindex.txt")){
-				codaok <- TRUE
-			}else{
-				# If the coda file doesn't exist initially, wait a few secs:
-				Sys.sleep(2)
-				
-				# If it still doesn't exist, skip reading files and stop with an error later on:				
-				if(file.exists("CODAindex.txt")){
-					codaok <- TRUE
-				}else{
-					codaok <- FALSE					
-					break
-				}
-			}
-			
-			# Files may not exist if simulation crashed:
-			reads <- try(suppressWarnings({
-				# Inits and out files will have correct numbering - but CODAchain will start at 1 for each sim, so adjust:
-				realnums <- sort(as.numeric(gsub("[inits,.txt]", "", list.files()[grepl("inits[[:digit:]]+.txt",list.files())])))
-				fakenums <- sort(as.numeric(gsub("[CODAchain,.txt]", "", list.files()[grepl("CODAchain[[:digit:]]+.txt",list.files())])))				
-				# We might have a codachain0 if monitoring DIC so remove from the fakenums:
-				fakenums <- fakenums[fakenums!=0]
-				
-				# If we're still waiting for coda to finish outputting chains - wait a bit longer:
-				if(length(realnums)!=length(fakenums)) Sys.sleep(5)
-
-				if(!all(fakenums==(1:length(fakenums)))) stop("There was an error in renaming the chain output")
-
-				# Temporarily rename to avoid conflicts while we swap the numbers around:
-				for(c in 1:length(realnums)) file.rename(paste("CODAchain",fakenums[c],".txt",sep=""), paste("TCODAchain",fakenums[c],".txt",sep=""))
-				# Then rename back and reorder:
-				for(c in 1:length(realnums)) file.rename(paste("TCODAchain",fakenums[c],".txt",sep=""), paste("CODAchain",realnums[c],".txt", sep=""))
-
-				# Use close to make sure the files are written out:
-				fm <- list.files()[grepl("CODA[[:graph:]]*.txt",list.files())]
-				file.copy(from=fm, to='..')
-				for(f in paste("../",fm,sep="")) close(file(f))
-				fm <- list.files()[grepl("pd[[:graph:]]*.txt",list.files())]
-				file.copy(from=fm, to='..')
-				for(f in paste("../",fm,sep="")) close(file(f))
-				fm <- list.files()[grepl("popt[[:graph:]]*.txt",list.files())]
-				file.copy(from=fm, to='..')
-				for(f in paste("../",fm,sep="")) close(file(f))
-				fm <- list.files()[grepl("inits[[:digit:]]+.txt",list.files())]
-				file.copy(from=fm, to='..')
-				for(f in paste("../",fm,sep="")) close(file(f))
-				fm <- list.files()[grepl("out[[:digit:]]+.Rdump",list.files())]
-				file.copy(from=fm, to='..')
-				for(f in paste("../",fm,sep="")) close(file(f))
-				if(s==1){
-					file.copy(from='CODAindex.txt', to='..')
-					close(file("../CODAindex.txt"))
-				}
-			}))
-			if(class(reads)=="try-error"){
-				success[s] <- FALSE
-			}else{
-				success[s] <- TRUE
-					
-			}
-			setwd(temp.directory)
-				# Don't delete the sim folder - has command and potentially interesting stuff in it:
-			# unlink(sim, recursive=TRUE)
-		}
-	}
+	# dummy variable to get rid of binding warnings - actually loaded from simchainsinfo:
+	sim.chains <- list()
+	success <- try(load("simchainsinfo.Rsave"))
+	if(class(success)=="try-error") stop("The required 'simchainsinfo.Rsave' file was not found in the root simulation directory, please file a bug report to the package developer!")
+	n.sims <- length(sim.chains)
 	
-	setwd(temp.directory)
-	
-	if(!codaok && suspended){
-		stop("The CODA files were not found for one or more simulations - JAGS may not have finished, or there may have been an error with the model.  Check to see if the processes have finished and try again.", call.=FALSE)
-	}
-	
+
+	allok <- FALSE
 	on.exit({
+
+		if (!allok){
+			
+			failedjagsmodel <- paste(readLines("model.txt", warn=FALSE), collapse="\n")
+			class(failedjagsmodel) <- "runjags.model"
+			assign("model", failedjagsmodel, envir=failedjags)
+
+			failedd <- paste(readLines("data.txt", warn=FALSE), collapse="\n")
+			class(failedd) <- "runjags.data"
+			assign("data", failedd, envir=failedjags)
+			
+			failedi <- character(n.chains)
+			for(i in 1:n.chains){
+				failedi[i] <- paste(readLines(paste("inits",i,".txt",sep=""), warn=FALSE), collapse="\n")
+			}
+			class(failedi) <- "runjags.inits"
+			assign("inits", failedi, envir=failedjags)
+			
+			failedo <- character(n.sims)
+			for(i in 1:n.sims){
+				failedo[i] <- paste(readLines(paste("sim.",i,"/jagsoutput.txt",sep=""), warn=FALSE), collapse="\n")
+			}
+			class(failedo) <- "runjags.output"
+			assign("output",failedo, envir=failedjags)
+			
+		}
+		
 		setwd(save.directory)
+		
 		if(copy){
 			new.directory <- if(class(method)=="list" && method$method=='xgrid') new_unique(method$jobname, touch=TRUE, type='folder') else new_unique('runjagsfiles', touch=TRUE, type='folder')			
 			if((new.directory=="Directory not writable")==TRUE){
 				warning("JAGS files could not be copied to the working directory as it is not writable")
 			}else{
-				file.copy(from=paste(temp.directory, list.files(temp.directory), sep=.Platform$file.sep), to=new.directory, recursive=TRUE)
+				# file.rename may not work on all platforms for directories so use file.copy instead:
+				file.copy(from=file.path(temp.directory, list.files(temp.directory)), to=new.directory, recursive=TRUE)
 				cat("JAGS files were saved to the '", new.directory, "' folder in your current working directory\n", sep="")
 			}
 		}
 		if(delete) unlink(temp.directory, recursive = TRUE)
 		
-		})
+	})
+	
+	setwd(temp.directory)
+	
+  	if(length(list.files(pattern="JAGS.out",recursive=TRUE))>0){
+   		stop("You are using a version of JAGS prior to 0.99.0, which is no longer supported.  Please update JAGS and try again")
+	}
 	
 	
-	if (any(!success)){
-		
-		if(!codaok )
-		failedjagsmodel <- paste(readLines("model.txt", warn=FALSE), collapse="\n")
-		class(failedjagsmodel) <- "runjags.model"
-		assign("model", failedjagsmodel, envir=failedjags)
+	simfolders <- paste("sim.",1:n.sims,sep="")
 
-		failedd <- paste(readLines("data.txt", warn=FALSE), collapse="\n")
-		class(failedd) <- "runjags.data"
-		assign("data", failedd, envir=failedjags)
-			
-		failedi <- character(n.chains)
-		for(i in 1:n.chains){
-			failedi[i] <- paste(readLines(paste("inits",i,".txt",sep=""), warn=FALSE), collapse="\n")
+	if(length(simfolders)==0){
+		# This skips all of the output checking as we can't be sure what has happened with custom JAGS methods
+		warning("No simulation sub-folders found in the provided directory - looking for chain outputs in the root folder...")
+	}else{
+	
+		outputs <- vector('list', length=n.sims)
+		for(i in 1:n.sims){
+			tries <- 0
+			repeat{
+				outputs[[i]] <- try(paste(readLines(paste("sim.",i,"/jagsoutput.txt",sep=""), warn=FALSE), collapse="\n"), silent=TRUE)
+				if(class(outputs[[i]])!="try-error") break
+				tries <- tries +1
+				if(tries==11){
+					if(n.sims==1) stop("Unable to read the output of the simulation") else stop(paste("Unable to read the output of simulation ", i, sep=""))
+				}
+				Sys.sleep(0.5)
+			}
 		}
-		class(failedi) <- "runjags.inits"
-		assign("inits", failedi, envir=failedjags)
 		
-		if(silent.jags){
-			stop("No model output from one or more simulations; the model may not have compiled correctly, or there was a conflict between the initial values provided and data, or the monitored node(s) don't exist.  Run the model with silent.jags=FALSE and check the model output for clues.", call.=FALSE)
-		}else{
-			stop("No model output from one or more simulations; the model may not have compiled correctly, or there was a conflict between the initial values provided and data, or the monitored node(s) don't exist.  Check the model output above for clues (it may also help to inspect the jags model, data and initial values which have been saved to failedjags$model, failedjags$data and failedjags$inits respectively).", call.=FALSE)
+		# Check that all simulations have finished (again - just to be sure):
+		finished <- sapply(outputs,function(x) return(grepl("[[:space:]]Deleting model",x)))
+		if(!all(finished)){
+			if(suspended){
+				allok <- TRUE
+				delete <- FALSE
+				copy <- FALSE
+				stop("The simulations have not finished yet") 
+			}else{
+				stop("An unknown error occured - the simulation(s) appear to have not finished; check the model output in failedjags$output for clues")
+			}
+		}
+			
+		# Check for warnings about no monitored nodes ## MODIFY WHEN ALLOWING NO MONITORS ##:
+		nomons <- sapply(outputs,function(x) return(grepl("[[:space:]]There are no monitors[[:space:]]",x)))
+		if(any(nomons)) stop("The monitored nodes indicated do not exist in the model")
+		
+		# Check that all simulations didn't crash - if batch mode there will only be an Updating 0 if successful, if not batch mode there will always be a can't update no model if unsuccessful:
+		successful <- sapply(outputs,function(x){
+			return(grepl("[[:space:]]Updating 0[[:space:]]",x) & !grepl("[[:space:]]Can't update. No model![[:space:]]",x))
+			})
+	
+		if(!all(successful)){
+			#### LOOK FOR THE CRASHED DUMP FILES HERE??? ####
+			if(n.sims==1) stop("The simulation appears to have crashed - check the model output in failedjags$output for clues") else stop(paste("Simulation number(s) ", paste(which(!successful),collapse=", "), " appear(s) to have crashed; check the output in failedjags$output for clues", sep=""))
+		} 
+		
+		# Now we have established all the simulations exited successfully, but there may be delays in obtaining the coda output...		
+		increment <- 0.5
+		msgtime <- 3/increment
+		timeout <- 16/increment
+		
+		# First wait for all of the codaindex files to appear:
+		tries <- 0
+		repeat{
+			indexok <- file.exists(paste("sim.",1:n.sims,.Platform$file.sep,"CODAindex.txt",sep=""))
+			if(all(indexok)) break
+			tries <- tries +1
+			if(tries==msgtime) cat("Waiting for the CODA index files to be created...\n")
+			if(tries==timeout) stop(paste("Timed out waiting for the CODA index files to be created - the files available at time out were: ", paste(list.files(recursive=TRUE),collapse=", "), ".  Please file a bug report (including this message) to the runjags package author.", sep=""))
+			Sys.sleep(increment)
+		}
+		
+		# Now wait for all of the codachain files to appear:
+		codapaths <- unlist(lapply(1:n.sims,function(x) return(paste("sim.",x,.Platform$file.sep,"CODAchain",1:length(sim.chains[[x]]),".txt",sep=""))))
+		tries <- 0
+		repeat{
+			indexok <- file.exists(codapaths)
+			if(all(indexok)) break
+			tries <- tries +1
+			if(tries==msgtime) cat("Waiting for the CODA files to be created...\n")
+			if(tries==timeout) stop(paste("Timed out waiting for the CODA files to be created - the files available at time out were: ", paste(list.files(recursive=TRUE),collapse=", "), ".  Please file a bug report (including this message) to the runjags package author.", sep=""))
+			Sys.sleep(increment)
+		}
+		
+		# Now wait for all of the codachain files to be at least 95% of the max file size (always seem to be much closer than this):
+		tries <- 0
+		repeat{
+			fi <- file.info(codapaths)
+			if(all(fi[,'size']>0) && all(fi[,'size']/max(fi[,'size']) > 0.95)) break
+			tries <- tries +1
+			if(tries==msgtime) cat("Waiting for the CODA files to be completed...\n")
+				# If the coda files exist, wait a LONG time for them to be the correct sizes before giving up!
+			if(tries==(60*5/increment)) stop(paste("Timed out waiting for the CODA files to be completed - the file size and modification times at ", Sys.time(), " were: ", paste(paste(codapaths,fi[,'size'],as.character(fi[,'mtime']), sep=" : "),collapse=", "), ".  Please file a bug report (including this message) to the runjags package author.", sep=""))
+			Sys.sleep(increment)
+		}
+		
+		# At this point everything should be OK to proceed....
+		
+		for(s in 1:length(simfolders)){
+			# This should never happen as we have already established sim.s/jagsoutput.txt exists...
+			if(!paste("sim", s, sep=".")==simfolders[s]) stop(paste("The sub-folder for simulation ", s, " is missing from the root simulation directory", sep=""))
+			
+			setwd(simfolders[s])
+			
+			# Copy the chains to the root simulation directory and renumber at the same time:
+			fakenums <- 1:length(sim.chains[[s]])
+			realnums <- sim.chains[[s]]
+			for(c in fakenums){
+				
+				# One last repeat failsafe...
+				tries <- 0
+				repeat{
+					success <- file.rename(paste("CODAchain",c,".txt",sep=""), paste("../CODAchain",realnums[c],".txt",sep=""))
+					if(success) break
+					tries <- tries +1
+					if(tries==5) stop(paste("There was an error moving the coda file for chain ", realnums[c], sep=""))
+					Sys.sleep(1)
+				}
+				close(file(paste("../CODAchain",realnums[c],".txt",sep="")))
+			}
+
+			# These were created before the coda files, so just assume they are OK:
+			fm <- list.files(pattern="pd[[:graph:]]*.txt")
+			file.rename(from=fm, to=file.path('..',fm))
+			for(f in file.path("../",fm)) close(file(f))
+			fm <- list.files(pattern="popt[[:graph:]]*.txt")
+			file.rename(from=fm, to=file.path('..',fm))
+			for(f in file.path("../",fm)) close(file(f))
+
+			if(s==1){
+				success <- file.rename(from='CODAindex.txt', to='../CODAindex.txt')
+				if(!success) stop("There was an error copying the coda index file")
+				close(file("../CODAindex.txt"))
+				for(f in c("CODAchain0.txt","CODAindex0.txt","CODAtable0.txt")){
+					if(file.exists(f)){
+						file.rename(from=f, to=file.path("..",f))
+						close(file(file.path("..",f)))
+					}
+				}
+			}
+
+			setwd(temp.directory)
+			# Won't delete the sim folder if there was a problem - has command and potentially interesting stuff in it!!
+			unlink(simfolders[s], recursive=TRUE)
 		}
 	}
+	
+	setwd(temp.directory)
+	
+	chainscopied <- sort(as.numeric(gsub("[CODAchain,.txt]", "", list.files(pattern="CODAchain[[:digit:]]+[.]txt"))))
+	# We might have a codachain0 if monitoring DIC so remove from the fakenums:
+	chainscopied <- chainscopied[chainscopied!=0]					
 
-	if(!silent.jags & class(method)=="character" ) swcat("\n")
+	if(length(chainscopied)!=n.chains){
+		stop(paste("Expected ", n.chains, " chains to be output but found ", length(chainscopied), " in the root simulation directory - please file a bug report to the runjags package author", sep=""))
+		
+	}
+	
+	allok <- TRUE
 
 	swcat("Simulation complete.  Reading coda files...\n")
 	
-
-	
-	
 	suppressWarnings(inputsuccess <- try(input.data <- read.openbugs(quiet=TRUE), silent=TRUE))
-
 	if((class(inputsuccess)=="try-error")){
-		
-		# Sometimes it's taking a while to move files maybe?
-		Sys.sleep(2)
-		
-		suppressWarnings(inputsuccess <- try(input.data <- read.openbugs(quiet=TRUE), silent=TRUE))
-		
-		if((class(inputsuccess)=="try-error")){
-		
-			filename <- paste("jags.dump", 1, ".R", sep="")
-			suppressWarnings(try(inputsuccess <- try(tempinput <- readLines(filename)), silent=TRUE))
-			if(class(inputsuccess)=="try-error"){
-				if(silent.jags){
-					stop("Unable to load model output; the model may not have compiled correctly, or there was a conflict between the initial values provided and data, or the monitored node(s) don't exist.  Run the model with silent.jags=FALSE and check the model output for clues.")
-				}else{
-					stop("Unable to load model output; the model may not have compiled correctly, or there was a conflict between the initial values provided and data, or the monitored node(s) don't exist.  Check the model output above for clues.")
-				}			
-			}else{
-				if(silent.jags){
-					stop("The model appears to have crashed during the burnin period.  Ensure that the syntax is correct and that appropriate prior distributions and starting values have been given.  Also try running the model with silent.jags=FALSE and check the model output for clues.")
-				}else{
-					stop("The model appears to have crashed during the burnin period.  Ensure that the syntax is correct and that appropriate prior distributions and starting values have been given.  Also try checking the model output above for clues.")
-				}
-			}
+	
+		filename <- paste("jags.dump", 1, ".R", sep="")
+		suppressWarnings(try(inputsuccess <- try(tempinput <- readLines(filename)), silent=TRUE))
+		if(class(inputsuccess)=="try-error"){
+			stop("Unable to load model output - please file a bug report to the runjags package author.")
+		}else{
+			stop("The model appears to have crashed during the burnin period.  Check the failedjags$output variable for clues.")
 		}
 	}
+	
+	# Last failsafe:
+	if(nchain(input.data)!=n.chains) stop(paste("Expected ", n.chains, " chains to be returned but only found ", nchain(input.data), " - please file a bug report to the runjags package author", sep=""))
 	
 	swcat("Coda files loaded successfully\n")
 	achieved <- niter(input.data)
@@ -273,5 +336,4 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 	
 	class(inits) <- 'runjags.inits'
 	return(list(mcmc=input.data, pd=pd, popt=popt, pd.i=pd.i, end.state=inits))
-	
 }

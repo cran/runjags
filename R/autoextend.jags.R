@@ -1,6 +1,5 @@
 autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = runjags.object$thin, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
-
 	# We may be passed some unevaluated function arguments so evaluate everything here:
 	argnames <- names(formals(autoextend.jags))
 	for(i in 1:length(argnames)){
@@ -209,11 +208,23 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	
 	newlines <- if(silent.jags) "\n" else "\n\n"
 	
-	
 	# Check to see if this is using an rjags method, and if it is get the method.options$rjags stuff set up:	
 	if(method %in% c("background","bgparallel")) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 	if(method=="rjags"){
 		if(keep.jags.files) stop("Unable to keep JAGS files when using the 'rjags' method")
+		
+		# Module loading MUST be done before model compilation:
+		for(m in modules){
+			if(m!=""){
+				if(m=="runjags"){
+					success <- try(load.module.runjags())
+				}else{
+					success <- try(load.module(m))
+				}
+			
+				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
+			}
+		}		
 		
 		if(! 'rjags' %in% names(method.options)){
 			method.options <- c(method.options, list(rjags=as.jags(runjags.object)))
@@ -235,7 +246,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		method.options <- method.options[names(method.options)!="rjags"]	
 	}
 	# popt and pd.i are guaranteed not to be a problem for autorun functions
-	
+		
 	swcat("\nAuto-run JAGS",newlines,sep="")
 	
 	if(startsample>runjags.object$sample | !combine){
@@ -334,7 +345,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}
 	
 	convergence <- c(convergence, psrf.target=psrf.target)
-	class(convergence) <- "gelman.with.target"
+	class(convergence) <- "gelman.target"
 	
 	n.params <- nrow(convergence$psrf)
 	n.iters <- niter(additional$mcmc)
@@ -451,7 +462,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				}
 					
 				convergence <- c(convergence, psrf.target=psrf.target)
-				class(convergence) <- "gelman.with.target"
+				class(convergence) <- "gelman.target"
 					
 				n.params <- nrow(convergence$psrf)				
 					

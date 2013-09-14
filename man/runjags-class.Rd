@@ -34,6 +34,7 @@
 \alias{print.runjags.model}
 \alias{print.runjags.data}
 \alias{print.runjags.inits}
+\alias{print.runjags.output}
 \alias{print.mcse.stats}
 \alias{print.crosscorr.stats}
 \alias{print.gelman.with.target}
@@ -91,6 +92,7 @@ value files from failed simulations for inspection by the user.
 	\method{print}{runjags.model}(x, linenumbers=TRUE, ...)
 	\method{print}{runjags.data}(x, linenumbers=TRUE, ...)
 	\method{print}{runjags.inits}(x, linenumbers=TRUE, ...)
+	\method{print}{runjags.output}(x, linenumbers=TRUE, ...)
 	
 	\method{print}{runjags.study}(x,...)
 	\method{print}{runjags.bginfo}(x, ...)
@@ -214,7 +216,7 @@ pd/popt/pd.i information.
 
 \code{\link{autorun.jags}},
 
-\code{\link[coda]{summary.mcmc}},
+\code{\link[coda]{summary.mcmc}}
 
 }
 

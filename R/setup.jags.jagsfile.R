@@ -4,6 +4,13 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	
 	if(rjagsmethod && !require(rjags)) stop("The rjags package is not installed")
 	
+	# Reset failedjags stuff:
+	failedjags$model <- "No failed model available!"
+	failedjags$data <- "No failed data available!"
+	failedjags$inits <- "No failed initial values available!"
+	failedjags$output <- "No failed model output available!"
+	failedjags$end.state <- "No failed model parameter state available!"
+
 	# We may be passed some unevaluated function arguments so evaluate everything here:
 	argnames <- names(formals(setup.jags))
 	for(i in 1:length(argnames)){
@@ -62,6 +69,22 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	
 	if(class(model)!="character" | length(model)!=1){
 		stop("The model must be provided in the form of a character string")
+	}
+	
+	# Find references to functions in the runjags module (unless we have already been told to use the standalone runjags module):
+	if(!any(modules=="runjagsmodule")){
+		# Find any matching functions used (not in comments, and definitely used as a function not a variable):
+		fs <- c("par1","par2","par3","par4","lomax","mouch","genpar")
+
+		fs <- apply(expand.grid(c("~","<-"),c("d","p","q"),fs,"("),1,paste,collapse="")
+		# Get rid of commented lines and remove all spaces:
+		nohashstring <- paste(lapply(strsplit(model, "[\n\r]")[[1]], function(x) gsub("#.*", "", x)), collapse="\n")
+		nohashstring <- gsub('[[:space:]]','',nohashstring)
+
+		# Find any matches and add runjags to the modules if rjags method:
+		if(any(sapply(fs,function(x) return(grepl(x,nohashstring,fixed=TRUE))))){
+			if(rjagsmethod) modules <- c(modules, 'runjags') else warning("Pareto family functions provided by the runjags module are only available using the rjags method; to use these functions with other methods install (and specify using the module argument) the 'runjagsmodule' standalone module")
+		}
 	}
 	
 	if(class(data)=="list") suppressWarnings(try(data <- dump.format(data), silent=TRUE))
@@ -140,6 +163,7 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	n.params <- length(monitor)
 	params.names <- monitor
 	
+	
 	temp.directory <- tempfile('runjagsdir')
 	dir.create(temp.directory)
 	cwd <- getwd()
@@ -172,7 +196,11 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	if(rjagsmethod){
 		if(length(modules)>0) for(m in modules){
 			if(m!=""){
-				success <- try(load.module(m))
+				if(m=="runjags"){
+					success <- try(load.module.runjags())
+				}else{
+					success <- try(load.module(m))
+				}
 				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
 			}
 		}
@@ -191,9 +219,25 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		# Model checking etc can be done by rjags later
 	
 	}else{
+		
+		resetsyspath=resetbinpath <- FALSE
+		if(.Platform$OS.type == "windows"){		
+			currentsyspath <- Sys.getenv('PATH')
+			if(!grepl(jags.status$libpaths$PATH,currentsyspath,fixed=TRUE)){
+				Sys.setenv(PATH=paste(currentsyspath, ';', jags.status$libpaths$PATH, sep=''))
+				resetsyspath <- TRUE
+			}
 
+			currentsysbinpath <- Sys.getenv('LTDL_LIBRARY_PATH')
+			if(!grepl(jags.status$libpaths$LTDL_LIBRARY_PATH,currentsysbinpath,fixed=TRUE)){
+				Sys.setenv(LTDL_LIBRARY_PATH=paste(currentsysbinpath, if(currentsysbinpath!='') ';', jags.status$libpaths$LTDL_LIBRARY_PATH, sep=''))
+				resetbinpath <- TRUE
+			}		
+		}	
+		
 		scriptstring <- ""
 		if(length(modules)>0) for(i in 1:length(modules)){
+			if(modules[i]=="runjags") stop("The runjags module is only available using the rjags method; to use the functions provided with other methods install (and specify using the module argument) the 'runjagsmodule' standalone module")
 			if(modules[i]!=""){
 				scriptstring <- paste(scriptstring, "load ", modules[i], "\n", sep="")
 			}
@@ -211,14 +255,14 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		output <- system2(jags, stdout=TRUE, stderr=TRUE, stdin="script.cmd", wait=TRUE)
 		if(grepl("file not found", paste(output,collapse="\n"))){
 			cat(output, sep="\n")
-			stop("Error reading module or factory files (see output above for more details)")
+			stop("Error reading modules or factories (see output above for more details)")
 		}
 	
 		scriptstring <- paste(scriptstring, "model in <\"model.txt\">\n", sep="")
 
 		cat(scriptstring, "\nexit\n", file="script.cmd", sep="", append=FALSE)  
 		output <- system2(jags, stdout=TRUE, stderr=TRUE, stdin="script.cmd", wait=TRUE)
-		if(grepl("error", tolower(paste(output,collapse="\n")))){
+		if(grepl("error", tolower(deparse(paste(output,collapse="\n"))))){
 			cat(output, sep="\n")
 			
 			failedjagsmodel <- model
@@ -233,7 +277,7 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	
 			cat(scriptstring, "\nexit\n", file="script.cmd", sep="", append=FALSE)  
 			output <- system2(jags, stdout=TRUE, stderr=TRUE, stdin="script.cmd", wait=TRUE)
-			if(grepl("error", tolower(paste(output,collapse="\n")))){
+			if(grepl("error", tolower(deparse(paste(output,collapse="\n"))))){
 				cat(output, sep="\n")
 				class(data) <- 'runjags.data'
 				assign("data", data, envir=failedjags)
@@ -247,7 +291,7 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 			if(inits[i]!=""){
 				cat(paste(scriptstring, "data in <\"inits",i,".txt\">\n", sep=""), "\nexit\n", file="script.cmd", sep="", append=FALSE)  
 				output <- system2(jags, stdout=TRUE, stderr=TRUE, stdin="script.cmd", wait=TRUE)
-				if(grepl("error", tolower(paste(output,collapse="\n")))){
+				if(grepl("error", tolower(deparse(paste(output,collapse="\n"))))){
 					cat(output, sep="\n")
 					class(inits) <- 'runjags.inits'
 					assign("inits", inits, envir=failedjags)
@@ -257,6 +301,8 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 			}
 		}
 		
+		if(resetsyspath) Sys.setenv(PATH=currentsyspath)
+		if(resetbinpath) Sys.setenv(LTDL_LIBRARY_PATH=currentsysbinpath)
 	}
 
 	class(model) <- "runjags.model"

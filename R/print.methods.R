@@ -16,7 +16,7 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 				cat("\nFull summary statistics aren't available as this model was last extended using summarise=FALSE argument - you can use eg summary(as.mcmc.list(results)) or extend.jags(results, sample=0, summarise=TRUE) to append summary statistics\n\n", sep="")
 				m <- NA
 			}else{
-				cat("\nJAGS model summary statistics from ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, ":\n\n", sep="")
+				cat("\nJAGS model summary statistics from ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, ":\n", sep="")
 
 				if(any(c(is.character(x$hpd),is.character(x$summary),is.character(x$mcse),is.character(x$autocorr)))){
 					m <- "There was an error calculating summary statistics - use $summary, $hpd etc to access individual elements"
@@ -44,11 +44,12 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 					selected <- matchvars(vars, dimnames(numbers)[[1]])
 					numbers <- numbers[selected,,drop=FALSE]
 				
-					m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="", colsep="  ")
+					m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="")
 				
 				}
 			
-				cat(m, "", sep="\n")
+				print.noquote(m)
+				cat("\n")
 	
 				if(class(x$dic)!="character"){
 					cat("Model fit assessment (DIC):  ", format(round(x$dic$dic, digits=digits), scientific=FALSE), "  (range between chains: ", format(round(min(x$dic$dic.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$dic.chains), digits=digits), scientific=FALSE), ")\n", sep="")
@@ -79,6 +80,7 @@ print.runjags.model <- function(x, linenumbers=TRUE, ...){
 	cat(c("\nJAGS model syntax:\n\n", x, if(linenumbers) "\n\n" else "\n"),sep="")
 	invisible(x)
 }
+
 print.runjags.data <- function(x, linenumbers=TRUE, ...){
 	if(x==""){
 		cat("\nNo data supplied\n")
@@ -104,6 +106,24 @@ print.runjags.inits <- function(x, linenumbers=TRUE, ...){
 	}else{
 		for(i in 1:length(x)){
 			cat(c("\nChain ", i, ":\n", "", x[i],""),sep="")
+		}
+	
+	}
+	cat("\n")
+	invisible(x)
+}
+print.runjags.output <- function(x, linenumbers=TRUE, ...){
+	cat(c("","JAGS model output:"),sep="\n")
+	if(linenumbers){
+		for(i in 1:length(x)){
+			split <- strsplit(x[i],"\n",fixed=TRUE)[[1]]
+			lines <- length(split)
+			if(lines>0) x[i] <- paste(paste(format(as.character(1:lines), justify='left'),"  |  ", split, sep=""),collapse="\n")
+			if(length(x)>1) cat(c("\nSimulation ", i, ":\n\n", "", x[i],if(linenumbers) "\n"),sep="") else cat(c("\n\n", "", x[i],if(linenumbers) "\n"),sep="")
+		}	
+	}else{
+		for(i in 1:length(x)){
+			if(length(x)>1) cat(c("\nSimulation ", i, ":\n", "", x[i],""),sep="") else cat(c("\n", "", x[i],""),sep="")
 		}
 	
 	}
@@ -160,11 +180,12 @@ print.runjags.plots <- function(x,vars=NA,layout=c(1,1),newwindows=!.Platform$GU
 	output <- capture.output({
 		
 		if(file!="") pdf(file,...)
-		if(!exists("dev.new")) dev.new <- x11
 
 		if(!identical(add.crosscorr,FALSE)){
-			crosscorr.plot(add.crosscorr)
+			safe.crosscorr.plot(add.crosscorr)
 			title(sub="Cross-correlation")
+			# This stops the xyplots being overlaid onto the crosscorr.plot:
+			plot.new()		
 		}
 	
 		N <- length(toplot)
@@ -179,9 +200,6 @@ print.runjags.plots <- function(x,vars=NA,layout=c(1,1),newwindows=!.Platform$GU
 		newpage <- TRUE
 		p1 <- 1
 		p2 <- 1
-		
-		# This stops the xyplots being overlaid onto the crosscorr.plot:
-		plot.new()		
 		
 		for(i in 1:N){
 			if(newpage && file=="" && newwindows){
@@ -210,14 +228,14 @@ print.runjags.plots <- function(x,vars=NA,layout=c(1,1),newwindows=!.Platform$GU
 
 
 print.crosscorr.stats <- function(x, vars=NA, digits=5, ...){
-    cat("Cross-correlation matrix:\n\n")
+    cat("Cross-correlation matrix:\n")
 
 	selected <- matchvars(vars, dimnames(x)[[1]])
 	x <- x[selected,selected,drop=FALSE]
 		
-	m <- prettifytable(x, digits=digits, colsequal=FALSE, nastring="", colsep="  ")
+	m <- prettifytable(x, digits=digits, colsequal=FALSE, nastring="")
 	
-	cat(m, sep="\n")
+	print.noquote(m)
 	
 	cat("\n[See also 'crosscorr.plot(as.mcmc(runjags.object))' for a prettier output]\n")
 	
@@ -235,16 +253,16 @@ print.mcse.stats <- function(x, vars=NA, digits = 5, ...){
 	x <- x[c(selected, selected+length(varnames), selected+(2*length(varnames)))]
 	varnames <- varnames[selected]
 	
-    cat("Monte Carlo standard error:\n\n")
+    cat("Monte Carlo standard error:\n")
 	numbers <- matrix(nrow=length(varnames),ncol=4,dimnames=list(varnames,c("SSeff", "SD", "MCerr", "% of SD")))	
 	numbers[,1] <- as.integer(x[1:(length(x)/3)])
 	numbers[,2] <- x[((length(x)/3)+1):(length(x)*2/3)]
 	numbers[,3] <- x[((length(x)*2/3)+1):length(x)]
 	numbers[,4] <- round(numbers[,3]/numbers[,2]*100,1)
 
-	m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="", colsep="  ")
+	m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="")
 		
-	cat(m, sep="\n")
+	print.noquote(m)
 	
     cat("\n[A rule of thumb is that the Monte Carlo error should be less than 5% of the standard deviation of the sample]\n")
 
@@ -253,7 +271,7 @@ print.mcse.stats <- function(x, vars=NA, digits = 5, ...){
 
 
 
-print.gelman.with.target <- function(x, vars=NA, digits = 3, ...){
+print.gelman.target <- function(x, vars=NA, digits = 3, ...){
 
 	selected <- matchvars(vars, dimnames(x))
 	x <- x[selected,drop=FALSE]
@@ -291,14 +309,17 @@ print.runjags.study <- function(x,...){
 	if(!identical(x$means, NA)){
 		cat("\nAverage values obtained from a JAGS study with a total of ", x$simulations-sum(x$crashed), " simulations", if(sum(x$crashed)>0) paste(" (excluding ", sum(x$crashed), " crashed simulations)", sep=""), ":\n\n", sep="")
 		print.default(x$means,...)
+		rettab <- x$means
 		if(!identical(x$singles, NA)){
 			cat("\nValues obtained for variables that were stochastic for only 1 simulation:\n\n", sep="")
 			print.default(x$singles,...)
+			rettab <- rbind(rettab, cbind(x$singles,1))
 		}		
 	}else{
 		if(!identical(x$singles, NA)){
 			cat("\nValues obtained from a JAGS study with a total of ", x$simulations-sum(x$crashed), " simulations", if(sum(x$crashed)>0) paste(" (excluding ", sum(x$crashed), " crashed simulations)", sep=""), ":\n\n", sep="")
 			print.default(x$singles,...)
+			rettab <- cbind(x$singles, Simualtions=1)
 		}			
 	}
 	cat("\n")
@@ -308,7 +329,7 @@ print.runjags.study <- function(x,...){
 	cat("Average burnin required:  ", round(mean(x$burnin)), " (range: ", round(min(x$burnin)), " - ", round(max(x$burnin)), ")\n", sep="")
 	cat("Average samples required:  ", round(mean(x$sample)), " (range: ", round(min(x$sample)), " - ", round(max(x$sample)), ")\n", sep="")
 	cat("\n")
-	invisible(x$summary)
+	invisible(rettab)
 }
 
 as.mcmc.runjags <- function(x){
@@ -388,7 +409,7 @@ plot.runjags <- function(x,vars=NA,layout=NA, newwindows=NA,file="",type="all", 
 	
 	if(!any("density"%in%type) && !any("trace"%in%type)){
 		if(file!="") pdf(file,...)
-		crosscorr.plot(crosscorr,sub="Cross-correlation")
+		safe.crosscorr.plot(crosscorr,sub="Cross-correlation")
 		if(file!="") dev.off()
 		invisible(crosscorr)
 	}else{	
@@ -403,12 +424,6 @@ print.runjags.bginfo <- function(x, ...){
 		
 }
 
-plot.runjags.bginfo <- function(x, ...){
-
-	stop("Nothing to plot - retrieve the results for this suspended JAGS call using 'results.jags(background.runjags.object)' first")
-	invisible(x)
-		
-}
 
 plot.runjags.plots <- print.runjags.plots
 
@@ -427,6 +442,32 @@ as.runjags.default <- function(x, ...){
 }
 
 failedjags <- new.env()
-assign("model", "", envir=failedjags)
-assign("data", "", envir=failedjags)
-assign("inits", "", envir=failedjags)
+
+assign("model", "No failed model available!", envir=failedjags)
+assign("data", "No failed data available!", envir=failedjags)
+assign("inits", "No failed initial values available!", envir=failedjags)
+assign("output", "No failed model output available!", envir=failedjags)
+assign("end.state", "No failed model parameter state available!", envir=failedjags)
+
+assign("study", "No failed runjags study available!", envir=failedjags)
+
+runjagsprivate <- new.env()
+assign("defaultoptions",list(jagspath=""),envir=runjagsprivate)   #, warn.inits=TRUE, warn.rng=TRUE
+assign("options",runjagsprivate$defaultoptions,envir=runjagsprivate)
+
+runjags.options <- function(...){
+	opts <- list(...)
+	if(length(opts)>0){
+		options <- runjagsprivate$options
+		recognised <- names(opts) %in% names(options)
+		if(any(!recognised)){
+			warning(paste("Igoring unrecognised option(s): ", paste(names(opts)[!recognised],collapse=", ")))
+		}
+		opts <- opts[recognised]
+		for(i in 1:length(opts)){
+			options[names(opts)[i]] <- opts[[i]]
+		}
+		assign("options",options,envir=runjagsprivate)
+	}
+	return(runjagsprivate$options)
+}

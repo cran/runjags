@@ -68,12 +68,14 @@ ask <- function (prompt="?", type="logical", bounds=c(-Inf, Inf), na.allow=FALSE
 	}			
 }
 
-findjags <- function(ostype = .Platform$OS.type, look_in = NA, from.variable=".jagspath"){
+findjags <- function(ostype = .Platform$OS.type, look_in = NA, ...){
 	
 	if(is.na(look_in)) look_in <- if(ostype=="windows") c("/Program Files/","/Windows/Program Files/","C:/Program Files/","C:/Windows/Program Files/","/") else NULL
 		
 	if(! ostype %in% c("unix","windows")) stop(paste("Unrecognised OS type '", ostype, "'.  Use either 'unix' or 'windows'", sep=""))
 	
+		# This is a bit of a mess now the option is deprocated...
+	if(!exists('from.variable')) from.variable <- ""
 	if(is.na(from.variable) | is.null(from.variable) | from.variable=="" | length(from.variable)==0){
 		from.variable <- character(0)
 	}else{
@@ -83,6 +85,10 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, from.variable=".j
 			from.variable <- get(from.variable)
 		}		
 	}
+	if(length(from.variable)!=0){
+		warning("The '.jagspath' option is deprecated - use the runjags.options() to set the default path to JAGS")
+	}
+	if(runjagsprivate$options$jagspath != runjagsprivate$defaultoptions$jagspath) from.variable <- runjagsprivate$options$jagspath
 
 	if(ostype=="unix"){
 		
@@ -98,14 +104,22 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, from.variable=".j
 	}
 	
 	if(ostype=="windows"){
-
+		
+		# First check if the environmental variable is set (by rjags), then this will work:
+		suppressWarnings(s <- try(system('where jags',intern=TRUE),silent=TRUE))
+		if(is.null(attr(s,'status'))){
+			s <- gsub('jags.bat','jags-terminal.exe',s)
+			s <- gsub('\\','/',s,fixed=TRUE)
+			return(s)
+		}
+		
 		if(class(look_in)!="character") stop("The look_in argument supplied to findjags must be a character vector of paths")
 		look_in <- paste(look_in,"/",sep="")
 		look_in <- gsub("//","/",look_in,fixed=TRUE)
 		suppressWarnings(paths <- paste(unlist(lapply(look_in, function(x) return(paste(x,list.files(x),sep="")))),"/",sep=""))
 		possible <- unique(paths[grepl("JAGS",paths)|grepl("jags",paths)])
-
-		posspaths <- character(0)
+		
+		if(Sys.getenv("JAGS_HOME")!="") posspaths <- Sys.getenv("JAGS_HOME") else posspaths <- character(0)
 
 		if(length(possible)>0) for(i in 1:length(possible)){
 		binpaths <- list.files(possible[i],recursive=TRUE)
@@ -141,9 +155,9 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, from.variable=".j
 		# If rjags is installed but not loaded suggest loading it:
 		
 		if(any(.packages(TRUE)=='rjags')){
-			warning("JAGS was not found in the common install locations on your system; either provide a path to the executable as the jags argument or use the global variable .jagspath, or try using 'library(rjags)' (or specify method='rjags') to use the rjags method")
+			warning("JAGS was not found in the common install locations on your system; try loading the rjags package first or alternatively provide a path to the executable as the jags argument or using runjags.options()")
 		}else{
-			warning("JAGS was not found in the common install locations on your system; please provide a path to the executable as the jags argument or use the global variable .jagspath")
+			warning("JAGS was not found in the common install locations on your system; please provide a path to the executable as the jags argument or using runjags.options()")
 		}
 	}
 	
@@ -469,7 +483,7 @@ as.jags.runjags <- function(x, ...){
 		assign("inits", runjags.object$end.state, envir=failedjags)
 		assign("data", runjags.object$data, envir=failedjags)
 		
-		stop("There was an error reading the model, data or initial values (see output above for more details, and examine 'failedjags$model', 'failedjagsdata' and 'failedjags$inits' to see model/data/inits syntax with line numbers)",call.=FALSE)
+		stop("There was an error reading the model, data or initial values (see output above for more details, and examine 'failedjags$model', 'failedjags$data' and 'failedjags$inits' to see model/data/inits syntax with line numbers)",call.=FALSE)
 	}
 	unlink(tfile)
 	

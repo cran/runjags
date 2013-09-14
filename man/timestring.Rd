@@ -57,7 +57,7 @@ FALSE then just an integer is returned.  Default TRUE.}
 # time how long it takes to complete a task:
 
 pre.time <- Sys.time()
-for (i in 1:10000000) hold <- exp(100)  # PROCESS TO TIME
+Sys.sleep(2)  # PROCESS TO TIME
 post.time <- Sys.time()
 timestring(pre.time, post.time)
 

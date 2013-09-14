@@ -8,26 +8,20 @@ runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libp
 	
 	tryCatch({
 
-		swcat("Calling the simulation using the simple method... (this may take some time)\n")
+		swcat("Running the simulation using the simple method... (output will be displayed once the simulation has termianted)\n")
+		flush.console()
 
 		if (os == "windows"){
-			success <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd", if(silent.jags) " 2>&1", sep = ""), intern=silent.jags, wait=TRUE, ignore.stderr = FALSE, translate=TRUE, mustWork=TRUE)
+			success <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd > sim.1/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=TRUE)
 		}else{
-			if(silent.jags){
-				suppressWarnings(success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd 2>&1", sep=""), intern=TRUE, wait=TRUE))
-			}else{
-				suppressWarnings(success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd", sep=""), intern=FALSE, wait=TRUE))
-			}
+			suppressWarnings(success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd > sim.1/jagsoutput.txt 2>&1", sep=""), intern=TRUE, wait=TRUE))
 		}
 	
 		# In theory more portable code but can't guarantee interleaving of stdout/stderr:
 		# output <- system2(jags, args=if(batch.jags) "script.cmd" else character(0), stdout=if(silent.jags) TRUE else "", stderr=if(silent.jags) TRUE else "", stdin=if(batch.jags) "" else "script.cmd")
 
-		# Try and get the output from JAGS to buffer before continuing on unix-alikes:
 		if(!silent.jags){
-			Sys.sleep(0.2)
-			cat("\n")
-			flush.console()
+			cat(readLines("sim.1/jagsoutput.txt",warn=FALSE),sep="\n")
 		}
 	
 		retval <- TRUE
@@ -124,13 +118,9 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 						Sys.setenv(LTDL_LIBRARY_PATH=paste(currentsysbinpath, if(currentsysbinpath!='') ';', testjags$libpaths$LTDL_LIBRARY_PATH, sep=''))
 					}		
 								
-					success <- shell(paste(shQuote(jags), if(!batch.jags) " <", "  sim.", s, "/script.cmd", if(silent.jags) " 2>&1", sep = ""), intern=silent.jags, wait=TRUE)
+					success <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=TRUE)
 				}else{
-					if(silent.jags){
-						success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd 2>&1", sep=""), intern=TRUE, wait=TRUE)
-					}else{
-						success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd", sep=""), intern=FALSE, wait=TRUE)					
-					}
+					suppressWarnings(success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep=""), intern=TRUE, wait=TRUE))
 				}
 				
 				retval <- "An error occured transferring the model output from the snow cluster"
@@ -212,11 +202,6 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 			retval <- TRUE
 		}
 		
-		# Try and get the output from JAGS to buffer before continuing:
-		Sys.sleep(0.5)
-		if (os == "unix") system("echo ''") else cat("\n")
-		flush.console()
-	
 	})
 	
 	return(retval)
@@ -226,7 +211,7 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 
 
 
-runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl){
+runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 	
 	if(nsims==1) retval <- 'An unknown error occured while calling JAGS using the background method' else retval <- 'An unknown error occured while calling JAGS using the parallel background method'
 	
@@ -239,7 +224,7 @@ runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		success <- numeric(nsims)
 		for(s in 1:nsims){
 			if (os == "windows"){
-					success[s] <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt", if(silent.jags) " 2>&1", sep = ""), intern=FALSE, wait=FALSE, mustWork=TRUE)
+					success[s] <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt", if(silent.jags) " 2>&1", sep = ""), intern=FALSE, wait=FALSE)
 			}else{
 				if(silent.jags){
 					success[s] <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep=""), intern=FALSE, wait=FALSE)
@@ -262,7 +247,7 @@ runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 
 runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 	
-	swcat("Calling the simulation... (this may take some time)\n")
+	swcat("Calling the simulation...\n")
 
 	retval <- 'An unknown error occured while calling JAGS using the interruptible method'
 	
@@ -341,6 +326,7 @@ runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, o
 		}
 	})
 	
+	cat("\n")
 	setwd(thed)
 	return(retval)	
 
@@ -348,7 +334,7 @@ runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, o
 
 runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 	
-	swcat("Calling the simulation using the parallel method... (this may take some time)\n")
+	swcat("Calling the simulation using the parallel method...\n")
 
 	retval <- 'An unknown error occured while calling JAGS using the parallel method'
 	
@@ -384,9 +370,13 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 			}
 						
 			# Allow first simulation to start before we look for the PID:
-			Sys.sleep(0.1)
-			if(!file.exists(paste('sim.', 1, '/jagsoutput.txt', sep=''))) Sys.sleep(1)
-			if(!file.exists(paste('sim.', 1, '/jagsoutput.txt', sep=''))) Sys.sleep(1)
+			tries <- 0
+			repeat{
+				if(file.exists('sim.1/jagsoutput.txt')) break
+				Sys.sleep(0.5)
+				tries <- tries +1
+				if(tries==6) stop("Timed out waiting for output to appear from JAGS")
+			}
 			
 			tasks <- system('TASKLIST', intern=TRUE)
 
@@ -399,12 +389,17 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 		
 		}else{
 			pid <- character(nsims)
-			for(s in 1:nsims){
+			# Start with last simulation first, so the first simulation will be the last to finish most of the time:
+			for(s in nsims:1){
 				success <- suppressWarnings(system(paste('./scriptlauncher.sh ', s, sep=''), wait=TRUE, intern=FALSE))
 				# Allow simulation to start before we look for the PID:
-				Sys.sleep(0.1)
-				if(!file.exists(paste('sim.', s, '/jagspid.txt', sep=''))) Sys.sleep(1)
-				if(!file.exists(paste('sim.', s, '/jagspid.txt', sep=''))) Sys.sleep(1)
+				tries <- 0
+				repeat{
+					if(file.exists(paste('sim.', s, '/jagspid.txt', sep=''))) break
+					Sys.sleep(0.5)
+					tries <- tries +1
+					if(tries==6) stop("Timed out waiting for output to appear from JAGS")
+				}
 
 				suppressWarnings(output <- readLines(paste('sim.', s, '/jagspid.txt', sep='')))
 				pid[s] <- output[1]
@@ -417,13 +412,27 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 		repeat{
 			if(!silent.jags) cat("Following the progress of chain ", s, " (the program will wait for all chains to finish before continuing):\n", sep="")			
 			output <- tailf(paste('sim.', s, '/jagsoutput.txt', sep=''), refresh=jags.refresh, start=1, min.static=2, stop.text="Deleting model", print=!silent.jags, return=TRUE)
+			cat("\n")
 			if(output$interrupt) break
-			Sys.sleep(1)
-			simsdone <- which(file.exists(paste('sim.', 1:nsims, '/jagsoutput.txt', sep='')))
+
+			# The first sim should be finished last ... but give the others up to 5 seconds to catch up before switching to them...
+			tries <- 0
+			repeat{
+				# Check to see which chains have (a) started, and (b) finished:
+				simsdone <- sapply(1:nsims, function(x) return(file.exists(paste('sim.', x, '/jagsoutput.txt', sep='')) && grepl("Deleting model",paste(readLines(paste('sim.', x, '/jagsoutput.txt', sep=''),warn=FALSE),collapse="\n"))))
+				
+				if(all(simsdone)) break
+				tries <- tries +1
+				if(tries==5) break
+				Sys.sleep(1)
+			}
+
 			if(all(simsdone)){
 				cat("All chains have finished\n")
 				break
 			}
+
+			# If one still hasn't finished, start watching it:
 			s <- which(!simsdone)[1]
 		}					
 				
@@ -461,17 +470,10 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 
 runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 	
-	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary
+	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary - and the modules loaded just before that
 	extra.options <- rjags[names(rjags)!='rjags']
 	rjags <- rjags$rjags
 
-	for(m in extra.options$modules){
-		if(m!=""){
-			success <- try(load.module(m))
-			if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
-		}
-	}
-	
 	for(i in 1:length(extra.options$factories)){
 		if(extra.options$factories[i]!=""){
 			f <- strsplit(gsub(")","",extra.options$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
@@ -485,7 +487,7 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 		
 	if(silent.jags) extra.options$progress.bar <- "none"
 	
-	if(!silent.jags) swcat("Calling the simulation using the rjags method... (this may take some time)\n")
+	if(!silent.jags) swcat("Calling the simulation using the rjags method...\n")
 
 	if(extra.options$adapt>0){
 		if(!silent.jags) cat("  Adapting the model for ", format(extra.options$adapt,scientific=FALSE), " iterations...\n",sep="")
@@ -580,11 +582,11 @@ runjags.xgrid <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 
 		', if(!silent.jags) 'echo "" > sim.$1/jagsout.txt', ' 
 		', if(!silent.jags) 'echo "" > sim.$1/jagsout.txt', ' 
-		', if(nsims>1) '( ( echo "Chain "$1":" 2>&1 1>&3 | tee -a sim.$1/jagserror.txt) 3>&1 1>&2) 2>&1 | tee -a sim.$1/jagsout.txt', if(nsims>1 && silent.jags) ' > /dev/null', '', '
+		', if(nsims>1) '( ( echo "Chain "$1":" 2>&1 1>&3 | tee -a sim.$1/jagserror.txt) 3>&1 1>&2) 2>&1 | tee -a sim.$1/jagsout.txt', if(nsims>1 && silent.jags) '', '', '
 
-		( ( (', jagspath, ' < sim.$1/script.cmd; echo $! > sim.$1/.retstat.$pid) 2>&1 1>&3 | tee -a sim.$1/jagserror.txt) 3>&1 1>&2) 2>&1 | tee -a sim.$1/jagsout.txt', if(silent.jags) ' > /dev/null', '
+		( ( (', jagspath, ' < sim.$1/script.cmd; echo $! > sim.$1/.retstat.$pid) 2>&1 1>&3 | tee -a sim.$1/jagserror.txt) 3>&1 1>&2) 2>&1 | tee -a sim.$1/jagsout.txt', if(silent.jags) '', '
 
-		', if(nsims>1) '( ( echo "" 2>&1 1>&3 | tee -a sim.$1/jagserror.txt) 3>&1 1>&2) 2>&1 | tee -a sim.$1/jagsout.txt', if(nsims>1 & silent.jags) ' > /dev/null', '', '
+		', if(nsims>1) '( ( echo "" 2>&1 1>&3 | tee -a sim.$1/jagserror.txt) 3>&1 1>&2) 2>&1 | tee -a sim.$1/jagsout.txt', if(nsims>1 & silent.jags) '', '', '
 
 		# This makes sure the process has finished before continuing:
 		wait
@@ -664,12 +666,17 @@ runjags.xgrid <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 
 runjags.start <- function(model, monitor, data, inits, modules, factories, burnin, sample, adapt, thin, tempdir, dirname, method, method.options, internal.options){
 	
+	# Reset failedjags stuff:
+	failedjags$model <- "No failed model available!"
+	failedjags$data <- "No failed data available!"
+	failedjags$inits <- "No failed initial values available!"
+	failedjags$output <- "No failed model output available!"
+	failedjags$end.state <- "No failed model parameter state available!"
+	
 	chains=n.chains <- length(inits)		
 
 	updates <- sample
 	if(sample<1) stop("The specified value for sample must be a positive integer")
-
-	if(!require(parallel)) stop("The package parallel is required to run runjags")
 
 	# Method for calling JAGS is now encapsulated within method=function() and method.options=list()
 	# jags, silent.jags, tempdir, method, jags.refresh, batch.jags){
@@ -990,10 +997,19 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		
 		setwd(temp.directory)
 
-		cat(model, file="model.txt",sep="")  
+		cat(model, file="model.txt",sep="")
+		close(file("model.txt"))
 		cat(data, file="data.txt",sep="")  
+		close(file("data.txt"))
+		
+		save(sim.chains, file="simchainsinfo.Rsave")
+		close(file("simchainsinfo.Rsave"))
 			
 		for(s in 1:nsims){
+
+			sim <- paste("sim", s, sep=".")
+			#system(paste('mkdir ', sim, sep=''))
+			dir.create(sim)
 
 			scriptstring <- ""
 
@@ -1021,64 +1037,47 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			scriptstring <- paste(scriptstring, "compile, nchains(", as.integer(nsim.chains[s]), ")\n", sep="")
 			for(c in 1:nsim.chains[s]){
 				i <- sim.chains[[s]][c]
-				if(!is.na(inits[i]) && inits[i]!="") scriptstring <- paste(scriptstring, "parameters in \"sim.", s, "/inits", i, ".txt\", chain(", c, ")\n", sep="")
+				if(!is.na(inits[i]) && inits[i]!="") scriptstring <- paste(scriptstring, "parameters in \"inits", i, ".txt\", chain(", c, ")\n", sep="")
 			}
 
 			scriptstring <- paste(scriptstring, "initialize\n", sep="")
-			if(adapt > 0){
+			if(adapt.runs > 0){
 				scriptstring <- paste(scriptstring, "adapt ", adapt.runs, "\n", sep="")
 			}
-			if(burnin > 0 | adapt <= 0){
+			if(ini.runs > 0){
 				scriptstring <- paste(scriptstring, "update ", ini.runs, "\n", sep="")
 			}
 
-			scriptstring <- paste(scriptstring, monitors, if(any(monitor=="pd.i")) paste("monitor pD, type(mean) thin(", thin, ")\n", sep=""), if(any(monitor=="pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), if(any(monitor=="popt")) paste("monitor popt, type(mean) thin(", thin, ")\n", sep=""), "update ", real.runs, "\n", sep="")
+			scriptstring <- paste(scriptstring, monitors, if(any(monitor=="pd.i")) paste("monitor pD, type(mean) thin(", thin, ")\n", sep=""), if(any(monitor=="pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), if(any(monitor=="popt")) paste("monitor popt, type(mean) thin(", thin, ")\n", sep=""))
+			
+			if(real.runs > 0) scriptstring <- paste(scriptstring, "update ", real.runs, "\n", sep="")
 		
 			if(any(monitor=="pd.i")) scriptstring <- paste(scriptstring, "coda pD, stem(\"sim.", s, "/pd\")\n", sep="")
 			if(any(monitor=="popt")) scriptstring <- paste(scriptstring, "coda popt, stem(\"sim.", s, "/popt\")\n", sep="")
 
 			for(c in 1:nsim.chains[s]){
 				i <- sim.chains[[s]][c]
-				scriptstring <- paste(scriptstring, "parameters to \"sim.", s, "/out", i, ".Rdump\", chain(", c, ")\n", sep="")
+				scriptstring <- paste(scriptstring, "parameters to \"out", i, ".Rdump\", chain(", c, ")\n", sep="")
 			}
 
 			scriptstring <- paste(scriptstring, "coda *, stem(sim.", s, "/CODA)\n", sep="")
 
-			scriptstring <- paste(scriptstring, "model clear\nexit\n", sep="")
+			# model clear is used to detect the model being finished, update 0 is used to detect the model not having crashed
+			scriptstring <- paste(scriptstring, "update 0\nmodel clear\nexit\n", sep="")
 
-			output <- file(paste("script", s, ".cmd", sep=""), 'w')
+			output <- file(paste("sim.",s,"/script.cmd", sep=""), 'w')
 			cat(scriptstring, file=output,sep="")  
 			close(output)
+			
 		}
 
 		for(i in 1:chains){
 			cat(initstring[i], file=paste("inits", i, ".txt", sep=""),sep="")
+			close(file(paste("inits", i, ".txt", sep="")))
 		}
 
-		for(s in 1:nsims){
 
-			sim <- paste("sim", s, sep=".")
-			#system(paste('mkdir ', sim, sep=''))
-			dir.create(sim)
-		
-			file.copy(from=c(paste('script', s, '.cmd', sep=''), paste('inits', s, '.txt', sep='')), to=sim)
-			thed <- getwd()
-			setwd(sim)
-			file.rename(from=paste('script', s, '.cmd', sep=''), to='script.cmd')
-			setwd(thed)
-		
-			unlink(paste('script', s, '.cmd', sep=''))
-		
-			for(i in sim.chains[[s]]){
-				file.copy(from=c(paste('inits', i, '.txt', sep=''), paste('inits', i, '.txt', sep='')), to=sim)
-				# We need to leave the inits in the root folder in case the model crashes:
-	#			unlink(paste('inits', i, '.txt', sep=''))
-			}
-		}
-	
-	
-		os <- .Platform$OS.type
-	
+		os <- .Platform$OS.type	
 		if(os == "windows"){		
 			currentsyspath <- Sys.getenv('PATH')
 			if(!grepl(method.options$libpaths$PATH,currentsyspath,fixed=TRUE)){
