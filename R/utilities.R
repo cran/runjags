@@ -74,7 +74,7 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, ...){
 		
 	if(! ostype %in% c("unix","windows")) stop(paste("Unrecognised OS type '", ostype, "'.  Use either 'unix' or 'windows'", sep=""))
 	
-		# This is a bit of a mess now the option is deprocated...
+	# This is a bit of a mess now the option is deprecated...
 	if(!exists('from.variable')) from.variable <- ""
 	if(is.na(from.variable) | is.null(from.variable) | from.variable=="" | length(from.variable)==0){
 		from.variable <- character(0)
@@ -88,7 +88,6 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, ...){
 	if(length(from.variable)!=0){
 		warning("The '.jagspath' option is deprecated - use the runjags.options() to set the default path to JAGS")
 	}
-	if(runjagsprivate$options$jagspath != runjagsprivate$defaultoptions$jagspath) from.variable <- runjagsprivate$options$jagspath
 
 	if(ostype=="unix"){
 		
@@ -130,9 +129,9 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, ...){
 		versions <- sapply(posspaths, function(x){
 			pathsegs <- strsplit(x,"/")[[1]]
 			withnum <- grepl("[0-9]",pathsegs)
-			return(getversion(pathsegs[withnum][1]))
+			return(getvers(pathsegs[withnum][1]))
 		})
-		# If versions doesn't contain a number, getversion will return 0
+		# If versions doesn't contain a number, getvers will return 0
 
 		x64s <- grepl('x86',posspaths)
 
@@ -337,7 +336,7 @@ timestring <- function(time1, time2=NA, units=NA, show.units=TRUE){
 	
 }
 
-testjags <- function(jags=findjags(), silent=FALSE){
+testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 	
 	# Evaluate jags outside a suppresswarnings:
 	jags <- jags
@@ -459,22 +458,20 @@ as.jags.runjags <- function(x, ...){
 	
 	runjags.object <- x
 	
-  	tfile <- tempfile()
-	cat(runjags.object$model, file=tfile)
 	dataenv <- list.format(as.character(runjags.object$data))
 	inits <- lapply(runjags.object$end.state,list.format)
 	s <- try({
 	if(length(inits[[1]])==0){
 		if(as.character(runjags.object$data)==""){
-			jags.object <- jags.model(tfile, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)
+			jags.object <- jags.model(textConnection(runjags.object$model), n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)
 		}else{
-			jags.object <- jags.model(tfile, data=dataenv, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)				
+			jags.object <- jags.model(textConnection(runjags.object$model), data=dataenv, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)				
 		}
 	}else{
 		if(as.character(runjags.object$data)==""){
-			jags.object <- jags.model(tfile, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)
+			jags.object <- jags.model(textConnection(runjags.object$model), inits=inits, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)
 		}else{
-			jags.object <- jags.model(tfile, data=dataenv, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)				
+			jags.object <- jags.model(textConnection(runjags.object$model), data=dataenv, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)				
 		}
 	}})
 	
@@ -485,20 +482,55 @@ as.jags.runjags <- function(x, ...){
 		
 		stop("There was an error reading the model, data or initial values (see output above for more details, and examine 'failedjags$model', 'failedjags$data' and 'failedjags$inits' to see model/data/inits syntax with line numbers)",call.=FALSE)
 	}
-	unlink(tfile)
-	
+
 	return(jags.object)
 }
 
-as.runjags.jags <- function(x, monitor = stop("No monitored variables supplied"), modules=c(""), factories=c(""), check=TRUE, jags = findjags(), ...){
+as.runjags.jags <- function(x, monitor = stop("No monitored variables supplied"), modules=runjags.getOption('modules'), factories=runjags.getOption('factories'), check=TRUE, jags = runjags.getOption('jagspath'), ...){
 	
 	jags.object <- x
 	model <- paste(jags.object$model(),collapse="\n")
 	data <- dump.format(jags.object$data())
-	end.state <- sapply(jags.object$state(), dump.format)
+	end.state <- sapply(jags.object$state(internal=TRUE), dump.format)
 	
 	runjags.object <- setup.jags(model=model, monitor = monitor, data=data,  n.chains=length(end.state), inits = end.state, modules=modules, factories=factories, jags = jags, method=if(check) "simple" else "rjags")
 	
 	return(runjags.object)
 	
 }
+
+runjagsprivate <- new.env()
+
+# Use 'expression' for functions to avoid having to evaluate before the package is fully loaded:
+assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages()) 'rjags' else 'interruptible'), tempdir=TRUE, newwindows=expression(!.Platform$GUI%in%c("AQUA","Rgui")), modules="", factories="", linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE), envir=runjagsprivate)
+assign("options",runjagsprivate$defaultoptions,envir=runjagsprivate)
+assign("rjagsmethod",c('rjags','rjparallel'),envir=runjagsprivate)
+assign("parallelmethod",c('parallel','bgparallel','snow','rjparallel','xgrid'),envir=runjagsprivate)
+
+
+runjags.options <- function(...){
+	opts <- list(...)
+	if(length(opts)>0){
+		options <- runjagsprivate$options
+		recognised <- pmatch(names(opts), names(options))
+		if(any(is.na(recognised))){
+			warning(paste("Igoring unmatched or ambiguous option(s): ", paste(names(opts)[is.na(recognised)],collapse=", ")))
+		}
+		optnames <- names(options)[recognised[!is.na(recognised)]]
+		for(i in 1:length(opts)){
+			options[optnames[i]] <- opts[[i]]
+		}
+		assign("options",options,envir=runjagsprivate)
+	}
+	invisible(runjagsprivate$options)
+}
+
+runjags.getOption <- function(name){
+	if(length(name)!=1) stop("Only 1 option can be retrieved at a time")
+	opt <- pmatch(name,names(runjagsprivate$options))
+	if(is.na(opt)) stop(paste("Unmatched or ambiguous option '", name, "'", sep=""))
+	# Use eval as some defaults are put in using 'expression' to avoid evaluating at load time:
+	return(eval(runjagsprivate$options[[opt]]))
+}
+
+runJAGS.getOption <- runjags.getOption

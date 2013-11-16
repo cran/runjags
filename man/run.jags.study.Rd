@@ -106,9 +106,9 @@ present.
 
 \examples{
 
-\dontrun{
-
 # Perform a drop-1 validation study for a simple model:
+
+\dontrun{
 	
 themodel <- "
 model{
@@ -143,6 +143,7 @@ datafun <- function(s){
 }
 
 # Set up a cluster to use with the parLapply method:
+library(parallel)
 cl <- makeCluster(20)
 
 # Call the 20 simulations over the snow cluster:
@@ -153,9 +154,14 @@ targets=list(Y=Y, m=2, c=1), runjags.options=list(n.chains=2), cl=cl)
 
 results
 
-	
 }
 
+}
+
+\references{
+	M. J. Denwood, "runjags: An R Package Providing Interface Utilities, Distributed 
+	Computing Methods and Additional Distributions For MCMC Models in JAGS," Journal 
+	of Statistical Software, [Under review].
 }
 
 \keyword{methods}

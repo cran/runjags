@@ -1,8 +1,8 @@
 import(
 
+	parallel,
 	lattice,
-	coda,
-	parallel
+	coda
 	
 )
 
@@ -48,6 +48,8 @@ timestring,
 testjags,
 findJAGS,
 testJAGS,
+load.runjagsmodule,
+load.runJAGSmodule,
 
 xgrid.run.jags,
 xgrid.autorun.jags,
@@ -77,7 +79,8 @@ xgrid.jobs,
 xgrid.delete,
 
 failedjags,
-runjags.options
+runjags.options,
+runjags.getOption
 
 )
 

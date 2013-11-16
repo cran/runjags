@@ -71,7 +71,7 @@ summary.runjags <- function(object, ...){
 }
 
 
-print.runjags.model <- function(x, linenumbers=TRUE, ...){
+print.runjags.model <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	if(linenumbers){
 		split <- strsplit(x,"\n",fixed=TRUE)[[1]]
 		lines <- length(split)
@@ -81,7 +81,7 @@ print.runjags.model <- function(x, linenumbers=TRUE, ...){
 	invisible(x)
 }
 
-print.runjags.data <- function(x, linenumbers=TRUE, ...){
+print.runjags.data <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	if(x==""){
 		cat("\nNo data supplied\n")
 	}else{
@@ -94,7 +94,7 @@ print.runjags.data <- function(x, linenumbers=TRUE, ...){
 	}
 	invisible(x)
 }
-print.runjags.inits <- function(x, linenumbers=TRUE, ...){
+print.runjags.inits <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	cat(c("","JAGS chains initial values / end states:"),sep="\n")
 	if(linenumbers){
 		for(i in 1:length(x)){
@@ -112,7 +112,7 @@ print.runjags.inits <- function(x, linenumbers=TRUE, ...){
 	cat("\n")
 	invisible(x)
 }
-print.runjags.output <- function(x, linenumbers=TRUE, ...){
+print.runjags.output <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	cat(c("","JAGS model output:"),sep="\n")
 	if(linenumbers){
 		for(i in 1:length(x)){
@@ -131,7 +131,7 @@ print.runjags.output <- function(x, linenumbers=TRUE, ...){
 	invisible(x)
 }
 
-print.runjags.plots <- function(x,vars=NA,layout=c(1,1),newwindows=!.Platform$GUI%in%c("AQUA","Rgui"),file="",add.crosscorr=FALSE,...){
+print.runjags.plots <- function(x,vars=NA,layout=c(1,1),newwindows=runjags.getOption('newwindows'),file="",add.crosscorr=FALSE,...){
 	
 	if(!length(layout)==2) stop("The layout option must be a numeric vector of length 2")
 	if(!all(layout>0)) stop("All dimensions in the layout vector must be >=1")
@@ -348,7 +348,7 @@ as.mcmc.runjags <- function(x){
 		m <- combine.mcmc(m, collapse.chains=TRUE)
 	}
 	
-	m <- coda::as.mcmc(m)
+	m <- as.mcmc(m)
 
 	selected <- matchvars(vars, varnames(m))
 	if(class(m)=="mcmc.list") thevarnames <- dimnames(m[[1]]) else thevarnames <- dimnames(m)
@@ -375,7 +375,7 @@ as.mcmc.list.runjags <- function(x, vars=NA, ...){
 	
 }
 
-plot.runjags <- function(x,vars=NA,layout=NA, newwindows=NA,file="",type="all", ...){
+plot.runjags <- function(x,vars=NA,layout=NA, newwindows=runjags.getOption('newwindows'),file="",type="all", ...){
 	
 	if(is.na(newwindows)) newwindows <- !.Platform$GUI%in%c("AQUA","Rgui")
 		
@@ -448,26 +448,4 @@ assign("data", "No failed data available!", envir=failedjags)
 assign("inits", "No failed initial values available!", envir=failedjags)
 assign("output", "No failed model output available!", envir=failedjags)
 assign("end.state", "No failed model parameter state available!", envir=failedjags)
-
 assign("study", "No failed runjags study available!", envir=failedjags)
-
-runjagsprivate <- new.env()
-assign("defaultoptions",list(jagspath=""),envir=runjagsprivate)   #, warn.inits=TRUE, warn.rng=TRUE
-assign("options",runjagsprivate$defaultoptions,envir=runjagsprivate)
-
-runjags.options <- function(...){
-	opts <- list(...)
-	if(length(opts)>0){
-		options <- runjagsprivate$options
-		recognised <- names(opts) %in% names(options)
-		if(any(!recognised)){
-			warning(paste("Igoring unrecognised option(s): ", paste(names(opts)[!recognised],collapse=", ")))
-		}
-		opts <- opts[recognised]
-		for(i in 1:length(opts)){
-			options[names(opts)[i]] <- opts[[i]]
-		}
-		assign("options",options,envir=runjagsprivate)
-	}
-	return(runjagsprivate$options)
-}

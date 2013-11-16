@@ -59,7 +59,7 @@ vector<double const *> const &par, bool give_log) const
   if (give_log)
   	return (log(2.0) + log(ALPHA(par))) - (log(MYPI) + log(pow(x,2.0) + pow(ALPHA(par),2.0)));
   else
-    return (2*ALPHA(par)) / (MYPI * (pow(x,2.0) + pow(ALPHA(par),2.0)));
+    return (2.0*ALPHA(par)) / (MYPI * (pow(x,2.0) + pow(ALPHA(par),2.0)));
   
 }
 
@@ -104,7 +104,7 @@ DHCauchy::q(double p, vector<double const *> const &par, bool lower,
 	    tp = p;
     }
 
-	x = ALPHA(par) * tan(MYPI*tp / 2);
+	x = ALPHA(par) * tan(MYPI*tp / 2.0);
 	
     return x;
 }

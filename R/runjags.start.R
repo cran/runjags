@@ -32,6 +32,135 @@ runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libp
 }
 
 
+runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
+
+	# Eventually we should compile the model once and then export the compiled model and then change the inits - but we are currently unable to change RNG states on compiled models with rjags 3.x
+
+	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary - and the modules loaded just before that
+	# BUT will have to be re-compiled with appropriate RNG on each node
+	# but having already compiled it we have at least multiple safe RNG streams set up that we can just copy...
+
+	extra.options <- rjags[names(rjags)!='rjags']
+	rjags <- rjags$rjags
+	
+	# There should never be a pd, popt or pd.i monitor here but remove just in case:
+	monitor <- extra.options$monitor[! extra.options$monitor %in% c("pd","popt","pd.i","dic")]
+	by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
+	
+	# Retrieve model, data and initial values with RNG states (guaranteed to be thread-proof by auto/extend.jags code) for all chains:
+	model <- paste(rjags$model(),collapse="\n")
+	data <- rjags$data()
+	inits <- rjags$state(internal=TRUE)
+	
+	if(identical(cl, NA)){
+		cl <- makeCluster(nsims)
+		on.exit(stopCluster(cl))
+	}
+	
+	clname <- capture.output(print(cl))
+	if(nsims==1) swcat("Starting the rjags simulation using a ", clname, "\n") else swcat("Starting the rjags simulations using a ", clname, "\n")		
+	
+	clfun <- function(s,model,data,inits,extra.options,monitor){
+		
+		if(!require("runjags")) stop("The runjags package is not installed on one or more cluster nodes")
+		if(!require("rjags")) stop("The runjags package is not installed on one or more cluster nodes")
+	
+		# Module loading MUST be done before model compilation:
+		for(m in extra.options$modules){
+			if(m!=""){
+				if(m=="runjags"){
+					success <- try(load.runjagsmodule())
+				}else{
+					success <- try(load.module(m))
+				}
+		
+				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
+			}
+		}		
+		
+		chains <- extra.options$sim.chains[[s]]
+		inits <- inits[chains]
+		n.chains <- length(chains)
+		
+		rjags <- jags.model(file=textConnection(model), data=data, inits=inits, n.chains, n.adapt=0, quiet=TRUE)
+	
+		for(i in 1:length(extra.options$factories)){
+			if(extra.options$factories[i]!=""){
+				f <- strsplit(gsub(")","",extra.options$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
+				fa <- ""
+				try(fa <- as.character(list.factories(f[2])$factory))
+				if(!f[1] %in% fa) stop(paste("The factory '", f[1], "' of type '", f[2], "' is not available - ensure any required modules are also provided", sep=""))
+				success <- try(set.factory(f[1],f[2],TRUE))			
+				if(class(success)=="try-error") stop(paste("Failed to load the factory '", f[1], "' of type '", f[2], "'", sep=""))
+			}
+		}
+		
+		if(extra.options$adapt>0){
+			flush.console()
+			by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by
+			finishedadapting <- adapt(rjags,n.iter=extra.options$adapt,progress.bar=extra.options$progress.bar,by=by,end.adaptation=TRUE)
+			flush.console()
+		}
+		if(extra.options$burnin>0){
+			flush.console()
+			by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
+			update(rjags,n.iter=extra.options$burnin,progress.bar=extra.options$progress.bar)
+			flush.console()
+		}
+
+		flush.console()
+		samples <- jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin)
+		# This is just a dummy call so that we can get the names of the variables:
+		suppressWarnings(varnames <- coda::varnames(coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
+		flush.console()
+	
+		mcmcout <- lapply(samples, function(x){
+			x <- coda::as.mcmc.list(x)
+			names(x) <- as.character(chains)
+			return(x)
+		})
+		
+		nvar <- length(varnames)
+		niter <- sapply(mcmcout,niter)
+		if(!all(niter==niter[1])) stop("An error occured with the rjags method - variables returned with differing numbers of iterations")
+		niter <- niter[1]
+	
+		mcmc <- vector('list',length=n.chains)
+	
+		for(i in 1:n.chains){
+		
+			mcmc[[i]] <- coda::mcmc(do.call('cbind',lapply(mcmcout, function(x) return(x[[i]]))), start=extra.options$burnin+1, thin=extra.options$thin)		
+			dimnames(mcmc[[i]]) <- list(1:niter, varnames)
+		}
+	
+		mcmc <- coda::as.mcmc.list(mcmc)
+		
+		return(list(mcmc=mcmc, end.state=sapply(rjags$state(internal=TRUE),dump.format)))
+	
+	}
+	
+	allm <- parLapply(cl,1:nsims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
+	
+	tvarnames <- sapply(allm,function(x) return(paste(varnames(x$mcmc),collapse=',')))
+	if(!all(tvarnames==tvarnames[1])) stop("An error occured with the rjparallel method - simulations returned differing variable names")
+
+	# Re-order and combine mcmc lists:	
+	sim.chains <- extra.options$sim.chains
+	mcmc <- as.mcmc.list(lapply(1:extra.options$n.chains, function(x){
+		sim <- which(sapply(sim.chains,function(y) return(any(x==y))))
+		return(allm[[sim]]$mcmc[[which(sim.chains[[sim]]==x)]])
+	}))
+	end.state <- sapply(1:extra.options$n.chains, function(x){
+		sim <- which(sapply(sim.chains,function(y) return(any(x==y))))
+		return(allm[[sim]]$end.state[[which(sim.chains[[sim]]==x)]])
+	})
+	
+	if(!silent.jags) swcat("Simulation complete\n")
+	
+	return(list(complete=TRUE, mcmc=mcmc, pd=NA, popt=NA, pd.i=NA, end.state=end.state))
+	
+}
+
 runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 		
 	retval <- 'An unknown error occured while calling JAGS using the snow method'
@@ -62,7 +191,7 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 
 		f <- function(s, files, jags, batch.jags, silent.jags){
 			
-			if(!require(runjags)) return(paste("The runjags package was not found on the snow node '", Sys.info()['nodename'], "'", sep=""))
+			if(!require("runjags")) return(paste("The runjags package was not found on the snow node '", Sys.info()['nodename'], "'", sep=""))
 
 			retval <- "An error occured on the snow cluster"
 
@@ -753,11 +882,11 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		}
 		jags <- jags.status$JAGS.path
 		
-		if(!jags.status$JAGS.found && ! method%in%c("rjags","snow")){
+		if(!jags.status$JAGS.found && ! method%in% c("snow",runjagsprivate$rjagsmethod)){
 			swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument, or using the rjags method.  Use the testjags() function for more detailed diagnostics.\n", sep="")
 			stop("Unable to call JAGS", call.=FALSE)
 		}
-		if(method=="rjags" && !require(rjags)){
+		if(method%in%runjagsprivate$rjagsmethod && !require("rjags")){
 			swcat("The rjags package was not found, either install the rjags package or use another method\n", sep="")
 			stop("The rjags package was not found", call.=FALSE)
 		}
@@ -794,6 +923,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		}
 
 		strmethod <- method
+		extramethodargs <- list(sim.chains=list())
 		if(strmethod=="simple"){
 			nsims <- 1
 			method <- runjags.simple
@@ -838,6 +968,24 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 				if(!is.character(rjt) && length(rjt)!=1) stop("The argument supplied for remote.jags must be a character string specifying the path to JAGS on the snow nodes, a function (with no arguments) returning a character string specifying the path to JAGS, or NA in which case JAGS will be found using findjags()")
 			}			
 		}
+		if(strmethod=="rjparallel"){
+			ncores <- suppressWarnings(detectCores())
+			if(is.na(ncores)){
+				ncores <- 2
+				warning("Unable to detect the available number of cores on your machine - using a maximum of 2 cores as a default")
+			}
+			nsims <- min(n.chains, ncores)
+			if(!is.na(inputsims)){
+				if(inputsims!=as.integer(inputsims) || inputsims <1) warning("The supplied nsims option is not a positive integer and was ignored") else nsims <- min(n.chains, inputsims)
+			}
+			if(any(grepl('cluster',class(cl)))){
+				if(!is.na(inputsims)) warning("Supplied value for nsims has been ignored, and the number of available cores on the supplied cluster used instead")
+				nsims <- min(n.chains, length(cl))
+			}
+			method <- runjags.rjparallel			
+			extramethodargs <- c(extramethodargs,list(monitor=monitor, modules=modules, factories=factories, adapt=adapt, burnin=burnin, sample=sample, n.chains=n.chains, thin=thin, by=by, progress.bar=progress.bar))
+			writefiles <- FALSE
+		}
 		if(strmethod=="background"){
 			nsims <- 1
 			method <- runjags.background
@@ -860,12 +1008,11 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			nsims <- min(n.chains, xgrid.options$max.threads)
 			method <- runjags.xgrid
 		}
-		extramethodargs <- list()
 		if(strmethod=='rjags'){
 			nsims <- 1
 			# nsims can never be more than 1 for rjags in case we don't specify parallel methods!!!
 			method <- runjags.rjags
-			extramethodargs <- list(monitor=monitor, modules=modules, factories=factories, adapt=adapt, burnin=burnin, sample=sample, n.chains=n.chains, thin=thin, by=by, progress.bar=progress.bar)
+			extramethodargs <- c(extramethodargs,list(monitor=monitor, modules=modules, factories=factories, adapt=adapt, burnin=burnin, sample=sample, n.chains=n.chains, thin=thin, by=by, progress.bar=progress.bar))
 			writefiles <- FALSE
 		}
 		
@@ -910,9 +1057,11 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			temp.directory <- file.path(getwd(), jobname)
 		}
 		if(any(names(method.options)=="write.files")) write.files <- method.options$write.files
+			
+		strmethod <- "custom"
 		
 	}	
-	
+
 	if(method.options$nsims != as.integer(method.options$nsims)) stop("The number of simulations required must be an integer")
 	nsims <- method.options$nsims
 	
@@ -924,7 +1073,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 	
 	if(any(c("pd","pd.i","popt") %in% monitor)){
 		if(n.chains < 2) stop("The DIC, pD, pD.i and popt cannot be assessed with only 1 chain")
-		if(nsims > 1) stop("The DIC, pD, pD.i and popt cannot be assessed when using parallel or separate chains")
+		if(strmethod%in%runjagsprivate$parallelmethod || nsims > 1) stop("The DIC, pD, pD.i and popt cannot be assessed when using parallel or separate chains")
 	}
 
 	sim.chains <- matrix(NA, ncol=ceiling(n.chains/nsims), nrow=nsims)
@@ -934,6 +1083,8 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 	nsim.chains <- sapply(sim.chains, length)
 
 	stopifnot(sum(nsim.chains)==n.chains)
+	
+	method.options$rjags$sim.chains <- sim.chains
 	
 	real.runs <- as.integer(updates)
 	ini.runs <- as.integer(burnin)
@@ -957,14 +1108,14 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 
 	on.exit(setwd(save.directory))
 
-	# None of this will ever be needed for rjags methods:
-	if(nsims!=1){
+	# None of this will ever be needed for rjags methods - rjparallel separate chains are handled in auto/extend.jags as it needs to be done before model compilation:
+	if(nsims!=1 && ! strmethod%in%runjagsprivate$rjagsmethod){
 
 		norng <- sum(grepl('.RNG.name', inits, fixed=TRUE))
 
 		if(norng!=n.chains){
 			if(norng!=0) stop('Attempting to use parallel chains with some (but not all) .RNG.name values specified - make sure you specify a .RNG.name for each chain and try again')
-			warning('You attempted to start parallel chains without setting different PRNG for each chain, which is not recommended.  Different .RNG.name values have been added to each set of initial values.', call.=FALSE)
+			if(runjags.getOption('rng.warning')) warning('You attempted to start parallel chains without setting different PRNG for each chain, which is not recommended.  Different .RNG.name values have been added to each set of initial values.', call.=FALSE)
 		
 			# Different behaviours for nchains <= 4 and > 5:
 
@@ -972,7 +1123,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 				rngname <- paste('\".RNG.name\" <- \"', rep(c('base::Wichmann-Hill', 'base::Marsaglia-Multicarry', 'base::Super-Duper', 'base::Mersenne-Twister'), ceiling(n.chains/4)), '\"\n',sep='')
 			}else{
 				rjagsloaded <- 'rjags' %in% .packages()
-				if(!require(rjags)) stop("The rjags package is required to generate initial values for more than 4 parallel chains")
+				if(!require("rjags")) stop("The rjags package is required to generate initial values for more than 4 parallel chains")
 				success <- try(load.module("lecuyer"))
 				if(class(success)=="try-error") stop("Failed to load the lecuyer module - ensure that the latest version of JAGS and rjags is installed")
 				

@@ -1,4 +1,4 @@
-autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = runjags.object$thin, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = runjags.getOption('jagspath'), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 	# We may be passed some unevaluated function arguments so evaluate everything here:
 	argnames <- names(formals(autoextend.jags))
@@ -45,11 +45,11 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}
 	jags <- jags.status$JAGS.path
 		
-	if(!jags.status$JAGS.found && ! method%in%c("rjags","snow")){
+	if(!jags.status$JAGS.found && ! method%in%c("snow",runjagsprivate$rjagsmethod)){
 		swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument, or using the rjags method.  Use the testjags() function for more detailed diagnostics.\n", sep="")
 		stop("Unable to call JAGS", call.=FALSE)
 	}
-	if(method=="rjags" && !require(rjags)){
+	if(method%in%runjagsprivate$rjagsmethod && !require("rjags")){
 		swcat("The rjags package was not found, either install the rjags package or use another method\n", sep="")
 		stop("The rjags package was not found", call.=FALSE)
 	}
@@ -122,6 +122,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		if(any(drop.chain>length(runjags.object$end.state)) | any(drop.chain < 1)) stop("Specified value(s) to drop.chain are invalid - please specify which chain(s) to drop by the chain number(s)")
 		if(length(drop.chain)==length(runjags.object$end.state)) stop("Specified value(s) to drop.chains are invalid - it is not possible to drop all chains")
 		inits <- runjags.object$end.state[-drop.chain]
+		# Will have to re-compile rjags object:
+		method.options <- method.options[names(method.options)!='rjags']
 	}else{
 		inits <- runjags.object$end.state
 	}
@@ -139,10 +141,10 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	if(length(confidence)!=1 || confidence < 0 || confidence > 1) stop("The value supplied for 'confidence' must be between 0 and 1", call.=FALSE)
 		
 	if(n.chains > 1 && all(runjags.object$end.state=="")){
-		warning("No initial values were provided - using the same initial values for all chains", call.=FALSE)
+		if(runjags.getOption('inits.warning')) warning("No initial values were provided - using the same initial values for all chains", call.=FALSE)
 	}else{
 		if(n.chains > 1 && all(runjags.object$end.state==runjags.object$end.state[1])){
-			warning("Identical initial values were provided for each chain - this is not recommended and may result in false convergence", call.=FALSE)
+			if(runjags.getOption('inits.warning')) warning("Identical initial values were provided for each chain - this is not recommended and may result in false convergence", call.=FALSE)
 		}			
 	}
 	
@@ -201,7 +203,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		burnadapt <- 0
 		adapt <- adaptive$length
 	}else{
-		if(adaptive$type!="burnin") warning("Adaptive type not recognised - choose one of 'burnin' or 'adapt'")
+		if(adaptive$type!="burnin") stop("Adaptive type not recognised - choose one of 'burnin' or 'adapt'")
 		burnadapt <- adaptive$length
 		adapt <- 0
 	}
@@ -210,42 +212,82 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	
 	# Check to see if this is using an rjags method, and if it is get the method.options$rjags stuff set up:	
 	if(method %in% c("background","bgparallel")) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
-	if(method=="rjags"){
-		if(keep.jags.files) stop("Unable to keep JAGS files when using the 'rjags' method")
+
+	###########
+	### Setup rjags stuff:
+	# Check to see if this is using an rjags method, and if it is get the method.options$rjags stuff set up:	
+	method <- getrunjagsmethod(method)	
+	if(keep.jags.files && method%in%runjagsprivate$rjagsmethod){
+		warning("Unable to keep JAGS files when using the 'rjags' or 'rjparallel' methods - switching to the 'interruptible' or 'parallel' method")
+		method <- if(method=="rjags") "interruptible" else "parallel"
+	}
+	if(method%in%runjagsprivate$rjagsmethod){
+	
+		# RNG in >4 rjparallel chains should be lecuyer - if the lecuyer module is loaded when the rjags object compiles (unless it already has RNGnames) it will be
+		if(n.chains > 4 && method=='rjparallel'){
 		
+			modules <- c(modules, "lecuyer")
+			modules <- unique(modules)
+		
+			norng <- sum(grepl('.RNG.name', inits, fixed=TRUE))
+			if(norng!=n.chains && norng!=0) stop('Attempting to use parallel chains with some (but not all) .RNG.name values specified - make sure you specify a .RNG.name for each chain (or no chains) and try again')
+			# If we have RNG names make sure they are all lecuyer:
+			if(norng!=0){
+				if(sum(grepl('lecuyer::RngStream', inits, fixed=TRUE)) != norng){
+					if(runjags.getOption('rng.warning')) warning("You attempted to start >4 parallel chains with a PRNG other than that in the lecuyer module - this is not recommended.  The RNG.names have been modified to use the lecuyer module.")
+					inits <- lapply(inits,function(x){
+						x <- list.format(x)
+						x <- x[!names(x)%in%c(".RNG.state",".RNG.name")]
+						return(dump.format(x))
+					})
+					class(inits) <- "runjags.inits"
+					method.options <- method.options[names(method.options)!='rjags']
+					# The inits now don't have .RNG.name and we have loaded the lecuyer module - so when the model re-compiles (as it will be forced to), the new inits will be set as lecuyer
+				}
+			}
+		}
+	
 		# Module loading MUST be done before model compilation:
 		for(m in modules){
 			if(m!=""){
 				if(m=="runjags"){
-					success <- try(load.module.runjags())
+					success <- try(load.runjagsmodule())
 				}else{
 					success <- try(load.module(m))
 				}
-			
+		
 				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
 			}
 		}		
-		
+	
 		if(! 'rjags' %in% names(method.options)){
+			# Just in case this has changed (drop RNG, drop chains etc):
+			runjags.object$end.state <- inits
 			method.options <- c(method.options, list(rjags=as.jags(runjags.object)))
 		}
-		checkcompiled <- try(coef(method.options$rjags),silent=TRUE)
+		checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
 		if(class(checkcompiled)=="try-error"){
-			if(grepl("must be recompiled",checkcompiled)){
-				if(silent.jags){
-					o <- capture.output(method.options$rjags$recompile()) 
-				}else{
-					swcat("Compiling rjags model...\n")
-				 	method.options$rjags$recompile()
-				}
+			if(silent.jags){
+				o <- capture.output(method.options$rjags$recompile()) 
 			}else{
-				stop(paste("There was an error creating the rjags method for this JAGS model:  ", as.character(checkcompiled), sep=""))
+				swcat("Compiling rjags model...\n")
+			 	method.options$rjags$recompile()
 			}
+			checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
+			if(class(checkcompiled)=="try-error") stop(paste("There was an error creating the rjags method for this JAGS model:  ", as.character(checkcompiled), sep=""))
 		}
+
+		if(any(c("popt", "pd.i") %in% monitor)){
+			stop("Cannot monitor popt or pd.i with the rjags method.  Try using the interuptible or simple method instead, or removing the pd.i and popt monitors.")
+		}					
 	}else{
 		method.options <- method.options[names(method.options)!="rjags"]	
-	}
+	}	
+	###########
+	###########
+
 	# popt and pd.i are guaranteed not to be a problem for autorun functions
+
 		
 	swcat("\nAuto-run JAGS",newlines,sep="")
 	
@@ -686,8 +728,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	if(summarise){
 		summaries <- runjags.summaries(mcmclist=combinedoutput$mcmc, pd=combinedoutput$pd, popt=combinedoutput$popt, pd.i=combinedoutput$pd.i, monitor=monitor, plots = plots, psrf.target = psrf.target, normalise.mcmc = normalise.mcmc, check.stochastic = check.stochastic, confidence=confidence, silent=TRUE)
 	}else{
-		if(any(monitor=="dic")) warning("Cannot calculate DIC automatically when summarise=FALSE")
-		if(plots) warning("Cannot produce plots automatically when summarise=FALSE")
+		if(any(monitor=="dic") && runjags.getOption('summary.warning')) warning("Cannot calculate DIC automatically when summarise=FALSE")
+		if(plots && runjags.getOption('summary.warning')) warning("Cannot produce plots automatically when summarise=FALSE")
 		message <- "Summary statistics not produced when summarise=FALSE"	
 		summaries <- list(summary=message, HPD=message, hpd=message, mcse=message, psrf=message, autocorr=message, crosscorr=message, stochastic=message, dic=message, trace=message, density=message)
 	}

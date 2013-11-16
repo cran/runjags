@@ -10,17 +10,18 @@ parallel and distributed computing}
 
 This package provides high-level interface utilities for Just Another
 Gibbs Sampler (JAGS), either running locally (via the rjags package or
-using multiple cores in parallel) or via distributed computing clusters
-such as those provided by snow (a Simple Network Of Workstations),
-Xgrid, or other user specified functions.  A JAGS extension module
-providing the full Pareto family of distributions for use in JAGS models
-is also provided.  The primary functions facilitate running JAGS models
-to convergence, evaluate the performance of a model against simulated
-data, provide automated calculation of summary statistics, and are
-compatible with the WinBUGS syntax of model files with data and initial
-values lists.  Running of arbitrary R commands (not involving JAGS) over
-Xgrid is also supported.  Requires Just Another Gibbs Sampler (JAGS) for 
-most functions, see:  \url{http://www-fis.iarc.fr/~martyn/software/jags/}
+separate JAGS instances) or via distributed computing clusters such as
+those provided by snow (a Simple Network Of Workstations), Xgrid, or
+other user specified functions.  A JAGS extension module providing the
+full Pareto family of distributions for use in JAGS models is also
+provided.  The primary functions facilitate running parallel JAGS models
+for multiple chains, automated control of convergence and sample length
+diagnostics, evaluation of the performance of a model against simulated
+data, and compatibility with the WinBUGS syntax of model files with data
+and initial values lists.  Running of arbitrary R commands (not
+involving JAGS) over Xgrid is also supported.  Requires Just Another
+Gibbs Sampler (JAGS) for most functions, see: 
+\url{http://mcmc-jags.sourceforge.net}
 
 }
 
@@ -29,7 +30,7 @@ most functions, see:  \url{http://www-fis.iarc.fr/~martyn/software/jags/}
 JAGS is a program which allows analysis of Bayesian models using Markov
 chain Monte Carlo (MCMC) simulation, and was developed by Martyn Plummer
 to be an alternative to BUGS that ran on UNIX systems as well as Windows
-systems (see: \url{http://www-fis.iarc.fr/~martyn/software/jags/} for
+systems (see: \url{http://mcmc-jags.sourceforge.net} for
 more information).  The R package rjags is a native R interface to the
 JAGS library, and allows a greater level of control for compiled models,
 which may be more useful for model development.  This package was
@@ -60,6 +61,9 @@ necessary sample sizes
 incluing conversion to/from jags objects (for compatibility with the
 rjags package)
 
+\code{\link{runjags.options}} for ways to set default options for runjags
+functions
+
 \code{\link{read.winbugs}} for translation of WinBUGS text files into
 JAGS compatible model, data and initial values files
 
@@ -81,5 +85,11 @@ over the JAGS libraries
 }
 
 \author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
+
+\references{
+	M. J. Denwood, "runjags: An R Package Providing Interface Utilities, Distributed 
+	Computing Methods and Additional Distributions For MCMC Models in JAGS," Journal 
+	of Statistical Software, [Under review].
+}
 
 \keyword{methods}

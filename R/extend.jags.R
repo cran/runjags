@@ -1,4 +1,4 @@
-extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, burnin = 0, sample = 10000, adapt=max(200-burnin, 0), jags = findjags(), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, thin = runjags.object$thin, keep.jags.files = FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, burnin = 0, sample = 10000, adapt=max(200-burnin, 0), jags = runjags.getOption('jagspath'), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, thin = runjags.object$thin, keep.jags.files = FALSE, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 	# We may be passed some unevaluated function arguments from parent functions using getargs so evaluate everything here:
 	argnames <- names(formals(extend.jags))
@@ -44,7 +44,7 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	
 	if(sample < 2 && sample!=0) stop(paste("Unable to run the simulation for ", sample, " update(s) - the value supplied for sample must be 2 or more", sep=""))
 	if(((sample + combine*runjags.object$sample) < 100) && (summarise || plots)){
-		warning("Cannot produce meaningful summary statistics or plots with less than 100 samples - setting both to FALSE")
+		if(runjags.getOption('summary.warning')) warning("Cannot produce meaningful summary statistics or plots with less than 100 samples - setting both to FALSE")
 		summarise <- FALSE
 		plots <- FALSE
 	} 
@@ -52,10 +52,10 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	if(length(confidence)!=1 || confidence < 0 || confidence > 1) stop("The value supplied for 'confidence' must be between 0 and 1", call.=FALSE)
 		
 	if(n.chains > 1 && all(runjags.object$end.state=="")){
-		warning("No initial values were provided - using the same initial values for all chains", call.=FALSE)
+		if(runjags.getOption('inits.warning')) warning("No initial values were provided - using the same initial values for all chains", call.=FALSE)
 	}else{
 		if(n.chains > 1 && all(runjags.object$end.state==runjags.object$end.state[1])){
-			warning("Identical initial values were provided for each chain - this is not recommended and may result in false convergence", call.=FALSE)
+			if(runjags.getOption('inits.warning')) warning("Identical initial values were provided for each chain - this is not recommended and may result in false convergence", call.=FALSE)
 		}			
 	}
 	
@@ -100,11 +100,13 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 		drop.chain <- unique(round(drop.chain))
 		if(any(drop.chain>length(runjags.object$end.state)) | any(drop.chain < 1)) stop("Specified value(s) to drop.chain are invalid - please specify which chain(s) to drop by the chain number(s)")
 		if(length(drop.chain)==length(runjags.object$end.state)) stop("Specified value(s) to drop.chains are invalid - it is not possible to drop all chains")
-		inits <- runjags.object$end.state[-drop.chain]
-	}else{
-		inits <- runjags.object$end.state
+
+		# Will have to re-compile rjags object:
+		method.options <- method.options[names(method.options)!='rjags']
+		runjags.object$end.state <- runjags.object$end.state[-drop.chain]		
 	}
-		
+
+	inits <- runjags.object$end.state	
 	n.chains <- length(inits)
 	if(n.chains<1) stop("Number of chains must be greater than 0")
 	
@@ -125,19 +127,45 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	burnin <- burnin
 	
 	
+	###########
+	### Setup rjags stuff:
 	# Check to see if this is using an rjags method, and if it is get the method.options$rjags stuff set up:	
 	method <- getrunjagsmethod(method)	
-	if(keep.jags.files && method=="rjags"){
-		warning("Unable to keep JAGS files when using the 'rjags' method - switching to the 'interruptible' method")
-		method <- "interruptible"
+	if(keep.jags.files && method%in%runjagsprivate$rjagsmethod){
+		warning("Unable to keep JAGS files when using the 'rjags' or 'rjparallel' methods - switching to the 'interruptible' or 'parallel' method")
+		method <- if(method=="rjags") "interruptible" else "parallel"
 	}
-	if((method=="rjags")){
+	if(method%in%runjagsprivate$rjagsmethod){
+		
+		# RNG in >4 rjparallel chains should be lecuyer - if the lecuyer module is loaded when the rjags object compiles (unless it already has RNGnames) it will be
+		if(n.chains > 4 && method=='rjparallel'){
+			
+			modules <- c(modules, "lecuyer")
+			modules <- unique(modules)
+			
+			norng <- sum(grepl('.RNG.name', inits, fixed=TRUE))
+			if(norng!=n.chains && norng!=0) stop('Attempting to use parallel chains with some (but not all) .RNG.name values specified - make sure you specify a .RNG.name for each chain (or no chains) and try again')
+			# If we have RNG names make sure they are all lecuyer:
+			if(norng!=0){
+				if(sum(grepl('lecuyer::RngStream', inits, fixed=TRUE)) != norng){
+					if(runjags.getOption('rng.warning')) warning("You attempted to start >4 parallel chains with a PRNG other than that in the lecuyer module - this is not recommended.  The RNG.names have been modified to use the lecuyer module.")
+					inits <- lapply(inits,function(x){
+						x <- list.format(x)
+						x <- x[!names(x)%in%c(".RNG.state",".RNG.name")]
+						return(dump.format(x))
+					})
+					class(inits) <- "runjags.inits"
+					method.options <- method.options[names(method.options)!='rjags']
+					# The inits now don't have .RNG.name and we have loaded the lecuyer module - so when the model re-compiles (as it will be forced to), the new inits will be set as lecuyer
+				}
+			}
+		}
 		
 		# Module loading MUST be done before model compilation:
 		for(m in modules){
 			if(m!=""){
 				if(m=="runjags"){
-					success <- try(load.module.runjags())
+					success <- try(load.runjagsmodule())
 				}else{
 					success <- try(load.module(m))
 				}
@@ -147,20 +175,21 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 		}		
 		
 		if(! 'rjags' %in% names(method.options)){
+			# Just in case this has changed (drop RNG, drop chains etc):
+			runjags.object$end.state <- inits
 			method.options <- c(method.options, list(rjags=as.jags(runjags.object)))
 		}
-		checkcompiled <- try(coef(method.options$rjags),silent=TRUE)
+		checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
+		
 		if(class(checkcompiled)=="try-error"){
-			if(grepl("must be recompiled",checkcompiled)){
-				if(silent.jags){
-					o <- capture.output(method.options$rjags$recompile()) 
-				}else{
-					swcat("Compiling rjags model...\n")
-				 	method.options$rjags$recompile()
-				}
+			if(silent.jags){
+				o <- capture.output(method.options$rjags$recompile()) 
 			}else{
-				stop(paste("There was an error creating the rjags method for this JAGS model:  ", as.character(checkcompiled), sep=""))
+				swcat("Compiling rjags model...\n")
+			 	method.options$rjags$recompile()
 			}
+			checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
+			if(class(checkcompiled)=="try-error") stop(paste("There was an error creating the rjags method for this JAGS model:  ", as.character(checkcompiled), sep=""))
 		}
 		if(any(c("popt", "pd.i") %in% monitor)){
 			stop("Cannot monitor popt or pd.i with the rjags method.  Try using the interuptible or simple method instead, or removing the pd.i and popt monitors.")
@@ -168,6 +197,8 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	}else{
 		method.options <- method.options[names(method.options)!="rjags"]	
 	}	
+	###########
+	###########
 	
 	# Wrapper to catch sample=0, in which case we are probably just using this as a hack to calculate sumamry statistics:
 	if(!(sample==0 & combine)){
@@ -299,8 +330,8 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	if(summarise){
 		summaries <- runjags.summaries(mcmclist=combinedoutput$mcmc, pd=combinedoutput$pd, popt=combinedoutput$popt, pd.i=combinedoutput$pd.i, monitor=monitor, plots = plots, psrf.target = psrf.target, normalise.mcmc = normalise.mcmc, check.stochastic = check.stochastic, confidence=confidence, silent=FALSE)
 	}else{
-		if(any(monitor=="dic")) warning("Cannot calculate DIC automatically when summarise=FALSE")
-		if(plots) warning("Cannot produce plots automatically when summarise=FALSE")
+		if(any(monitor=="dic") && runjags.getOption('summary.warning')) warning("Cannot calculate DIC automatically when summarise=FALSE")
+		if(plots && runjags.getOption('summary.warning')) warning("Cannot produce plots automatically when summarise=FALSE")
 		message <- "Summary statistics not produced when summarise=FALSE"	
 		summaries <- list(summary=message, HPD=message, hpd=message, mcse=message, psrf=message, autocorr=message, crosscorr=message, stochastic=message, dic=message, trace=message, density=message)
 	}
@@ -377,8 +408,8 @@ results.jags <- function(background.runjags.object){
 	if(runjags.object$summarise){
 		summaries <- runjags.summaries(mcmclist=combinedoutput$mcmc, pd=combinedoutput$pd, popt=combinedoutput$popt, pd.i=combinedoutput$pd.i, monitor=runjags.object$monitor, plots = runjags.object$plots, psrf.target = runjags.object$psrf.target, normalise.mcmc = runjags.object$normalise.mcmc, check.stochastic = runjags.object$check.stochastic, confidence=runjags.object$confidence, silent=FALSE)
 	}else{
-		if(any(runjags.object$monitor=="dic")) warning("Cannot calculate DIC automatically when summarise=FALSE", call.=FALSE)
-		if(runjags.object$plots) warning("Cannot produce plots automatically when summarise=FALSE", call.=FALSE)
+		if(any(runjags.object$monitor=="dic") && runjags.getOption('summary.warning')) warning("Cannot calculate DIC automatically when summarise=FALSE", call.=FALSE)
+		if(runjags.object$plots && runjags.getOption('summary.warning')) warning("Cannot produce plots automatically when summarise=FALSE", call.=FALSE)
 		message <- "Summary statistics not produced when summarise=FALSE"	
 		summaries <- list(summary=message, HPD=message, hpd=message, mcse=message, psrf=message, autocorr=message, crosscorr=message, stochastic=message, dic=message, trace=message, density=message)
 	}

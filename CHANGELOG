@@ -19,6 +19,31 @@ A utility function to generate pairwise comparisons within fixed effects.
 VERSION HISTORY
 
 
+Version 1.2.0
+
+NEW FEATURES
+
+Added rjparallel method for using parallel rjags models (possibly over a snow cluster)
+
+Added runjags.options to suppress or reduce the output of warning messages (amongst other things)
+
+Added a load.runjagsmodule function to explicitly load the bundled JAGS extension module
+
+The inits option can now be used with a function (this mimics the equivalent behaviour of rjags)
+
+
+BUG FIXES
+
+Issue resolved that would prevent chains being dropped with the rjags method
+
+Bug resolved that gave an error 'Error in lapply(X = X, FUN = FUN, ...) : object 'newinits' not found' when using a list of initial value lists
+
+Issue resolved to (hopefully) fix test errors on solaris sparc hardware
+
+Other minor bug fixes
+
+
+
 Version 1.1.0
 
 NEW FEATURES

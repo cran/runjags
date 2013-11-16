@@ -6,8 +6,7 @@
 \description{
    Convert a named list of numeric vector(s) or array(s) of data or
    initial values to a character string in the correct format to be read
-   by JAGS as either data or initial values, using the run.jags
-   function.
+   directly by JAGS as either data or initial values.
 }
 \usage{
 	dump.format(namedlist=list(), checkvalid=TRUE)

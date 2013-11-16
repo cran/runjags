@@ -160,12 +160,12 @@ maindata <- newstring
 #####################
 
 if(length(maindata) > 1){
-	warning("More than 1 WinBugs type data block was found in the file.  Blocks were combined.")
+	if(runjags.getOption('blockcombine.warning')) warning("More than 1 WinBugs type data block was found in the file.  Blocks were combined.")
 	maindata <- paste(maindata, collapse="")
 }
 
 if(length(jagsdata) > 1){
-	warning("More than 1 JAGS type data block was found in the file.  Blocks were combined.")
+	if(runjags.getOption('blockcombine.warning')) warning("More than 1 JAGS type data block was found in the file.  Blocks were combined.")
 	jagsdata <- paste(jagsdata, collapse="\n")
 }
 

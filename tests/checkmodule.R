@@ -3,6 +3,9 @@ library(runjags)
 # Require the rjags library to run these checks - it sets the required environmental variables under windows:
 if(!require(rjags)) stop("The rjags library is required to run this check")
 
+# Required for nchain etc:
+library(coda)
+
 # Find and load the runjags shared library (only required for these tests and using the rjags call 'load.modue()' so NOT loaded at runtime):
 slibpath <- system.file("libs", paste(.Platform$r_arch, if(.Platform$r_arch!="") "/" else "", if(.Platform$OS.type=="unix") "runjags.so" else "runjags.dll", sep=""), package="runjags")
 cat("Loading shared library from:  ", slibpath, "\n", sep="")
@@ -38,9 +41,22 @@ checkrunjagsmod <- function(distribution, funtype, parameters, x, uselog=FALSE, 
 
 load("moduletargets.Rsave")
 
-checksok <- sapply(1:N, function(i){
-	return(all(signif(checkrunjagsmod(tests[[i]]$distribution, tests[[i]]$funtype, tests[[i]]$parameters, tests[[i]]$x, tests[[i]]$uselog, tests[[i]]$lower),sdigits)==results[[i]]))
-})
+checksok <- rep(TRUE, N)
+for(i in 1:N){
+	obs <- checkrunjagsmod(tests[[i]]$distribution, tests[[i]]$funtype, tests[[i]]$parameters, tests[[i]]$x, tests[[i]]$uselog, tests[[i]]$lower)
+	expect <- results[[i]]
+	
+	# If more than 1% out (guaranteed that expect!=0 to 6 s.f.):
+	problem <- abs(expect-obs) > 0.01*abs(expect)
+	if(any(problem)){
+		cat("\nError with check number ", i, ":\n")
+		expect <- format(c("Expected", expect[problem]))
+		obs <- format(c("Got", obs[problem]))
+		cat(paste(paste("\t",expect,"\t-\t",obs,sep=""), collapse="\n"), "\n")
+		
+		checksok[i] <- FALSE
+	}
+}
 
 if(!all(checksok)) stop(paste("The runjags module checks failed for test number(s) ", paste(which(!checksok),collapse=","), sep=""))
 
@@ -159,8 +175,8 @@ m <- "model{
 	
 	dummy ~ dlomax(1,1)
 	
-	#monitor# psn, psg, psl, psp, psp1, psp2, psp3, psp4, psgp, pslm, psm, 
-	#qshc, pshc
+	#monitor# psn, psg, psl, psp1, psp2, psp3, psp4, psgp, pslm, psm, 
+	#qshc, pshc, psp,
 	#data# sp, cont1, cont2, pos1, pos2, pos3
 	#inits# dummy
 }"
@@ -173,7 +189,7 @@ pos1 <- rgamma(1,1,1)
 pos2 <- rgamma(1,1,1)
 pos3 <- rgamma(1,1,1)
 
-r <- run.jags(m, sample=10, n.chains=2, method='rjags')
+r <- run.jags(m, sample=10, n.chains=1, method='rjags', summarise=FALSE, plots=FALSE)
 
 ps <- combine.mcmc(r,vars='ps')[1,]
 stopifnot(all(signif(sp)==signif(ps)))

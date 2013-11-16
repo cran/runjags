@@ -86,13 +86,13 @@ value files from failed simulations for inspection by the user.
 \usage{
 
 	\method{print}{runjags}(x, vars=NA, digits = 5, ...)
-	\method{plot}{runjags}(x,vars=NA, layout=NA, newwindows=NA, 
-	file="", type="all", ...)
+	\method{plot}{runjags}(x,vars=NA, layout=NA, 
+	newwindows=runjags.getOption("newwindows"), file="", type="all", ...)
 	
-	\method{print}{runjags.model}(x, linenumbers=TRUE, ...)
-	\method{print}{runjags.data}(x, linenumbers=TRUE, ...)
-	\method{print}{runjags.inits}(x, linenumbers=TRUE, ...)
-	\method{print}{runjags.output}(x, linenumbers=TRUE, ...)
+	\method{print}{runjags.model}(x, linenumbers=runjags.getOption("linenumbers"), ...)
+	\method{print}{runjags.data}(x, linenumbers=runjags.getOption("linenumbers"), ...)
+	\method{print}{runjags.inits}(x, linenumbers=runjags.getOption("linenumbers"), ...)
+	\method{print}{runjags.output}(x, linenumbers=runjags.getOption("linenumbers"), ...)
 	
 	\method{print}{runjags.study}(x,...)
 	\method{print}{runjags.bginfo}(x, ...)
@@ -101,8 +101,9 @@ value files from failed simulations for inspection by the user.
 	\method{as.mcmc.list}{runjags}(x, vars=NA, ...)
 
 	\method{as.jags}{runjags}(x, ...)
-	\method{as.runjags}{jags}(x, monitor, modules=c(""), factories=c(""), 
-	check=TRUE, jags = findjags(), ...)
+	\method{as.runjags}{jags}(x, monitor, modules=runjags.getOption('modules'), 
+	factories=runjags.getOption('factories'), check=TRUE, 
+	jags = runjags.getOption('jagspath'), ...)
 	
 }
 
@@ -209,6 +210,8 @@ pd/popt/pd.i information.
 
 
 \seealso{
+
+\code{\link{runjags.options}},
 
 \code{\link{combine.mcmc}},
 

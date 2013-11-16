@@ -332,8 +332,8 @@ xgrid.results.jags <- function(background.runjags.object, wait=TRUE, cleanup=TRU
 	if(runjags.object$summarise){
 		summaries <- runjags.summaries(mcmclist=combinedoutput$mcmc, pd=combinedoutput$pd, popt=combinedoutput$popt, pd.i=combinedoutput$pd.i, monitor=runjags.object$monitor, plots = runjags.object$plots, psrf.target = runjags.object$psrf.target, normalise.mcmc = runjags.object$normalise.mcmc, check.stochastic = runjags.object$check.stochastic, silent=FALSE)
 	}else{
-		if(any(runjags.object$monitor=="dic")) warning("Cannot calculate DIC automatically when summarise=FALSE", call.=FALSE)
-		if(runjags.object$plots) warning("Cannot produce plots automatically when summarise=FALSE", call.=FALSE)
+		if(any(runjags.object$monitor=="dic") && runjags.getOption('summary.warning')) warning("Cannot calculate DIC automatically when summarise=FALSE", call.=FALSE)
+		if(runjags.object$plots && runjags.getOption('summary.warning')) warning("Cannot produce plots automatically when summarise=FALSE", call.=FALSE)
 		message <- "Summary statistics not produced when summarise=FALSE"	
 		summaries <- list(summary=message, HPD=message, hpd=message, mcse=message, psrf=message, autocorr=message, crosscorr=message, stochastic=message, dic=message, trace=message, density=message)
 	}

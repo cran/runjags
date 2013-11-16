@@ -36,7 +36,7 @@ runjags.summaries <- function(mcmclist, pd, popt, pd.i, monitor, plots, psrf.tar
 			n.params <- nrow(convergence$psrf)
 
 		}else{
-			warning("Convergence cannot be assessed with only 1 chain", call.=FALSE)		
+			if(runjags.getOption('summary.warning')) warning("Convergence cannot be assessed with only 1 chain", call.=FALSE)		
 			convergence <- "Convergence cannot be assessed using only 1 chain"
 			param.conv <- 1
 			n.params <- 1

@@ -1,3 +1,18 @@
+getRvers <- function(){
+	vers <- R.version$version.string
+	version.string <- gsub("\\(.*?\\)","",vers,perl=FALSE)
+	return(getvers(version.string))
+}
+
+getvers <- function(version.string){
+	vers <- gsub("[[:space:]]","",gsub("[[:alpha:]]","",version.string))
+	vers <- gsub("[[:punct:]]", "", gsub("."," ",vers, fixed=TRUE))
+	vers <- strsplit(vers," ",fixed=TRUE)[[1]]
+	version <- (10^((length(vers)-1):0))^3 * as.numeric(vers)
+	version <- sum(version)
+	return(version)
+}
+
 getjagsnames <- function(targets){
 	
 	retval <- unlist(lapply(1:length(targets), function(i){
@@ -219,7 +234,8 @@ find.parameters <- function(parameter, inputlist, environment=1, chain=1){
 		success <- suppressWarnings(try(inputlist <- inputlist(chain), silent=TRUE))
 		if(class(success)=="try-error") inputlist <- inputlist()
 	}
-
+	
+	if(all(sapply(inputlist,class)=='list')) inputlist <- inputlist[[chain]]
 	if(identical(list(), inputlist) | identical(list(list()), inputlist)) inputlist <- list("")
 
 	names <- names(inputlist)
@@ -330,9 +346,9 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, check.st
 				suppressWarnings(success <- try({
 					if(all(x > 0)){
 						if(all(x < 1)){
-							if(shapiro.test(x[use])$p.value < shapiro.test(log(x[use]/(1-x[use])))$p.value) rv <- 3
+							if(stats::shapiro.test(x[use])$p.value < stats::shapiro.test(log(x[use]/(1-x[use])))$p.value) rv <- 3
 						}else{
-							if(shapiro.test(x[use])$p.value < shapiro.test(log(x[use]))$p.value) rv <- 2
+							if(stats::shapiro.test(x[use])$p.value < stats::shapiro.test(log(x[use]))$p.value) rv <- 2
 						}
 					}
 				}, silent=TRUE))
@@ -398,23 +414,6 @@ safe.gelman.diag <- function(x, warn=TRUE,...){
 	}
 	
 }
-
-
-getRversion <- function(){
-	vers <- R.version$version.string
-	version.string <- gsub("\\(.*?\\)","",vers,perl=FALSE)
-	return(getversion(version.string))
-}
-
-getversion <- function(version.string){
-	vers <- gsub("[[:space:]]","",gsub("[[:alpha:]]","",version.string))
-	vers <- gsub("[[:punct:]]", "", gsub("."," ",vers, fixed=TRUE))
-	vers <- strsplit(vers," ",fixed=TRUE)[[1]]
-	version <- (10^((length(vers)-1):0))^3 * as.numeric(vers)
-	version <- sum(version)
-	return(version)
-}
-
 
 getargs <- function(functions, passed, returnall=TRUE){
 	
@@ -627,6 +626,7 @@ checkvalidforjags <- function(object){
 	if(any(names(object) == "")){
 		return(list(valid=FALSE, probstring="missing variable name(s)"))
 	}
+
 	if(!length(unique(names(object))) == length(object)){
 		return(list(valid=FALSE, probstring="duplicated variable name(s)"))
 	}
@@ -677,13 +677,13 @@ checkvalidforjags <- function(object){
 }
 
 getrunjagsmethod <- function(method){
-	methodmatch <- pmatch(tolower(method), c('rjags', 'simple', 'interruptible', 'parallel', 'snow', 'background', 'bgparallel', 'xgrid'))
+	methodmatch <- pmatch(tolower(method), c('rjags', 'simple', 'interruptible', 'parallel', 'snow', 'rjparallel', 'background', 'bgparallel', 'xgrid'))
 	if(is.na(methodmatch)){
-		stop(paste("Unsupported or ambiguous method '", method, "'; choose one of 'rjags', 'simple', 'interruptible', 'parallel', 'snow', 'background' or 'bgparallel'", sep=""), call.=FALSE)
+		stop(paste("Unsupported or ambiguous method '", method, "'; choose one of 'rjags', 'simple', 'interruptible', 'parallel', 'snow', 'rjparallel', 'background' or 'bgparallel'", sep=""), call.=FALSE)
 	}else{
-		method <- c('rjags', 'simple', 'interruptible', 'parallel', 'snow', 'background', 'bgparallel', 'xgrid')[methodmatch]
+		method <- c('rjags', 'simple', 'interruptible', 'parallel', 'snow', 'rjparallel', 'background', 'bgparallel', 'xgrid')[methodmatch]
 	}
-	if(method=="rjags"){
+	if(method%in%runjagsprivate$rjagsmethod){
 		if(!require('rjags')) stop("The rjags package is not installed - please install this package to use the 'rjags' method for runjags", call.=FALSE)
 		if(packageVersion('rjags') < 3.9) stop("Please update the rjags package to version 3-9 or later", call.=FALSE)				
 	}

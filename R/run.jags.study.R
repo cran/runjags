@@ -39,7 +39,7 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	}
 	
 	if(runjags.options$plots && !runjags.options$summarise){
-		warning("Cannot produce plots automatically when summarise=FALSE; setting summarise=TRUE")
+		if(runjags.getOption('summary.warning')) warning("Cannot produce plots automatically when summarise=FALSE; setting summarise=TRUE")
 		runjags.options$summarise <- TRUE
 	}
 	
@@ -164,13 +164,13 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 		
 		runjags.options$method <- eval(runjags.options$method)
 		# Detect common problems:
-		if(!require(runjags) || package_version(installed.packages()['runjags','Version'])<1) stop(paste("The runjags package (version >=1.0.0) is not installed on the cluster node '", Sys.info()['nodename'], "'", sep="")) 
-		if(runjags.options$method=='rjags' && !require(rjags)) stop(paste("The rjags package is not installed on the cluster node '", Sys.info()['nodename'], "' - try specifying runjags.options=list(method='simple')", sep="")) 
+		if(!require("runjags") || package_version(installed.packages()['runjags','Version'])<1) stop(paste("The runjags package (version >=1.0.0) is not installed on the cluster node '", Sys.info()['nodename'], "'", sep="")) 
+		if(runjags.options$method%in%runjagsprivate$rjagsmethod && !require("rjags")) stop(paste("The rjags package is not installed on the cluster node '", Sys.info()['nodename'], "' - try specifying runjags.options=list(method='simple')", sep="")) 
 		if(numeric_version(installed.packages()['runjags','Version']) < 1) stop("The runjags package (version >=1.0.0) must be installed on each cluster node")
-		if(runjags.options$method=='rjags'){
+		if(runjags.options$method%in%runjagsprivate$rjagsmethod){
 			for(module in runjags.options$modules){
 				if(module=="runjags"){
-					success <- try(load.module.runjags())
+					success <- try(load.runjagsmodule())
 				}else{
 					success <- try(load.module(module))				
 				}

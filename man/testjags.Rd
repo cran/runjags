@@ -15,7 +15,7 @@ run.jags function.
 
 \usage{
 
-testjags(jags=findjags(), silent=FALSE)}
+testjags(jags=runjags.getOption('jagspath'), silent=FALSE)}
 
 \arguments{
 

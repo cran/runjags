@@ -24,8 +24,8 @@
    \code{\link{run.jags}} directly with manual assessment of necessary
    run length may be preferable.
 
-Requires Just Another Gibbs Sampler (JAGS), see
-\url{http://www-fis.iarc.fr/~martyn/software/jags/}.
+	Requires Just Another Gibbs Sampler (JAGS), see
+	\url{http://mcmc-jags.sourceforge.net}.
 
 }
 
@@ -34,24 +34,28 @@ Requires Just Another Gibbs Sampler (JAGS), see
 autorun.jags(model, monitor = NA, data=NA, n.chains=NA, 
 	inits = NA, startburnin = 5000, startsample = 10000,
 	datalist=NA, initlist=NA, psrf.target = 1.05, normalise.mcmc = TRUE,
-	check.stochastic = TRUE, modules=c(""), factories=c(""),
+	check.stochastic = TRUE, modules=runjags.getOption('modules'), 
+	factories=runjags.getOption('factories'), 
 	raftery.options = list(), crash.retry=1, summarise = TRUE,
-	confidence=0.95, plots = summarise, thin.sample = FALSE, jags =
-	findjags(), silent.jags = FALSE, interactive=FALSE, max.time=Inf,
+	confidence=0.95, plots = summarise, thin.sample = FALSE, 
+	jags = runjags.getOption('jagspath'), 
+	silent.jags = FALSE, interactive=FALSE, max.time=Inf,
 	adaptive=list(type="burnin", length=200), thin = 1, monitor.deviance
-	= FALSE, monitor.pd = FALSE, tempdir=TRUE, jags.refresh=0.1,
-	batch.jags=silent.jags, method=if ('rjags' \%in\% .packages())
-	'rjags' else 'interruptible', method.options=list())
+	= FALSE, monitor.pd = FALSE, tempdir=runjags.getOption('tempdir'), 
+	jags.refresh=0.1, batch.jags=silent.jags, 
+	method=runjags.getOption('method'), method.options=list())
 
 autoextend.jags(runjags.object, add.monitor=character(0), 
 	drop.monitor=character(0), drop.chain=numeric(0),
 	combine=length(c(add.monitor,drop.monitor,drop.chain))==0,
 	startburnin = 0, startsample = 10000, psrf.target = 1.05,
-	normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options =
-	list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots =
-	summarise, thin.sample = FALSE, jags = findjags(), silent.jags =
-	FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type='burnin', length=200), 
-	thin = runjags.object$thin, tempdir=TRUE,
+	normalise.mcmc = TRUE, check.stochastic = TRUE, 
+	raftery.options = list(), crash.retry=1, summarise = TRUE, 
+	confidence=0.95, plots = summarise, thin.sample = FALSE, 
+	jags = runjags.getOption('jagspath'), silent.jags = FALSE, 
+	interactive=FALSE, max.time=Inf, 
+	adaptive=list(type='burnin', length=200), 
+	thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), 
 	jags.refresh=0.1, batch.jags=silent.jags, method=NA,
 	method.options=NA)
 
@@ -94,9 +98,10 @@ improved by using a method such as 'parallel' or 'snow').  The minimum
 
 \item{inits}{either a character vector with length equal to the number
 of chains the model will be run using, or a list of named lists
-representing names and corresponding values of inits for each chain.  If
-a vector, each element of the vector must be a character string in the R
-dump format representing the initial values for that chain, or NA.  If
+representing names and corresponding values of inits for each chain, or 
+a function with either 1 argument representing the chain or no arguments.  
+If a vector, each element of the vector must be a character string in the 
+R dump format representing the initial values for that chain, or NA.  If
 not all initialising variables are specified, the unspecified variables
 are sampled from the prior distribution by JAGS.  Values left as NA
 result in all initial values for that chain being sampled from the prior
@@ -293,22 +298,24 @@ status which may be useful in some situations.  Default TRUE if
 silent.jags is TRUE, or FALSE otherwise.}
 
 \item{method}{the method with which to call JAGS; probably a character
-vector specifying one of 'rjags', 'simple', 'interruptible', 'parallel', 
-or 'snow' (and see also \code{\link{xgrid.autoextend.jags}}). The former runs JAGS using the
-rjags package, whereas other options do not require the rjags package
-and call JAGS as an external executable.  'simple' runs JAGS as a
-foreground process (the default behaviour for runjags < 0.9.6),
-'interruptible' allows the JAGS process to be terminated immediately
-using the interrupt signal, 'parallel' runs each chain as a separate
-process on a separate core, and 'snow' uses a simple network of workstations
-(which may be passed into the method.options list as 'cl').  The default for 
-autorun.jags is to use 'rjags' if the 'rjags' package is load()ed, or the 
-'interactive' method otherwise.  The default for the autoextend.jags function is
-to use the same method as used for the previous JAGS call.
+vector specifying one of 'rjags', 'simple', 'interruptible', 'parallel',
+'rjparallel' or 'snow' (and see also \code{\link{xgrid.autoextend.jags}}). 
+The 'rjags' and 'rjparallel' methods run JAGS using the rjags package, 
+whereas other options do not require  the rjags package and call JAGS as 
+an external executable.  The 'simple' method runs JAGS as a foreground 
+process (the default behaviour for runjags < 0.9.6), 'interruptible' 
+allows the JAGS process to be terminated immediately using the interrupt 
+signal, 'parallel' runs each chain as a separate process on a separate 
+core, and 'rjparallel' and 'snow' use a simple network of workstations 
+(which may be passed into the method.options list as 'cl') to call 
+separate rjags models or JAGS instances.  The default for autorun.jags is 
+to use 'rjags' if the 'rjags' package is load()ed, or the 'interactive' 
+method otherwise.  The default for the autoextend.jags function is to 
+use the same method as used for the previous JAGS call.
 
-Note that the parallel, snow and bgparallel methods all use separate
-JAGS instances to speed up execution of models with multiple chains (at
-the expense of using more RAM), but cannot be used to monitor
+Note that the parallel, rjparallel, snow and bgparallel methods all use 
+separate JAGS instances to speed up execution of models with multiple 
+chains (at the expense of using more RAM), but cannot be used to monitor
 pd/popt/pd.i (and therefore DIC).  If no .RNG.name is specified in the
 initial values, each chain is assigned a different random number
 generator (.RNG.name) for up to 4 chains (the number of different RNG
@@ -368,7 +375,6 @@ used.  Others are ignored with a warning.}
 # run a model to calculate the intercept and slope of the expression 
 # y = m x + c, assuming normal observation errors for y:
 
-\dontrun{
 # Simulate the data
 N <- 100
 X <- 1:N
@@ -388,16 +394,18 @@ precision ~ dexp(1);
 }"
 
 
-# Run the model
-results <- autorun.jags(model=model, monitor=c("m", "c", "precision"))
+# Run the model using rjags:
+results <- autorun.jags(model=model,
+monitor=c("m", "c", "precision"), method="rjags")
 
 # Analyse traceplots of the results to assess convergence:
+\dontrun{
 plot(results, type="trace", layout=c(3,1))
+}
 
 # Summary of monitored variables:
 results
 
-}
 }
 
 \keyword{models}

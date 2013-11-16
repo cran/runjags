@@ -15,13 +15,31 @@
 
 Runs or extends a user specified JAGS model from within R,
 returning an object of class \code{\link{runjags-class}}.  
-Data and initial values can either be supplied in the R dump
-format (see dump.format() for an easy way to do this), or as a named
-list.  A character vector of variables to monitor must also be supplied,
-either to the monitor argument or inside the model code.
+Running a JAGS model using these functions has two main
+advantages:
+
+The method used to call the simulation can be changed with
+a single argument to the run.jags function.  Options are to
+use a separate instance of a JAGS executable or a model
+compiled using the \code{\link[rjags]{jags.model}} function,
+and to use a single model for all chains or multiple
+parallel threads to run chains simultaneously on parallel
+processors (either locally or via a distributed computing
+cluster).  The methods most likely to be used are 'interruptible'
+(single separate JAGS instance), ('rjags' (single rjags model),
+'parallel' (parallel JAGS instances), 'bgparallel' (parallel
+JAGS instances run in the background) and 'rjparallel'
+(parallel rjags models).  For more details see below under
+the 'method' argument.
+
+The second advantage is that several summary statistics and
+plots are automatically calculated, with associated S3
+methods intended to facilitate checking model convergence
+and run length.  See the help file for code{\link{runjags-class}}
+for more details.
 
 Requires Just Another Gibbs Sampler (JAGS), see
-\url{http://www-fis.iarc.fr/~martyn/software/jags/}.
+\url{http://mcmc-jags.sourceforge.net}.
 
 }
 
@@ -29,14 +47,15 @@ Requires Just Another Gibbs Sampler (JAGS), see
 
 run.jags(model, monitor = NA, data=NA, n.chains=NA, inits = NA, 
 	burnin = 5000, sample = 10000, adapt=max(200-burnin, 0), 
-	datalist=NA, initlist=NA, jags = findjags(), 
+	datalist=NA, initlist=NA, jags = runjags.getOption('jagspath'), 
 	silent.jags = FALSE, summarise = TRUE, confidence=0.95,
 	plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE,
-	check.stochastic = TRUE, modules=c(""), factories=c(""), thin = 1,
+	check.stochastic = TRUE, modules=runjags.getOption('modules'), 
+	factories=runjags.getOption('factories'), thin = 1,
 	monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE,
 	monitor.popt = FALSE, check.conv = summarise, keep.jags.files =
-	FALSE, tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags,
-	method=if ('rjags' \%in\% .packages()) 'rjags' else 'interruptible',
+	FALSE, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, 
+	batch.jags=silent.jags, method=runjags.getOption('method'), 
 	method.options=list())
 
 
@@ -44,12 +63,13 @@ extend.jags(runjags.object, add.monitor=character(0),
 	drop.monitor=character(0), drop.chain=numeric(0),
 	combine=length(c(add.monitor,drop.monitor,drop.chain))==0, 
 	burnin = 0, sample = 10000, adapt=max(200-burnin, 0), 
-	jags = findjags(),silent.jags = FALSE, summarise = TRUE, 
-	confidence=0.95, plots = summarise, psrf.target = 1.05, 
-	normalise.mcmc = TRUE, check.stochastic = TRUE, 
-	thin = runjags.object$thin, keep.jags.files	= FALSE, 
-	tempdir=TRUE, jags.refresh=0.1, batch.jags=silent.jags,
-	method=NA, method.options=NA)
+	jags = runjags.getOption('jagspath'), silent.jags = FALSE, 
+	summarise = TRUE, confidence=0.95, plots = summarise, 
+	psrf.target = 1.05, normalise.mcmc = TRUE, 
+	check.stochastic = TRUE, thin = runjags.object$thin, 
+	keep.jags.files	= FALSE, tempdir=runjags.getOption('tempdir'), 
+	jags.refresh=0.1, batch.jags=silent.jags, method=NA, 
+	method.options=NA)
 
 results.jags(background.runjags.object)
 
@@ -92,9 +112,10 @@ improved by using a method such as 'parallel' or 'snow').  The minimum
 
 \item{inits}{either a character vector with length equal to the number
 of chains the model will be run using, or a list of named lists
-representing names and corresponding values of inits for each chain.  If
-a vector, each element of the vector must be a character string in the R
-dump format representing the initial values for that chain, or NA.  If
+representing names and corresponding values of inits for each chain, or 
+a function with either 1 argument representing the chain or no arguments.  
+If a vector, each element of the vector must be a character string in the 
+R dump format representing the initial values for that chain, or NA.  If
 not all initialising variables are specified, the unspecified variables
 are sampled from the prior distribution by JAGS.  Values left as NA
 result in all initial values for that chain being sampled from the prior
@@ -255,15 +276,16 @@ silent.jags is TRUE, or FALSE otherwise.}
 
 \item{method}{the method with which to call JAGS; probably a character
 vector specifying one of 'rjags', 'simple', 'interruptible', 'parallel',
-'background', 'bgparallel' or 'snow' (and see also
-\code{\link{xgrid.autoextend.jags}}). The former runs JAGS using the
-rjags package, whereas other options do not require the rjags package
-and call JAGS as an external executable.  'simple' runs JAGS as a
-foreground process (the default behaviour for runjags < 0.9.6),
-'interruptible' allows the JAGS process to be terminated immediately
-using the interrupt signal, 'parallel' runs each chain as a separate
-process on a separate core, 'snow' uses a simple network of workstations
-(which may be passed into the method.options list as 'cl'), and
+'rjparallel', 'background', 'bgparallel' or 'snow' (and see also
+\code{\link{xgrid.extend.jags}}). The 'rjags' and 'rjparallel' methods
+run JAGS using the rjags package, whereas other options do not require 
+the rjags package and call JAGS as an external executable.  The 'simple' 
+method runs JAGS as a foreground process (the default behaviour for 
+runjags < 0.9.6), 'interruptible' allows the JAGS process to be terminated 
+immediately using the interrupt signal, 'parallel' runs each chain as a 
+separate process on a separate core, 'rjparallel' and 'snow' use a simple 
+network of workstations (which may be passed into the method.options 
+list as 'cl') to call separate rjags models or JAGS instances, and
 'background' & 'bgparallel' starts JAGS as one or more background
 processes and returns the information needed to be passed to
 \code{\link{results.jags}} to retrieve the simulations when they have
@@ -272,9 +294,9 @@ package is load()ed, or the 'interactive' method otherwise.  The default
 for the extend.jags function is to use the same method as used for the
 previous JAGS call.
 
-Note that the parallel, snow and bgparallel methods all use separate
-JAGS instances to speed up execution of models with multiple chains (at
-the expense of using more RAM), but cannot be used to monitor
+Note that the parallel, rjparallel, snow and bgparallel methods all use 
+separate JAGS instances to speed up execution of models with multiple 
+chains (at the expense of using more RAM), but cannot be used to monitor
 pd/popt/pd.i (and therefore DIC).  Each chain is specified using a
 different random number generator (.RNG.name) for up to 4 chains (the
 number of different RNG available in JAGS), unless .RNG.name is
@@ -321,7 +343,9 @@ used.  Others are ignored with a warning.}
 
 \seealso{
 
-\code{\link{runjags-class}}
+\code{\link{runjags-class}},
+
+\code{\link{runjags.options}},
 
 \code{\link{autorun.jags}},
 
@@ -329,9 +353,7 @@ used.  Others are ignored with a warning.}
 
 \code{\link{combine.mcmc}},
 
-\code{\link{testjags}},
-
-\code{\link{dump.format}}
+\code{\link{testjags}}
 
 }
 
@@ -345,8 +367,6 @@ used.  Others are ignored with a warning.}
 
 # run a model to calculate the intercept and slope of the expression 
 # y = m x + c, assuming normal observation errors for y:
-
-\dontrun{
 
 # Simulate the data
 X <- 1:100
@@ -363,21 +383,24 @@ c ~ dunif(-1000,1000);
 precision ~ dexp(1); 
 }"
 
-# Use dump.format to convert the data and initial values files 
-# into the R dump format, with explicit control over the random 
-# number generator used for each chain (optional): 
-data <- dump.format(list(X=X, Y=Y, N=length(X))) 
-inits1 <- dump.format(list(m=1, c=1, precision=1,
-.RNG.name="base::Super-Duper", .RNG.seed=1)) 
-inits2 <- dump.format(list(m=0.1, c=10, precision=1,
-.RNG.name="base::Wichmann-Hill", .RNG.seed=2))
+# Data and initial values in a named list format, 
+# with explicit control over the random number
+# generator used for each chain (optional): 
+data <- list(X=X, Y=Y, N=length(X))
+inits1 <- list(m=1, c=1, precision=1,
+.RNG.name="base::Super-Duper", .RNG.seed=1)
+inits2 <- list(m=0.1, c=10, precision=1,
+.RNG.name="base::Wichmann-Hill", .RNG.seed=2)
 
 # Run the model and produce plots 
 results <- run.jags(model=model, monitor=c("m", "c", "precision"), 
-data=data, n.chains=2, inits=c(inits1,inits2), plots = TRUE)
+data=data, n.chains=2, method="rjags", inits=c(inits1,inits2), 
+plots = TRUE)
 
 # Plot the monitored variables:
+\dontrun{
 plot(results)
+}
 
 # Look at the summary statistics:
 print(results)
@@ -385,12 +408,9 @@ print(results)
 # Extract only the coefficient as an mcmc.list object:
 coeff <- as.mcmc.list(results,vars="m")
 
-}
 
-
-# The same model but using embedded shortcuts to specify data, inits and monitors:
-
-\dontrun{
+# The same model but using embedded shortcuts to specify data, inits and monitors,
+# and using parallel chains:
 
 # Model in the JAGS format
 
@@ -413,12 +433,30 @@ N <- length(X)
 initfunction <- function(chain) return(switch(chain, 
 	"1"=list(m=-10), "2"=list(m=10)))
 
-results <- run.jags(model, n.chains=2, initlist=initfunction)
+# Run the 2 chains in parallel (allowing the run.jags function
+# to control the set up of the distributed computing cluster):
+results <- run.jags(model, n.chains=2, initlist=initfunction,
+method="rjparallel")
 
 # Look at a traceplot of the intercept and slope on a 2x1 grid:
+\dontrun{
 plot(results,type="trace",vars=c("m","^c"),layout=c(2,1))
-
 }
+
+# Run the same model using 8 chains and a user-specified
+# distributed computing cluster:
+
+# A list of 8 over-dispersed starting values for m:
+m <- as.list(runif(8,-20,20))
+
+# Set up a distributed computing cluster with 4 nodes:
+library(parallel)
+cl <- makeCluster(4)
+
+# Run the chains in parallel (run.jags will use 4 models 
+# in parallel with 2 chains each):
+results <- run.jags(model, n.chains=8, initlist=initfunction,
+method="rjparallel", method.options=list(cl=cl))
 
 
 }

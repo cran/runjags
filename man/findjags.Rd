@@ -40,6 +40,8 @@ for example "C:/Program Files/JAGS/bin/jags-terminal.exe" or
 \seealso{
    \code{\link{testjags}},
    
+   \code{\link{runjags.options}},
+   
    \code{\link{run.jags}}
 }
 

@@ -6,10 +6,10 @@ vers <- paste("R package version", meta$Version)
 citEntry(entry="article",
          title = "runjags: An R package providing interface utilities, parallel computing methods and additional distributions for MCMC models in JAGS",
          author = personList(as.person("M. J. Denwood")),
-         year = 2013,
-		 journal = "Journal of Statistical Software (in review)",
+         year = "In Review",
+		 journal = "Journal of Statistical Software",
 		 url = "http://cran.r-project.org/web/packages/runjags/",
-         textVersion = "M. J. Denwood (2013). runjags: An R package providing interface utilities, parallel computing methods and additional distributions for MCMC models in JAGS.  Journal of Statistical Software (in review).  http://cran.r-project.org/web/packages/runjags/"
+         textVersion = "M. J. Denwood (In Review). runjags: An R package providing interface utilities, parallel computing methods and additional distributions for MCMC models in JAGS.  Journal of Statistical Software.  http://cran.r-project.org/web/packages/runjags/"
 		 )
 
 

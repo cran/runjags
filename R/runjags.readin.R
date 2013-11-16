@@ -164,6 +164,9 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 			
 			setwd(simfolders[s])
 			
+			# Try to copy the script file back to the main folder, mostly for my benefit:
+			suppressWarnings(try(file.rename("script.cmd", paste("../script.",s,".cmd",sep="")), silent=TRUE))
+		
 			# Copy the chains to the root simulation directory and renumber at the same time:
 			fakenums <- 1:length(sim.chains[[s]])
 			realnums <- sim.chains[[s]]
@@ -333,7 +336,6 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 	}
 
 	if(crashed) inits <- unlist(crash.end) else inits <- unlist(input.end)
-	
 	class(inits) <- 'runjags.inits'
 	return(list(mcmc=input.data, pd=pd, popt=popt, pd.i=pd.i, end.state=inits))
 }

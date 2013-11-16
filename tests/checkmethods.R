@@ -1,6 +1,9 @@
 # test all of the runjags dispatch methods with a toy example:
 
 library(runjags)
+
+runjags.options(inits.warning=FALSE, rng.warning=FALSE)
+
 # Require for as.mcmc.list and niter:
 library(coda)
 
@@ -78,11 +81,13 @@ if(jagspath!="JAGS not found" && testjags(jagspath)$JAGS.available){
 	}
 }else{
 	cat("JAGS could not be called externally at the path: ", jagspath, "\n")
-	cat("All test methods except rjags were skipped\n")	
+	cat("All test methods except rjags and rjagsparallel were skipped\n")	
 }
 
-
 results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, initlist=initfunction, method='rjags')
+stopifnot(niter(as.mcmc.list(results))==1000)
+
+results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, initlist=initfunction, method='rjparallel')
 stopifnot(niter(as.mcmc.list(results))==1000)
 
 cat("All methods checks passed\n")
