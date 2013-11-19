@@ -1,4 +1,4 @@
-extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, burnin = 0, sample = 10000, adapt=max(200-burnin, 0), jags = runjags.getOption('jagspath'), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, thin = runjags.object$thin, keep.jags.files = FALSE, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, burnin = 0, sample = 10000, adapt=1000, jags = runjags.getOption('jagspath'), silent.jags = FALSE, summarise = TRUE, confidence=0.95, plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, thin = runjags.object$thin, keep.jags.files = FALSE, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 	# We may be passed some unevaluated function arguments from parent functions using getargs so evaluate everything here:
 	argnames <- names(formals(extend.jags))
@@ -97,6 +97,7 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	}
 	
 	if(length(drop.chain)>0){
+
 		drop.chain <- unique(round(drop.chain))
 		if(any(drop.chain>length(runjags.object$end.state)) | any(drop.chain < 1)) stop("Specified value(s) to drop.chain are invalid - please specify which chain(s) to drop by the chain number(s)")
 		if(length(drop.chain)==length(runjags.object$end.state)) stop("Specified value(s) to drop.chains are invalid - it is not possible to drop all chains")
@@ -109,7 +110,7 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	inits <- runjags.object$end.state	
 	n.chains <- length(inits)
 	if(n.chains<1) stop("Number of chains must be greater than 0")
-	
+
 	if(any(monitor=="deviance") && as.character(runjags.object$data)==""){
 		warning("Unable to monitor deviance with no data - removing the deviance monitor (and DIC/pd/popt/pd.i monitors if set)")
 		monitor <- monitor[!monitor%in%c("deviance","pd","pd.i","popt","dic")]
@@ -137,6 +138,10 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	}
 	if(method%in%runjagsprivate$rjagsmethod){
 		
+		if(any(c("popt", "pd.i") %in% monitor)){
+			stop("Cannot monitor popt or pd.i with the rjags method.  Try using the interuptible or simple method instead, or removing the pd.i and popt monitors.")
+		}					
+		
 		# RNG in >4 rjparallel chains should be lecuyer - if the lecuyer module is loaded when the rjags object compiles (unless it already has RNGnames) it will be
 		if(n.chains > 4 && method=='rjparallel'){
 			
@@ -155,45 +160,25 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 						return(dump.format(x))
 					})
 					class(inits) <- "runjags.inits"
+					runjags.object$end.state <- inits
 					method.options <- method.options[names(method.options)!='rjags']
 					# The inits now don't have .RNG.name and we have loaded the lecuyer module - so when the model re-compiles (as it will be forced to), the new inits will be set as lecuyer
 				}
 			}
 		}
 		
-		# Module loading MUST be done before model compilation:
-		for(m in modules){
-			if(m!=""){
-				if(m=="runjags"){
-					success <- try(load.runjagsmodule())
-				}else{
-					success <- try(load.module(m))
-				}
-			
-				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
-			}
-		}		
+		runjags.object$modules <- modules
+		runjags.object$method.options <- method.options
 		
-		if(! 'rjags' %in% names(method.options)){
-			# Just in case this has changed (drop RNG, drop chains etc):
-			runjags.object$end.state <- inits
-			method.options <- c(method.options, list(rjags=as.jags(runjags.object)))
+		if('rjags' %in% names(method.options)){
+			# Checks compiled:
+			method.options$rjags <- as.jags(runjags.object, adapt=adapt, quiet=TRUE)
+		}else{
+			# Sets up and compiles:
+			method.options <- c(method.options, list(rjags=as.jags(runjags.object, adapt=adapt, quiet=TRUE)))
 		}
-		checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
 		
-		if(class(checkcompiled)=="try-error"){
-			if(silent.jags){
-				o <- capture.output(method.options$rjags$recompile()) 
-			}else{
-				swcat("Compiling rjags model...\n")
-			 	method.options$rjags$recompile()
-			}
-			checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
-			if(class(checkcompiled)=="try-error") stop(paste("There was an error creating the rjags method for this JAGS model:  ", as.character(checkcompiled), sep=""))
-		}
-		if(any(c("popt", "pd.i") %in% monitor)){
-			stop("Cannot monitor popt or pd.i with the rjags method.  Try using the interuptible or simple method instead, or removing the pd.i and popt monitors.")
-		}					
+
 	}else{
 		method.options <- method.options[names(method.options)!="rjags"]	
 	}	
@@ -205,6 +190,10 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 		# Call function to run simulation and return MCMC list and pd, popt, pd.i objects:
 		startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=inits, modules=modules, factories=runjags.object$factories, burnin = burnin, sample = sample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
 		
+		# If using rjparallel method destroy the compiled rjags model as we update different compiled objects:
+		if(method=='rjparallel') method.options <- method.options[names(method.options)!="rjags"]
+
+				
 		# Return info for a background / xgrid etc job:
 		if(!startinfo$complete){
 			# Make a background.runjags.object object and save it - to be used by user in case of emergencies
@@ -241,7 +230,7 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 			background.runjags.object$silent.jags <- silent.jags
 			background.runjags.object$oldburnin <- runjags.object$burnin
 			background.runjags.object$oldsample <- runjags.object$sample
-			background.runjags.object$burnin <- burnin
+			background.runjags.object$burnin <- burnin+adapt
 			background.runjags.object$sample <- sample
 			background.runjags.object$thin <- thin
 			background.runjags.object$oldthin <- runjags.object$thin
@@ -291,7 +280,7 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 		}
 		
 		end.state <- newoutput$end.state
-		burnin <- runjags.object$burnin+(thin*runjags.object$sample)+burnin
+		burnin <- runjags.object$burnin+(thin*runjags.object$sample)+burnin+adapt
 		
 		iternames <- seq((burnin+1), (burnin+(sample*thin))-(thin-1), length.out=sample)
 		currentdn <- dimnames(newoutput$mcmc[[1]]) 
@@ -370,6 +359,7 @@ results.jags <- function(background.runjags.object){
 	end.state <- newoutput$end.state
 	class(end.state) <- 'runjags.inits'
 	
+	# runjags.object$burnin here includes adaptation phase:
 	burnin <- runjags.object$oldburnin+(background.runjags.object$oldthin*background.runjags.object$oldsample)+runjags.object$burnin
 	sample <- background.runjags.object$sample
 	thin <- background.runjags.object$thin

@@ -24,8 +24,8 @@ predict that datapoint is assessed.
 
 run.jags.study(simulations, model=NULL, datafunction=NULL,
 	targets=list(), confidence=0.95, record.chains=FALSE,
-	runjags.options=list(), cat.progress=FALSE, test=TRUE, 
-	parallel.method=parLapply, ...)
+	max.time="15m", runjags.options=list(), cat.progress=FALSE, 
+	test=TRUE, parallel.method=parLapply, ...)
 
 }
 
@@ -57,6 +57,11 @@ target value.  Default 95\% CI.}
 \item{record.chains}{option to return the full runjags objects returned
 from each simulation as a list item named 'runjags'.  Default FALSE.}
 
+\item{max.time}{the maximum time for which each individual simulation
+is allowed to run by the underling autorun.jags function. Acceptable units
+include 'seconds', 'minutes', 'hours', 'days', 'weeks', or the first
+letter(s) of each.  Default is 15 minutes.}
+
 \item{runjags.options}{a named list of options to be passed to the
 underlying \code{\link{autorun.jags}} function used to run the models.}
 
@@ -87,7 +92,8 @@ An object of class \code{\link{runjags.study-class}}, containing a
 summary of the performance of the model with regards to the target
 variables specified.  If record.chains==TRUE, an element named 'runjags'
 containing a list of all the runjags objects returned will also be
-present.
+present.  Any error messages given by individual simulations will
+be contained in the $errors element of the returned list.
 
 }
 
@@ -108,8 +114,6 @@ present.
 
 # Perform a drop-1 validation study for a simple model:
 
-\dontrun{
-	
 themodel <- "
 model{
 
@@ -122,10 +126,11 @@ model{
 	precision ~ dexp(1)
 	
 	#data# N, X
-	#inits# m, c, precision
+	#inits# m, c, precision, .RNG.seed, .RNG.name
 }"
 
 # Simulate the data
+set.seed(1)
 N <- 20
 X <- 1:N
 Y <- rnorm(length(X), 2*X + 1, 1)
@@ -135,12 +140,21 @@ m <- list(-10,10)
 c <- list(10,-10)
 precision <- list(0.01,100)
 
+.RNG.seed <- function(chain){
+	return(switch(chain, "1"= 1, "2"= 2))
+}
+.RNG.name <- function(chain){
+	return(switch(chain, "1"= "base::Super-Duper", "2"= "base::Wichmann-Hill"))
+}
+
 # A simple function that removes (over-writes with NA) one datapoint at a time:
 datafun <- function(s){
 	simdata <- Y
 	simdata[s] <- NA
 	return(list(Y=simdata))
 }
+
+\dontrun{
 
 # Set up a cluster to use with the parLapply method:
 library(parallel)

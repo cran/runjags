@@ -46,7 +46,7 @@ Requires Just Another Gibbs Sampler (JAGS), see
 \usage{
 
 run.jags(model, monitor = NA, data=NA, n.chains=NA, inits = NA, 
-	burnin = 5000, sample = 10000, adapt=max(200-burnin, 0), 
+	burnin = 4000, sample = 10000, adapt=1000, 
 	datalist=NA, initlist=NA, jags = runjags.getOption('jagspath'), 
 	silent.jags = FALSE, summarise = TRUE, confidence=0.95,
 	plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE,
@@ -62,7 +62,7 @@ run.jags(model, monitor = NA, data=NA, n.chains=NA, inits = NA,
 extend.jags(runjags.object, add.monitor=character(0), 
 	drop.monitor=character(0), drop.chain=numeric(0),
 	combine=length(c(add.monitor,drop.monitor,drop.chain))==0, 
-	burnin = 0, sample = 10000, adapt=max(200-burnin, 0), 
+	burnin = 0, sample = 10000, adapt=1000, 
 	jags = runjags.getOption('jagspath'), silent.jags = FALSE, 
 	summarise = TRUE, confidence=0.95, plots = summarise, 
 	psrf.target = 1.05, normalise.mcmc = TRUE, 
@@ -153,10 +153,12 @@ adding or removing variables or chains, and FALSE otherwise.}
 \item{sample}{the number of sampling iterations to use (numeric).
 Default 10000 iterations.}
 
-\item{adapt}{advanced option to control the length of the adaptive phase
-directly, which is otherwise half the length of the burnin period.
-Default is 0, unless burnin is less than 200 in which case 100 adapitve
-iterations are used.}
+\item{adapt}{the length of the adaptive phase to use when compiling
+models.  This will be run for every new simulation, although extending
+a model run with the rjags model does not require re-compilation (except
+when dropping chains).  Note that the number of adaptive iterations is
+in addition to the burnin iterations - so if a model has 1000 adapt and
+4000 burnin iterations the first sample will be taken at iteration 5001.}
 
 \item{datalist}{an optional named list containing variables used as
 data, or alternatively a function (with no arguments) that returns a
@@ -375,12 +377,12 @@ Y <- rnorm(length(X), 2*X + 10, 1)
 # Model in the JAGS format
 model <- "model { 
 for(i in 1 : N){ 
-Y[i] ~ dnorm(true.y[i], precision); 
-true.y[i] <- (m * X[i]) + c;
+	Y[i] ~ dnorm(true.y[i], precision);
+	true.y[i] <- (m * X[i]) + c
 } 
-m ~ dunif(-1000,1000); 
-c ~ dunif(-1000,1000); 
-precision ~ dexp(1); 
+m ~ dunif(-1000,1000)
+c ~ dunif(-1000,1000) 
+precision ~ dexp(1)
 }"
 
 # Data and initial values in a named list format, 
@@ -416,12 +418,12 @@ coeff <- as.mcmc.list(results,vars="m")
 
 model <- "model {
 for(i in 1 : N){ #data# N
-Y[i] ~ dnorm(true.y[i], precision); #data# Y
-true.y[i] <- (m * X[i]) + c; #data# X
+	Y[i] ~ dnorm(true.y[i], precision) #data# Y
+	true.y[i] <- (m * X[i]) + c #data# X
 }
-m ~ dunif(-1000,1000); #inits# m
-c ~ dunif(-1000,1000);
-precision ~ dexp(1);
+m ~ dunif(-1000,1000) #inits# m
+c ~ dunif(-1000,1000)
+precision ~ dexp(1)
 #monitor# m, c, precision
 }"
 
@@ -433,18 +435,20 @@ N <- length(X)
 initfunction <- function(chain) return(switch(chain, 
 	"1"=list(m=-10), "2"=list(m=10)))
 
+\dontrun{
 # Run the 2 chains in parallel (allowing the run.jags function
 # to control the set up of the distributed computing cluster):
 results <- run.jags(model, n.chains=2, initlist=initfunction,
 method="rjparallel")
 
 # Look at a traceplot of the intercept and slope on a 2x1 grid:
-\dontrun{
 plot(results,type="trace",vars=c("m","^c"),layout=c(2,1))
 }
 
 # Run the same model using 8 chains and a user-specified
 # distributed computing cluster:
+
+\dontrun{
 
 # A list of 8 over-dispersed starting values for m:
 m <- as.list(runif(8,-20,20))
@@ -457,10 +461,8 @@ cl <- makeCluster(4)
 # in parallel with 2 chains each):
 results <- run.jags(model, n.chains=8, initlist=initfunction,
 method="rjparallel", method.options=list(cl=cl))
-
-
 }
 
-
+}
 
 \keyword{models}

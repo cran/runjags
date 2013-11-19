@@ -113,17 +113,55 @@ print.runjags.inits <- function(x, linenumbers=runjags.getOption('linenumbers'),
 	invisible(x)
 }
 print.runjags.output <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
-	cat(c("","JAGS model output:"),sep="\n")
+
+	# For runjags.study error outputs:
+	if(all(grepl("simulation",names(x)))){
+		cat(c("","Crashed JAGS model outputs:"),sep="\n")
+		simnos <- as.numeric(gsub("[[:alpha:][:punct:]]","",names(x)))
+		printsimno <- TRUE
+	}else{
+		cat(c("","rjags model output:"),sep="\n")
+		simnos <- 1:length(x)
+		printsimno <- length(x)>1
+	}
 	if(linenumbers){
 		for(i in 1:length(x)){
 			split <- strsplit(x[i],"\n",fixed=TRUE)[[1]]
 			lines <- length(split)
 			if(lines>0) x[i] <- paste(paste(format(as.character(1:lines), justify='left'),"  |  ", split, sep=""),collapse="\n")
-			if(length(x)>1) cat(c("\nSimulation ", i, ":\n\n", "", x[i],if(linenumbers) "\n"),sep="") else cat(c("\n\n", "", x[i],if(linenumbers) "\n"),sep="")
+			if(printsimno) cat(c("\nSimulation ", simnos[i], ":\n\n", "", x[i],if(linenumbers) "\n"),sep="") else cat(c("\n\n", "", x[i],if(linenumbers) "\n"),sep="")
 		}	
 	}else{
 		for(i in 1:length(x)){
-			if(length(x)>1) cat(c("\nSimulation ", i, ":\n", "", x[i],""),sep="") else cat(c("\n", "", x[i],""),sep="")
+			if(printsimno) cat(c("\nSimulation ", simnos[i], ":\n", "", x[i],""),sep="") else cat(c("\n", "", x[i],""),sep="")
+		}
+	
+	}
+	cat("\n")
+	invisible(x)
+}
+print.rjags.output <- function(x, ...){
+	# For runjags.study error outputs:
+	if(all(grepl("simulation",names(x)))){
+		cat(c("","Crashed rjags model outputs:"),sep="\n")
+		simnos <- as.numeric(gsub("[[:alpha:][:punct:]]","",names(x)))
+		printsimno <- TRUE
+	}else{
+		cat(c("","rjags model output:"),sep="\n")
+		simnos <- 1:length(x)
+		printsimno <- length(x)>1
+	}
+	linenumbers <- FALSE
+	if(linenumbers){
+		for(i in 1:length(x)){
+			split <- strsplit(x[i],"\n",fixed=TRUE)[[1]]
+			lines <- length(split)
+			if(lines>0) x[i] <- paste(paste(format(as.character(1:lines), justify='left'),"  |  ", split, sep=""),collapse="\n")
+			if(printsimno) cat(c("\nSimulation ", simnos[i], ":\n\n", "", x[i],if(linenumbers) "\n"),sep="") else cat(c("\n\n", "", x[i],if(linenumbers) "\n"),sep="")
+		}	
+	}else{
+		for(i in 1:length(x)){
+			if(printsimno) cat(c("\nSimulation ", simnos[i], ":\n", "", x[i],""),sep="") else cat(c("\n", "", x[i],""),sep="")
 		}
 	
 	}
@@ -323,8 +361,9 @@ print.runjags.study <- function(x,...){
 		}			
 	}
 	cat("\n")
-	
-	
+	if(sum(x$crashed)>0){
+		cat("The ", sum(x$crashed), " error", if(sum(x$crashed)>1) "s", " returned ", if(sum(x$crashed)>1) "have " else "has ", "been stored in the '$errors' element of the list returned from run.jags.study\n\n",sep="")
+	}
 	cat("Average time taken:  ", timestring(mean(as.numeric(x$timetaken, units="secs"))), " (range: ", timestring(min(as.numeric(x$timetaken, units="secs"))), " - ", timestring(max(as.numeric(x$timetaken, units="secs"))), ")\n", sep="")
 	cat("Average burnin required:  ", round(mean(x$burnin)), " (range: ", round(min(x$burnin)), " - ", round(max(x$burnin)), ")\n", sep="")
 	cat("Average samples required:  ", round(mean(x$sample)), " (range: ", round(min(x$sample)), " - ", round(max(x$sample)), ")\n", sep="")
@@ -427,7 +466,7 @@ print.runjags.bginfo <- function(x, ...){
 
 plot.runjags.plots <- print.runjags.plots
 
-as.jags <- function(x, ...){
+as.jags <- function(x, adapt=1000, quiet=FALSE, ...){
 	UseMethod("as.jags")
 }
 as.jags.default <- function(x, ...){

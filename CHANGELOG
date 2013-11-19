@@ -25,6 +25,14 @@ NEW FEATURES
 
 Added rjparallel method for using parallel rjags models (possibly over a snow cluster)
 
+The rjags method will now try to avoid re-compiling the model wherever possible
+
+Changed the behaviour of adapt and burnin to be consistent between rjags methods and methods calling separate JAGS executables
+
+All methods now try to stop() using the specific error that crashed the model
+
+The simulation study function now returns error messages from crashed models
+
 Added runjags.options to suppress or reduce the output of warning messages (amongst other things)
 
 Added a load.runjagsmodule function to explicitly load the bundled JAGS extension module

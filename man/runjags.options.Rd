@@ -40,7 +40,8 @@ jagspath - the path to JAGS to use unless over-ridden in a function call
 (uses the findjags() function by default)
 
 method - the runjags method to use unless over-ridden in a function call
-(default is platform dependent)
+(default is 'rjags' if the rjags package is installed, or 'interruptible'
+otherwise)
 
 tempdir - default to temporary directory unless over-ridden in a
 function call (default TRUE)

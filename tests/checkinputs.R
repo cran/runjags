@@ -7,7 +7,7 @@ library(coda)
 
 if(!require(rjags)) stop("The rjags library is required to run this check")
 
-runjags.options(inits.warning=FALSE, rng.warning=FALSE)
+runjags.options(inits.warning=FALSE, rng.warning=FALSE, blockcombine.warning=FALSE)
 
 load.runjagsmodule()
 
@@ -47,14 +47,14 @@ results <- extend.jags(results,sample=1000)
 stopifnot(niter(as.mcmc.list(results))==2000)
 stopifnot(nvar(as.mcmc.list(results))==3)
 
-results2 <- extend.jags(results, drop.chain=1, summarise=FALSE)
+results2 <- extend.jags(results, sample=1000, drop.chain=1, summarise=FALSE)
 stopifnot(nchain(as.mcmc.list(results2))==1)
-stopifnot(list.format(results$end.state[[2]])$.RNG.name == list.format(results2$end.state[[1]])$.RNG.name)
+stopifnot(identical(list.format(results$end.state[[2]])$.RNG.name, list.format(results2$end.state[[1]])$.RNG.name))
 
-results2 <- extend.jags(results, drop.monitor="precision", summarise=FALSE)
+results2 <- extend.jags(results, sample=1000, drop.monitor="precision", summarise=FALSE)
 stopifnot(nvar(as.mcmc.list(results2))==2)
 
-results2 <- extend.jags(results, add.monitor="true.y", summarise=FALSE)
+results2 <- extend.jags(results, sample=1000, add.monitor="true.y", summarise=FALSE)
 stopifnot(nvar(as.mcmc.list(results2))==(3+N))
 
 cat("All input checks passed\n")

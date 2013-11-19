@@ -357,6 +357,7 @@ if(!failed){
 	})
 	sink(type='message')
 	sink()
+	close(zz)
 	unlink(zz)
 	if(class(success)=='try-error'){
 		writeLines('0')

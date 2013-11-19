@@ -32,7 +32,7 @@
 \usage{
 
 autorun.jags(model, monitor = NA, data=NA, n.chains=NA, 
-	inits = NA, startburnin = 5000, startsample = 10000,
+	inits = NA, startburnin = 4000, startsample = 10000,
 	datalist=NA, initlist=NA, psrf.target = 1.05, normalise.mcmc = TRUE,
 	check.stochastic = TRUE, modules=runjags.getOption('modules'), 
 	factories=runjags.getOption('factories'), 
@@ -40,7 +40,7 @@ autorun.jags(model, monitor = NA, data=NA, n.chains=NA,
 	confidence=0.95, plots = summarise, thin.sample = FALSE, 
 	jags = runjags.getOption('jagspath'), 
 	silent.jags = FALSE, interactive=FALSE, max.time=Inf,
-	adaptive=list(type="burnin", length=200), thin = 1, monitor.deviance
+	adaptive=1000, thin = 1, monitor.deviance
 	= FALSE, monitor.pd = FALSE, tempdir=runjags.getOption('tempdir'), 
 	jags.refresh=0.1, batch.jags=silent.jags, 
 	method=runjags.getOption('method'), method.options=list())
@@ -53,8 +53,7 @@ autoextend.jags(runjags.object, add.monitor=character(0),
 	raftery.options = list(), crash.retry=1, summarise = TRUE, 
 	confidence=0.95, plots = summarise, thin.sample = FALSE, 
 	jags = runjags.getOption('jagspath'), silent.jags = FALSE, 
-	interactive=FALSE, max.time=Inf, 
-	adaptive=list(type='burnin', length=200), 
+	interactive=FALSE, max.time=Inf, adaptive=1000, 
 	thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), 
 	jags.refresh=0.1, batch.jags=silent.jags, method=NA,
 	method.options=NA)
@@ -129,7 +128,8 @@ model. Default none.}
 run should be combined with the previous chains.  Default TRUE if not
 adding or removing variables or chains, and FALSE otherwise.}
 
-\item{startburnin}{the number of burnin iterations. Default 0.}
+\item{startburnin}{the number of burnin iterations, NOT including the
+adaptive iterations.}
 
 \item{startsample}{the total number of samples (including the chains
 supplied in runjags.object for autoextend.jags) on which to assess
@@ -262,13 +262,17 @@ next simulation extension to improve convergence will result in a total
 time of greater than max.time, the extension is aborted.  The time per
 iteration is estimated from the first simulation.  Acceptable units
 include 'seconds', 'minutes', 'hours', 'days', 'weeks', or the first
-letter(s) of each.  Default "1hr".}
+letter(s) of each.}
 
-\item{adaptive}{a list of advanced options controlling the length of the
-adaptive mode of each simulation.  Extended simulations do not require
-an adaptive phase, but JAGS prints a warning if one is not performed.
-Reduce the length of the adpative phase for very time consuming models.
-'type' must be one of 'adaptive' or 'burnin'.}
+\item{adaptive}{the length of the adaptive phase to use when re-compiling
+models.  This will be run for every new simulation except for the rjags
+method where it is only required to be run during the model compilation
+phase (this will only be performed once).  Note that the number of
+adaptive iterations is in addition to the burnin iterations - so if a
+model has 1000 adapt and 4000 burnin iterations the first sample will
+be taken at iteration 5001. It may be worth reducing the length of the 
+adpative phase for very time consuming models, as this adaptive phase
+is run during every model extension (except for the rjags method).}
 
 \item{thin}{the thinning interval to be used in JAGS.  Increasing the
 thinning interval may reduce autocorrelation, and therefore reduce the
@@ -383,28 +387,29 @@ Y <- rnorm(N, 2*X + 10, 1)
 # Model in the JAGS format
 model <- "model {
 for(i in 1 : N){
-Y[i] ~ dnorm(true.y[i], precision);
-true.y[i] <- (m * X[i]) + c;
+	Y[i] ~ dnorm(true.y[i], precision)
+	true.y[i] <- (m * X[i]) + c
 }
-m ~ dunif(-1000,1000);
-c ~ dunif(-1000,1000);
-precision ~ dexp(1);
+m ~ dunif(-1000,1000)
+c ~ dunif(-1000,1000)
+precision ~ dexp(1)
 
 #data# N, X, Y
 }"
 
 
-# Run the model using rjags:
-results <- autorun.jags(model=model,
+\dontrun{
+# Run the model using rjags with a 5 minute timeout:
+results <- autorun.jags(model=model, max.time="5m",
 monitor=c("m", "c", "precision"), method="rjags")
 
 # Analyse traceplots of the results to assess convergence:
-\dontrun{
 plot(results, type="trace", layout=c(3,1))
-}
 
 # Summary of monitored variables:
 results
+
+}
 
 }
 

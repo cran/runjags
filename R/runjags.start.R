@@ -35,6 +35,7 @@ runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libp
 runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 
 	# Eventually we should compile the model once and then export the compiled model and then change the inits - but we are currently unable to change RNG states on compiled models with rjags 3.x
+	# We also have to destroy the compiled rjags object after calling runjags.start() as we update different compiled objects
 
 	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary - and the modules loaded just before that
 	# BUT will have to be re-compiled with appropriate RNG on each node
@@ -78,12 +79,6 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 			}
 		}		
 		
-		chains <- extra.options$sim.chains[[s]]
-		inits <- inits[chains]
-		n.chains <- length(chains)
-		
-		rjags <- jags.model(file=textConnection(model), data=data, inits=inits, n.chains, n.adapt=0, quiet=TRUE)
-	
 		for(i in 1:length(extra.options$factories)){
 			if(extra.options$factories[i]!=""){
 				f <- strsplit(gsub(")","",extra.options$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
@@ -95,12 +90,15 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 			}
 		}
 		
-		if(extra.options$adapt>0){
-			flush.console()
-			by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by
-			finishedadapting <- adapt(rjags,n.iter=extra.options$adapt,progress.bar=extra.options$progress.bar,by=by,end.adaptation=TRUE)
-			flush.console()
-		}
+		chains <- extra.options$sim.chains[[s]]
+		inits <- inits[chains]
+		n.chains <- length(chains)
+		tmodel <- textConnection(model)
+		
+		# Once we have a way of changing states without recompiling, this won't be required:
+		rjags <- jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=extra.options$adapt, quiet=TRUE)
+		close(tmodel)
+		
 		if(extra.options$burnin>0){
 			flush.console()
 			by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
@@ -140,6 +138,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 	}
 	
 	allm <- parLapply(cl,1:nsims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
+#	allm <- lapply(1:nsims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
 	
 	tvarnames <- sapply(allm,function(x) return(paste(varnames(x$mcmc),collapse=',')))
 	if(!all(tvarnames==tvarnames[1])) stop("An error occured with the rjparallel method - simulations returned differing variable names")
@@ -212,9 +211,6 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 				
 				cwd <- getwd()
 								
-				#print("TEMPORARY")
-				#unlink(paste("sim",s,sep="."),recursive=TRUE)
-				
 				# Check to see that the sim files are there (which they will be if we created the cluster inside the function), if not create the folder:
 				if(paste("sim",s,sep=".") %in% list.files()){
 					cleanup <- FALSE
@@ -265,9 +261,6 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 				newfiles <- vector('list',length=length(newfilenames))
 				names(newfiles) <- newfilenames
 				for(f in 1:length(newfiles)) newfiles[f] <- paste(readLines(paste("sim.",s,"/",newfilenames[f],sep="")), collapse="\n")
-				
-				#print("TEMPORARY")
-				#unlink(paste("sim",s,sep="."),recursive=TRUE)
 				
 				if(cleanup){
 					unlink(paste("sim",s,sep="."),recursive=TRUE)
@@ -358,7 +351,7 @@ runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 				if(silent.jags){
 					success[s] <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep=""), intern=FALSE, wait=FALSE)
 				}else{
-					success[s] <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt", sep=""), intern=FALSE, wait=FALSE)					
+					success[s] <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep=""), intern=FALSE, wait=FALSE)					
 				}
 			}
 		}
@@ -599,32 +592,15 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 
 runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, nsims, jobname, cl, remote.jags, rjags){
 	
-	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary - and the modules loaded just before that
+	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary - and the modules/factories loaded just before that
 	extra.options <- rjags[names(rjags)!='rjags']
 	rjags <- rjags$rjags
 
-	for(i in 1:length(extra.options$factories)){
-		if(extra.options$factories[i]!=""){
-			f <- strsplit(gsub(")","",extra.options$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
-			fa <- ""
-			try(fa <- as.character(list.factories(f[2])$factory))
-			if(!f[1] %in% fa) stop(paste("The factory '", f[1], "' of type '", f[2], "' is not available - ensure any required modules are also provided", sep=""))
-			success <- try(set.factory(f[1],f[2],TRUE))			
-			if(class(success)=="try-error") stop(paste("Failed to load the factory '", f[1], "' of type '", f[2], "'", sep=""))
-		}
-	}
-		
 	if(silent.jags) extra.options$progress.bar <- "none"
 	
 	if(!silent.jags) swcat("Calling the simulation using the rjags method...\n")
 
-	if(extra.options$adapt>0){
-		if(!silent.jags) cat("  Adapting the model for ", format(extra.options$adapt,scientific=FALSE), " iterations...\n",sep="")
-		flush.console()
-		by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by
-		finishedadapting <- adapt(rjags,n.iter=extra.options$adapt,progress.bar=extra.options$progress.bar,by=by,end.adaptation=TRUE)
-		flush.console()
-	}
+	# Note that adap is always ignored as we are guaranteed to have a compiled and adapted model:
 	if(extra.options$burnin>0){
 		if(!silent.jags) cat("  Burning in the model for ", format(extra.options$burnin,scientific=FALSE), " iterations...\n",sep="")
 		flush.console()
@@ -1250,7 +1226,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 	if(resetbinpath) Sys.setenv(LTDL_LIBRARY_PATH=currentsysbinpath)
 
 	
-	if(class(result)=="try-error") stop("An error occured while attempting to run the JAGS model")
+	if(class(result)=="try-error") stop(paste("The following error was encountered while attempting to run the JAGS model:  ", as.character(result), sep=""),call.=FALSE)
 		
 	if(class(result)=="list"){
 		results <- result

@@ -3,7 +3,6 @@
 \usepackage[utf8]{inputenc} 
 %\VignetteIndexEntry{Using the runjags package}
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -19,8 +18,7 @@
 
 %% an abstract and keywords
 \Abstract{
-  The \pkg{runjags} package provides a set of interface functions to facilitate running Markov chain Monte Carlo models in \proglang{JAGS} from within \proglang{R}.  Automated calculation of appropriate convergence and sample length diagnostics, user-friendly access to commonly used graphical outputs and summary statistics, and parallelised methods of running \proglang{JAGS} are provided.  The primary motivation is to provide automated methods of analysis of simulated data to facilitate model performance assessment and drop-$k$ type cross-validation studies using high performance computing clusters provided by \pkg{snow}.  A module extension for \proglang{JAGS} providing the Pareto family of distributions is also included within \pkg{runjags}. This vignette is taken from the publication for the \pkg{runjags} package \citep{Denwood:2014ee}.  It outlines the primary functions of this package, and gives an illustration of a simulation study to assess the sensitivity of a gamma-Poisson (negative binomial) distribution to three different ‘minimally informative’ priors.
-  
+  The \pkg{runjags} package provides a set of interface functions to facilitate running Markov chain Monte Carlo models in \proglang{JAGS} from within \proglang{R}.  Automated calculation of appropriate convergence and sample length diagnostics, user-friendly access to commonly used graphical outputs and summary statistics, and parallelised methods of running \proglang{JAGS} are provided.  The primary motivation is to provide automated methods of analysis of simulated data to facilitate model performance assessment and drop-$k$ type cross-validation studies using high performance computing clusters provided by \pkg{snow}.  A module extension for \proglang{JAGS} providing the Pareto family of distributions is also included within \pkg{runjags}. This vignette is taken from the publication for the \pkg{runjags} package \citep{Denwood:2014ee}.  It outlines the primary functions of this package, and gives an illustration of a simulation study to assess the sensitivity of a gamma-Poisson (negative binomial) distribution to three different ‘minimally informative’ priors.  
 }
 \Keywords{MCMC, Bayesian, graphical models, interface utilities, \proglang{JAGS}, \pkg{BUGS}, \proglang{R}}
 \Plainkeywords{MCMC, Bayesian, graphical models, interface utilities, JAGS, BUGS, R} %% without formatting
@@ -89,7 +87,7 @@ The core functionality of the runjags package allows a model specified by the us
 
 The model formulation can also contain three special inline statements which are interpreted by the runjags package:  \jagscode{\#data\#}, which indicates that the comma separated variable names to the right of the statement are to be included in the simulation as data, and similarly \jagscode{\#monitor\#} which indicates variable names to monitor, and \jagscode{\#inits\#} which indicates variables for which initial values are to be provided.  Variables specified by \jagscode{\#data\#} and \jagscode{\#inits\#} will be automatically retrieved from a named list provided using the `datalist' and `initlist' arguments, or failing that from the parent environment for the function call.  For initial values, a list of length equal to the number of chains containing initial values to be used for each chain should be provided; if only a single set of initial values is provided a warning will be given.  The \jagscode{\#data\#} and \jagscode{\#inits\#} variable names may also match a function returning an appropriate vector, in the case of initial values this function may accept a single argument indicating the chain that the initial values are to be used for.  Multiple inline statements can be used, and will simply be combined.
 
-There are several options to the `run.jags' function including explicit specification of monitors, data and initial values, the required burn in period, sampling length and thinning interval, the summary statistics to calculate from the chains, the method to use for calling the \proglang{JAGS} executable, and options for `modules' and `factories' which allow a character vector of \proglang{JAGS} extension modules and factories to be loaded.  A basic model run with a fixed burn in period (default 5000 iterations) and sampling period (default 10000 iterations) can be obtained as follows.
+There are several options to the `run.jags' function including explicit specification of monitors, data and initial values, the required burn in period, sampling length and thinning interval, the summary statistics to calculate from the chains, the method to use for calling the \proglang{JAGS} executable, and options for `modules' and `factories' which allow a character vector of \proglang{JAGS} extension modules and factories to be loaded.  A basic model run with a fixed burn in period (default 4000 iterations after 1000 adaptive iterations) and sampling period (default 10000 iterations) can be obtained as follows.
 
 Specify a JAGS model as a character vector:
 \begin{Schunk}
@@ -135,11 +133,11 @@ R> .RNG.name <- function(chain)
 Run the simulation:
 \begin{Schunk}
 \begin{Sinput}
-R> results <- run.jags(model, n.chains = 2)
+R> results <- run.jags(model, n.chains = 2, method="interruptible")
 \end{Sinput}
 \begin{Soutput}
-Calling the simulation... (this may take some time)
-Welcome to JAGS 3.4.0 on Sat Nov 16 00:13:19 2013
+Calling the simulation...
+Welcome to JAGS 3.4.0 on Mon Nov 18 21:37:47 2013
 JAGS is free software and comes with ABSOLUTELY NO WARRANTY
 Loading module: basemod: ok
 Loading module: bugs: ok
@@ -151,13 +149,18 @@ Loading module: bugs: ok
 . Reading parameter file inits1.txt
 . Reading parameter file inits2.txt
 . Initializing model
-. Updating 5000
--------------------------------------------------| 5000
+. Adapting 1000
+-------------------------------------------------| 1000
+++++++++++++++++++++++++++++++++++++++++++++++++++ 100%
+Adaptation successful
+. Updating 4000
+-------------------------------------------------| 4000
 ************************************************** 100%
 . . . . Updating 10000
 -------------------------------------------------| 10000
 ************************************************** 100%
-. . . . Deleting model
+. . . . Updating 0
+. Deleting model
 . 
 Simulation complete.  Reading coda files...
 Coda files loaded successfully
@@ -167,9 +170,8 @@ Finished running the simulation
 \end{Soutput}
 \end{Schunk}
 
-The simple model shown (a linear model with intercept and single explanatory variable) is run using two chains, contains three variables that are monitored, and convergence is assessed using the Gelman-Rubin statistic \citep{Gelman1992}.  The default method for running the model does so by calling an external \proglang{JAGS} process in the foreground, but it is also possible to run a model using a background process, or using a separate background process for each chain to allow parallel processing of chains.  In this example the RNG type and seed is set for each chain, but if none is provided each chain will automatically be given a different random number generator (with a warning) in order to avoid possible issues with non-independence between chains.  For example the following code will allow a possibly lengthy \proglang{JAGS} simulation to be run in the background using two processors to speed up the simulation.
+The simple model shown (a linear model with intercept and single explanatory variable) is run using two chains, contains three variables that are monitored, and convergence is assessed using the Gelman-Rubin statistic \citep{Gelman1992}.  The method for running the model shown here does so by calling an external \proglang{JAGS} process in the foreground, but a variety of methods are available:  `parallel' runs separate \proglang{JAGS} processes for parallel chains, `background' and `bgparallel' run the model in the background with control of the \proglang{R} interface returning to the user while it is running, `snow' runs parallel chains in separate \proglang{JAGS} processes using a (possibly user-specified) distributed computing cluster, `rjags' uses the \pkg{rjags} package to run \proglang{JAGS}, and `rjparallel' runs parallel chains using separate \pkg{rjags} models using a distributed computing cluster.  The parallel methods (`parallel', `bgparallel' and `rjparallel') should speed up computation of models with multiple chains on multi-core machines, and all issues pertaining to pseudo-random number generation are automatically handled by \pkg{runjags}:  in this example the RNG type and seed is set for each chain, but if none is provided each chain will automatically be given a different random number generator in order to avoid possible issues with non-independence between chains.  The method used for each model run can be controlled directly using the `method' argument, or by changing the default using the `runjags.options' function to permanently set an alternative method as the default.  For example the following code will allow a possibly lengthy \proglang{JAGS} simulation to be run in the background using two processors to speed up the simulation:
 
-Start a JAGS model running as a background process:
 \begin{Schunk}
 \begin{Sinput}
 R> info <- run.jags(model, n.chains = 2, method = 'bgparallel')
@@ -179,7 +181,7 @@ Starting the simulation in the background...
 The JAGS process is now running in the background
 \end{Soutput}
 \end{Schunk}
-Carry on working in R while waiting for the simulation to complete, then retrieve the results once it has:
+This returns control of the terminal to the user, who can then carry on working in R while waiting for the simulation to complete, then retrieve the results once it has:
 \begin{Schunk}
 \begin{Sinput}
 R> results <- results.jags(info)
@@ -193,9 +195,7 @@ Finished running the simulation
 \end{Soutput}
 \end{Schunk}
 
-Other methods exist for running \proglang{JAGS} in foreground parallel processes, including using a distributed \pkg{snow} cluster \citep{Tierney2013}, using Apple's (now defunct) \pkg{Xgrid} distributed computing clusters, or using the \pkg{rjags} package \citep{Plummer2013} to interface to \proglang{JAGS} directly either using separate models for each chain or a single model for all chains (the latter is the default behaviour if the \pkg{rjags} package is already loaded).  The method used for each model run can be controlled directly using the `method' argument, or by changing the default using the `runjags.options' function to permanently set an alternative method as the default.
-
-If the model did not converge or take sufficient samples from the initial \proglang{JAGS} call, the model can be extended for a fixed additional number of samples with the `extend.jags' function, with the initial results either being combined with the new simulation or discarded.  Alternatively, the simulation can be automatically extended using the `autoextend.jags' function, which ensures that the Gelman-Rubin statistic for all monitored parameters meets the specified target to indicate convergence, and that the required number of samples is obtained.  The automated assessment of convergence should always be verified manually for inference to be relied upon, but a fully automated analysis may be sufficient for simulated data.  The initial simulation may also be called using `autorun.jags' in place of `run.jags' to fully automate control of the MCMC simulation run length from the start.
+If the model did not converge or take sufficient samples from the initial \proglang{JAGS} call, the model can be extended (using a different method to call \proglang{JAGS} if desired) for a fixed additional number of samples with the `extend.jags' function, with the initial results either being combined with the new simulation or discarded.  Alternatively, the simulation can be automatically extended using the `autoextend.jags' function, which ensures that the Gelman-Rubin statistic for all monitored parameters meets the specified target to indicate convergence, and that the required number of samples is obtained.  The automated assessment of convergence should always be verified manually for inference to be relied upon, but a fully automated analysis may be sufficient for simulated data.  The initial simulation may also be called using `autorun.jags' in place of `run.jags' to fully automate control of the MCMC simulation run length from the start.
 
 The output of these functions is an object of class `runjags'.  This class is associated with S3 methods for print, plot, as.mcmc and as.mcmc.list - all of which may take a `vars' argument to specify a subset of monitored nodes (using partial matching).  Further utility functions are available for combining multiple objects (`combine.mcmc') and for conversion to/from objects produced by the rjags package (`as.runjags' and `as.jags').  The plot method is intended to be used for convergence diagnostics, and has further arguments for commonly used layout and plot type arguments, but is not intended to be used for producing more specific graphical output from converged MCMC chains for which plot methods associated with `mcmc' or `mcmc.list' objects are more appropriate.  A typical examination of the output of a simulation (the default print method, and a trace plot output for variable names partially matching the letter `c') could be obtained as follows:
 
@@ -204,18 +204,19 @@ The output of these functions is an object of class `runjags'.  This class is as
 R> results
 \end{Sinput}
 \begin{Soutput}
+
 JAGS model summary statistics from 20000 samples 
 (chains = 2; burnin = 5000):
                                                  
           Lower95 Median Upper95   Mean        SD
-coef       1.9933 1.9994  2.0054 1.9994 0.0030835
-int        9.7812 10.141  10.492 10.141   0.18139
-precision 0.89058 1.2131   1.561 1.2215    0.1717
-                                                     
-                MCerr MC%ofSD SSeff      AC.10   psrf
-coef      0.000070118     2.3  1934    0.15969 1.0024
-int         0.0041253     2.3  1933    0.15826 1.0024
-precision   0.0012472     0.7 18953 -0.0036785 1.0003
+coef       1.9935 1.9995   2.006 1.9996 0.0031642
+int        9.7534  10.13   10.48 10.131   0.18577
+precision 0.89024 1.2131  1.5533 1.2213   0.17145
+                                                    
+                MCerr MC%ofSD SSeff     AC.10   psrf
+coef      0.000076615     2.4  1706    0.1895 1.0003
+int         0.0044427     2.4  1748   0.19662 1.0002
+precision   0.0012484     0.7 18862 0.0053645      1
 
 Total time taken: 11.9 seconds
 \end{Soutput}
@@ -377,41 +378,39 @@ R> results <- run.jags.study(S, jagsmodel, datafunction,
 \begin{Soutput}
 Starting a JAGS study at 01:17
 Testing the model and data for simulation 990...
+Compiling rjags model and adapting for 1000 iterations...
 Finished running the simulation
 The model runs OK
 Calling autorun.jags for 1000 simulations...
 Finished running the simulations
 Finished summarising results
 Finished JAGS study at 01:27 (total time taken: 6.9 minutes)
-
-Warning message:
-In run.jags.study(S, jagsmodel, datafunction, targets = list(mean = truemean,  :
-  An error was returned from  2  out of  1000  simulations:  the errors will be 
-  returned along with the runjags objects
 \end{Soutput}
 \begin{Sinput}
 R> results
 \end{Sinput}
 \begin{Soutput}
-Average values obtained from a JAGS study with a total of 998 simulations 
-(excluding 2 crashed simulations):
+Average values obtained from a JAGS study with a total of 999 simulations
+(excluding 1 crashed simulations):
 
       Target   Median     Mean Lower95%CI Upper95%CI Range95%CI Within95%CI
-mean    2.00 2.039121 2.197144  0.9620889   3.730709    2.76862   0.9328657
-shape   0.75 1.929399 7.525805  0.1716466  37.491728   37.32008   0.9579158
+mean    2.00 2.037695 2.195683  0.9618164   3.732989   2.771172   0.9329329
+shape   0.75 1.852515 6.025725  0.1719675  26.917416  26.745448   0.9579580
       AutoCorr(Lag10) Simulations
-mean        0.1135094         998
-shape       0.4807493         998
+mean        0.1137136         999
+shape       0.4883676         999
 
-Average time taken:  5.4 seconds (range: 2 seconds - 27.2 seconds)
-Average burnin required:  6754 (range: 5000 - 85000)
-Average samples required:  10836 (range: 10000 - 125074)
+The 1 error returned has been stored in the '$errors' element of the list returned from run.jags.study
+
+Average time taken:  5.2 seconds (range: 2.4 seconds - 36.9 seconds)
+Average burnin required:  7272 (range: 5000 - 145000)
+Average samples required:  10470 (range: 10000 - 57825)
 \end{Soutput}
 \end{Schunk}
 
 The function returns an object of class `runjags.study', with a default print method that summarises the results as appropriate; showing average values for the parameters that are common to multiple simulations, and individual results for parameters that are estimated from only a single simulation (for drop-1 cross validation studies).  All individual simulations are run using the underlying autorun.jags function, which attempts to ensure that sufficient samples have been taken to ensure convergence and minimise Monte Carlo error.
 
-For this simulation study, the \jagscode{mean} parameter was estimated reasonably well, but there was a large positive bias for the median and mean estimates of the \jagscode{shape} parameter which would result in under-estimation of the coefficient of variation.  As would be expected, the 95\% confidence intervals for both parameters identified the true value approximately 95\% of the time.  However, there was substantial autocorrelation for the shape parameter, which will have the effect of slowing convergence and increasing the required number of samples.  Two of the simulations also returned an error; further investigation revealed that the cause was sampling of extremely small values for the \jagscode{shape} parameter for two datasets with a particularly large variance and small mean.
+For this simulation study, the \jagscode{mean} parameter was estimated reasonably well, but there was a large positive bias for the median and mean estimates of the \jagscode{shape} parameter which would result in under-estimation of the coefficient of variation.  As would be expected, the 95\% confidence intervals for both parameters identified the true value approximately 95\% of the time.  However, there was substantial autocorrelation for the shape parameter, which will have the effect of slowing convergence and increasing the required number of samples.  One of the simulations also returned an error; further investigation revealed that the cause of the error (`Slicer stuck at value with infinite density') was sampling of extremely small values for the \jagscode{shape} parameter for a dataset with a particularly large variance and small mean.
 
 
 \subsection{Sensitivity to prior distributions}
@@ -438,17 +437,17 @@ Mean Prior & Shape Prior & Mean & Range of CI & Within CI & Auto. Corr. & Simula
 
 \hline
 
-Gamma & Gamma & 2.20 & 2.77 & 0.93 & 0.11 & 998\\
-Uniform & Gamma & 2.81 & 5.42 & 0.95 & 0.23 & 999\\
+Gamma & Gamma & 2.20 & 2.77 & 0.93 & 0.11 & 999\\
+Uniform & Gamma & 2.67 & 4.24 & 0.95 & 0.24 & 996\\
 Lomax & Gamma & 2.09 & 2.50 & 0.93 & 0.08 & 999\\
 \hline
-Gamma & Uniform & 2.13 & 2.30 & 0.86 & 0.30 & 1000\\
-Uniform & Uniform & 2.39 & 2.88 & 0.87 & 0.37 & 998\\
-Lomax & Uniform & 2.06 & 2.13 & 0.86 & 0.28 & 999\\
+Gamma & Uniform & 2.13 & 2.31 & 0.86 & 0.27 & 1000\\
+Uniform & Uniform & 2.39 & 2.90 & 0.89 & 0.34 & 999\\
+Lomax & Uniform & 2.06 & 2.14 & 0.86 & 0.25 & 999\\
 \hline
-Gamma & Lomax & 2.18 & 2.70 & 0.93 & 0.08 & 999\\
-Uniform & Lomax & 2.55 & 3.62 & 0.96 & 0.17 & 999\\
-Lomax & Lomax & 2.09 & 2.47 & 0.93 & 0.04 & 999\\
+Gamma & Lomax & 2.18 & 2.70 & 0.93 & 0.07 & 999\\
+Uniform & Lomax & 2.56 & 3.74 & 0.96 & 0.17 & 999\\
+Lomax & Lomax & 2.09 & 2.47 & 0.93 & 0.04 & 1000\\
 
 \hline
 
@@ -470,17 +469,17 @@ Mean Prior & Shape Prior & Mean & Range of CI & Within CI & Auto. Corr. & Simula
 
 \hline
 
-Gamma & Gamma & 7.53 & 37.32 & 0.96 & 0.48 & 998\\
-Uniform & Gamma & 6.72 & 32.21 & 0.95 & 0.49 & 999\\
-Lomax & Gamma & 7.07 & 34.39 & 0.96 & 0.49 & 999\\
+Gamma & Gamma & 6.03 & 26.75 & 0.96 & 0.49 & 999\\
+Uniform & Gamma & 5.86 & 25.36 & 0.95 & 0.49 & 996\\
+Lomax & Gamma & 5.81 & 25.66 & 0.96 & 0.48 & 999\\
 \hline
-Gamma & Uniform & 126.78 & 282.40 & 0.93 & 0.55 & 1000\\
-Uniform & Uniform & 126.09 & 281.99 & 0.93 & 0.55 & 998\\
-Lomax & Uniform & 128.02 & 287.94 & 0.93 & 0.54 & 999\\
+Gamma & Uniform & 115.42 & 255.49 & 0.92 & 0.59 & 1000\\
+Uniform & Uniform & 112.49 & 250.81 & 0.93 & 0.60 & 999\\
+Lomax & Uniform & 114.65 & 249.44 & 0.92 & 0.59 & 999\\
 \hline
-Gamma & Lomax & 1.49 & 4.04 & 0.97 & 0.38 & 999\\
-Uniform & Lomax & 1.47 & 4.10 & 0.96 & 0.38 & 999\\
-Lomax & Lomax & 1.50 & 4.10 & 0.97 & 0.38 & 999\\
+Gamma & Lomax & 1.47 & 3.99 & 0.97 & 0.37 & 999\\
+Uniform & Lomax & 1.44 & 3.91 & 0.96 & 0.39 & 999\\
+Lomax & Lomax & 1.49 & 4.04 & 0.97 & 0.38 & 1000\\
 
 \hline
 
@@ -536,7 +535,7 @@ R> ModelC <- "model{
 
 These models are all intended to represent the same simple data structure, and share similar `minimally informative' prior distributions on the two parameters of interest.  A comparison of the posterior coverage and autocorrelation between these models can be made, using gamma priors and Lomax priors for both parameters to assess the relative sensitivity of the three models to the priors.  This procedure is performed using the code given in Section~\ref{sec:origmodel} for these six candidate model formulations.
 
-A comparison of the results from each model is shown in Tables~\ref{tab:meanmodels} and~\ref{tab:shapemodels}.  The two models A \& B encountered errors from two of the datasets using gamma priors, and model A encountered an error for one dataset using the Lomax prior.  Inference for the mean parameter was very similar between models A and C, but was quite different for Model B using the gamma prior.  As before, inference for the shape parameter was heavily affected by the choice of prior distributions, with the models using Lomax priors out-performing the corresponding models using gamma priors for each model type.  The choice of model formulation had a small effect on the inference made for the shape parameter using Lomax priors, particularly in terms of the range of the 95'\% CI produced, but a much larger effect on the inference made using gamma priors.  
+A comparison of the results from each model is shown in Tables~\ref{tab:meanmodels} and~\ref{tab:shapemodels}.  The two models A \& B encountered an error from one dataset using gamma priors, but all datasets were analysed successfully using Lomax priors.  Inference for the mean parameter was very similar between models A and C, but was somewhat different for Model B using the gamma prior.  As before, inference for the shape parameter was heavily affected by the choice of prior distributions, with the models using Lomax priors out-performing the corresponding models using gamma priors for each model type.  The choice of model formulation had a small effect on the inference made for the shape parameter using Lomax priors, particularly in terms of the autocorrelation and range of the 95'\% CI produced, but a much larger effect on the inference made using gamma priors.  
 
 \begin{table}
 \centering
@@ -548,10 +547,10 @@ Model & Prior & Mean & Range of CI & Within CI & Auto. Corr. & Simulations\\
 
 \hline
 
-Model A & Lomax & 2.09 & 2.47 & 0.93 & 0.04 & 999\\
-Model A & Gamma & 2.20 & 2.77 & 0.93 & 0.11 & 998\\
+Model A & Lomax & 2.09 & 2.47 & 0.93 & 0.04 & 1000\\
+Model A & Gamma & 2.20 & 2.77 & 0.93 & 0.11 & 999\\
 Model B & Lomax & 2.06 & 2.33 & 0.92 & 0.01 & 1000\\
-Model B & Gamma & 10.6 & 2.78 & 0.94 & 0.03 & 998\\
+Model B & Gamma & 3.87 & 2.78 & 0.94 & 0.03 & 999\\
 Model C & Lomax & 2.08 & 2.44 & 0.93 & 0.02 & 1000\\
 Model C & Gamma & 2.19 & 2.74 & 0.93 & 0.05 & 1000\\
 
@@ -574,12 +573,12 @@ Model & Prior & Mean & Range of CI & Within CI & Auto. Corr. & Simulations\\
 
 \hline
 
-Model A & Lomax & 1.50 & 4.10 & 0.97 & 0.38 & 999\\
-Model A & Gamma & 7.53 & 37.32 & 0.96 & 0.48 & 998\\
-Model B & Lomax & 1.24 & 2.64 & 0.98 & 0.59 & 1000\\
-Model B & Gamma & 2.97 & 10.43 & 0.96 & 0.65 & 998\\
-Model C & Lomax & 1.51 & 3.97 & 0.97 & 0.19 & 1000\\
-Model C & Gamma & 9.35 & 46.67 & 0.96 & 0.32 & 1000\\
+Model A & Lomax & 1.49 & 4.04 & 0.97 & 0.38 & 1000\\
+Model A & Gamma & 6.03 & 26.75 & 0.96 & 0.49 & 999\\
+Model B & Lomax & 1.25 & 2.67 & 0.98 & 0.57 & 1000\\
+Model B & Gamma & 2.51 & 8.60 & 0.96 & 0.65 & 999\\
+Model C & Lomax & 1.53 & 4.05 & 0.97 & 0.20 & 1000\\
+Model C & Gamma & 9.31 & 47.17 & 0.96 & 0.33 & 1000\\
 
 \hline
 
@@ -660,7 +659,9 @@ Conti S, Presanis AM, van Veen MG, Xiridou M, Donoghoe MC, {Rinder Stengaard}
 
 \bibitem[{Denwood([In Review])}]{Denwood:2014ee}
 Denwood, MJ (In Review).
-\newblock \enquote{{runjags: An \proglang{R} Package Providing Interface Utilities, Distributed Computing Methods and Additional Distributions For MCMC Models in \proglang{JAGS}}.}
+\newblock \enquote{{runjags: An \proglang{R} Package Providing Interface Utilities, 
+Distributed Computing Methods and Additional Distributions For MCMC Models 
+in \proglang{JAGS}}.}
 \newblock \emph{Journal of Statistical Software}.
 
 \bibitem[{Denwood(2010)}]{denwood2010thesis}

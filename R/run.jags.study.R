@@ -1,4 +1,4 @@
-run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=list(), confidence=0.95, record.chains=FALSE, runjags.options=list(), cat.progress=FALSE, test=TRUE, parallel.method=parLapply, ...){
+run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=list(), confidence=0.95, record.chains=FALSE, max.time="15m", runjags.options=list(), cat.progress=FALSE, test=TRUE, parallel.method=parLapply, ...){
 	
 	# ... is passed either to autorun.jags (add.monitor not allowed, combine not allowed, maybe others) or to parallel.method function
 	
@@ -27,7 +27,12 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 		runjags.options$method <- expression(if('rjags' %in% .packages(TRUE)) 'rjags' else 'interruptible')
 	}else{
 		runjags.options$method <- getrunjagsmethod(runjags.options$method)
+		if(runjags.options$method%in%runjagsprivate$parallelmethod) stop("Cannot use parallel chains for the same simulation with the run.jags.study function")
 	}
+	if(any(names(runjags.options)=="max.time")){
+		warning("The 'max.time' argument specified to runjags.options was ignored - this parameter is in the argument list for run.jags.study")
+	}
+	runjags.options$max.time <- max.time
 	
 	if(!any(names(runjags.options)=="plots")){
 		runjags.options$plots <- FALSE
@@ -56,7 +61,7 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	runjags.options$datalist <- NaN
 	
 	# Get the data auto-specified in the model so we can copy and possibly over-write it:
-	modelsetup <- setup.jagsfile(model,n.chains=1,call.setup=FALSE,failincomplete=FALSE,method=runjags.options$method)
+	modelsetup <- setup.jagsfile(model,n.chains=1,call.setup=FALSE,failincomplete=FALSE,method=eval(runjags.options$method))
 	modeldata <- modelsetup$data
 	if(is.na(modeldata)) modeldata <- list() else modeldata <- list.format(modeldata)
 	
@@ -125,7 +130,7 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	args <- runjags.options[which(names(runjags.options) %in% names(formals(setup.jagsfile)))]
 	obj <- do.call("setup.jagsfile", args=args)
 	
-	if(any(obj$modules=="runjags") && runjags.options$method!="rjags") stop("")
+	if(any(obj$modules=="runjags") && (!eval(runjags.options$method)%in%runjagsprivate$rjagsmethod)) stop("The builtin runjags module is only available for rjags and rjparallel methods")
 	
 	if(any(c("popt", "pd.i") %in% obj$monitor)){
 		warning("Cannot monitor popt or pd.i with automatic run length functions - the specified monitor(s) have been removed")
@@ -149,6 +154,8 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	}else{
 		swcat("The model compiles OK\n")
 	}
+	
+	flush.console()
 	
 	# Slight hack - we're not calling actually run.jags so add combine=FALSE to the argument list:
 	runjags.options <- runjags.options[which(names(runjags.options) %in% names(formals(autoextend.jags)))]
@@ -232,21 +239,31 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 		stop("An unexpected error occured - ensure that the model runs using run.jags on the first dataset, and try using lapply as the parallel.method to debug")
 	}
 	
-	errors <- sapply(results, class)=="try-error"
-	if(all(errors)){
+	crashed <- sapply(results, class)=="try-error"
+	error <- sapply(results[crashed],as.character)
+
+	if(length(error)!=0){
+		names(error) <- paste("simulation.",which(crashed),sep="")
+		if(eval(runjags.options$method) %in% runjagsprivate$rjagsmethod){
+			class(error) <- "rjags.output"
+		}else{
+			class(error) <- "runjags.output"
+		}
+	}
+	
+	if(all(crashed)){
 		failedjags$study <- results
 		if(test) stop("All simulations returned an error (see failedjags$study) - ensure that the model runs using run.jags on the first dataset, and try using lapply as the parallel.method to debug") else stop("All simulations returned an error (see failedjags$study) - ensure that the model runs using run.jags on the first dataset")
 	}
-	if(any(errors)) warning(paste("An error was returned from ", sum(errors), " out of ", length(errors), " simulations:  the errors will be returned along with the runjags objects"))
 	
 	swcat("Finished running the simulations\n")
 
 	if(simulations != length(results)) stop("A different number of results was returned to that specified by simulations - ensure that the model runs using run.jags on the first dataset, and try using lapply as the parallel.method to debug")
 	
 	# Farm this out into another function so we can easily have a retrieve.jags.study function one day - targets will have to be added to the runjags.study.suspended object:
-	retval <- summarise.jags.study(results=results[!errors], targets=targets, confidence=confidence)
+	retval <- summarise.jags.study(results=results[!crashed], targets=targets, confidence=confidence)
 	
-	retval <- c(retval, list(simulations=simulations, model=obj$model, targets=targets, monitor=unique(c(obj$monitor,names(targets))), datafunction=datafunction, data=DATAS, crashed=errors))
+	retval <- c(retval, list(simulations=simulations, model=obj$model, targets=targets, monitor=unique(c(obj$monitor,names(targets))), datafunction=datafunction, data=DATAS, crashed=crashed, errors=error))
 	if(record.chains) retval <- c(retval, list(runjags=results))
 	
 	class(retval) <- "runjags.study"

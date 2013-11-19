@@ -74,7 +74,11 @@ class RNG
 	
 namespace runjags{
 	
-int runjagstestingfun(int disttype, int dpqr, bool uselog, bool lower, int N, double x[], int npars, double parameters[], double *values){
+int runjagstestingfun(int disttype, int dpqr, int uselogi, int loweri, int N, double x[], int npars, double parameters[], double *values){
+	
+	// Cast ints to bool in C++ ... will hopefully fix issues with (endianness or c/c++ issues?) problems on sparc
+	bool uselog = uselogi;
+	bool lower = loweri;
 	
 	// Virtual class to be replaced with specific class (and check the number of parameters - return a status 1 if wrong):
 	RScalarDist *dist;
@@ -161,7 +165,7 @@ int runjagstestingfun(int disttype, int dpqr, bool uselog, bool lower, int N, do
 
 extern "C" {
 
-void testrunjags(int *disttype, int *dpqr, bool *uselog, bool *lower, int *N, double *x, int *npars, double *parameters, double *values, int *status) // All pointers as everything from R is a vector
+void testrunjags(int *disttype, int *dpqr, int *uselog, int *lower, int *N, double *x, int *npars, double *parameters, double *values, int *status) // All pointers as everything from R is a vector
 {
 
 	status[0] = runjags::runjagstestingfun(disttype[0], dpqr[0], uselog[0], lower[0], N[0], x, npars[0], parameters, values);

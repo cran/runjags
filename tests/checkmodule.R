@@ -27,7 +27,8 @@ checkrunjagsmod <- function(distribution, funtype, parameters, x, uselog=FALSE, 
 	N <- length(x)
 	values <- numeric(N)
 	
-	output <- .C('testrunjags',disttype=as.integer(disttype),dpqr=as.integer(dpqr),uselog=as.logical(uselog),lower=as.logical(lower),N=as.integer(N), x=as.double(x),npars=as.integer(npars),parameters=as.double(parameters),values=as.double(values),status=integer(1))
+	# Having problems with bools on sparc, so use ints here:
+	output <- .C('testrunjags',disttype=as.integer(disttype),dpqr=as.integer(dpqr),uselog=as.integer(uselog),lower=as.integer(lower),N=as.integer(N), x=as.double(x),npars=as.integer(npars),parameters=as.double(parameters),values=as.double(values),status=integer(1))
 
 	if(output$status==1) stop("Incorrect number of parameters provided")
 	if(output$status==2) stop("Unrecognised distribution type")
@@ -43,18 +44,23 @@ load("moduletargets.Rsave")
 
 checksok <- rep(TRUE, N)
 for(i in 1:N){
+	success <- try({
 	obs <- checkrunjagsmod(tests[[i]]$distribution, tests[[i]]$funtype, tests[[i]]$parameters, tests[[i]]$x, tests[[i]]$uselog, tests[[i]]$lower)
 	expect <- results[[i]]
 	
-	# If more than 1% out (guaranteed that expect!=0 to 6 s.f.):
-	problem <- abs(expect-obs) > 0.01*abs(expect)
+	# Allow a bit of a larger tolerance than usual as we have saved the results from a different machine:
+	problem <- abs(expect-obs) > max(10^-5, .Machine$double.eps^0.5)
+
+	# Or obs is NA:
+	problem[is.na(problem)] <- TRUE
 	if(any(problem)){
-		cat("\nError with check number ", i, ":\n")
-		expect <- format(c("Expected", expect[problem]))
-		obs <- format(c("Got", obs[problem]))
-		cat(paste(paste("\t",expect,"\t-\t",obs,sep=""), collapse="\n"), "\n")
-		
+		cat("Error with check number ", i, " (which expected observed):  ", paste(paste(which(problem), " ", expect[problem], " ", obs[problem], ";  ", sep=""), collapse=""), "\n", sep="")
 		checksok[i] <- FALSE
+	}
+	})
+	if(class(success)=="try-error"){
+		checksok[i] <- FALSE
+		cat("Uncaught crash error with check number", i, "\n")
 	}
 }
 
@@ -189,10 +195,15 @@ pos1 <- rgamma(1,1,1)
 pos2 <- rgamma(1,1,1)
 pos3 <- rgamma(1,1,1)
 
-r <- run.jags(m, sample=10, n.chains=1, method='rjags', summarise=FALSE, plots=FALSE)
+r <- run.jags(m, burnin=100, sample=10, n.chains=1, method='rjags', summarise=FALSE, plots=FALSE)
 
+sp <- rep(sp,10)
 ps <- combine.mcmc(r,vars='ps')[1,]
-stopifnot(all(signif(sp)==signif(ps)))
-
+stopifnot(length(sp)==length(ps))
+if(!isTRUE(all.equal(sp,ps))){
+	# Reduce stringency of the test - roughly 10^7 different on linux:
+	problem <- abs(sp-ps) > max(10^-5, .Machine$double.eps^0.5)
+	if(any(problem)) stop(paste("Error with ps/sp check (which expected observed):  ", paste(paste(names(ps)[which(problem)], " ", sp[problem], " ", ps[problem], ";  ", sep=""), collapse=""), sep=""))
+}
 
 cat("All module checks passed\n")

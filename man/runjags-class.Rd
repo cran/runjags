@@ -67,12 +67,14 @@ extend.jags and autoextend.jags to extend the simulation.  They also
 have a few specific S3 methods for print, plot and extraction of the
 MCMC objects contained within the runjags object.
 
-Objects of class 'runjags.study' are produced by the run.jags.study
-function, and class 'runjags.bginfo' represents a JAGS model being run
+Objects of class 'runjags.bginfo' represents a JAGS model being run
 using a background method and can be passed to the results.jags function
 to retrieve (a copy of this object will also have been saved to
 'jagsinfo.Rsave' in the working directory of the background JAGS call in
 case the returned object is not saved by the user).
+
+Objects of class 'runjags.study' are produced by the run.jags.study
+function.  
 
 These functions provide print and plot methods, and conversion
 facilities to/from MCMC objects and objects of class 'jags' for
@@ -192,6 +194,12 @@ The print methods for runjags model, data and initial value strings
 simply provide the option for printing line numbers which may be useful
 for debugging.  The print methods for runjags.study and runjags.bginfo
 objects provide a basic overview of the objects.
+
+The as.jags method allows runjags objects to be converted to rjags style
+compiled JAGS models - additional arguments adapt and quiet are passed
+directly to jags.model, other arguments are ignored.  If the runjags
+object already contains a compiled JAGS model, this is returned directly
+without re-compilation.
 
 }
 

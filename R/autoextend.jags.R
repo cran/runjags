@@ -1,4 +1,4 @@
-autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = runjags.getOption('jagspath'), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=list(type="burnin", length=200), thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = runjags.getOption('jagspath'), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=1000, thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 	# We may be passed some unevaluated function arguments so evaluate everything here:
 	argnames <- names(formals(autoextend.jags))
@@ -28,6 +28,10 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}
 
 	method <- getrunjagsmethod(method)
+	
+	# Can't use rjparallel method with this function as we'd have to keep destroying/recompiling the damn thing - if this ever changes in rjags we can alter this:
+	if(method=='rjparallel') stop("The rjparallel method is not currently available for autorun functions - try the 'parallel' or 'snow' methods instead")
+	
 	
 	jags.status <- testjags(jags, silent=TRUE)
 	if(jags.status$JAGS.available==FALSE){
@@ -124,6 +128,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		inits <- runjags.object$end.state[-drop.chain]
 		# Will have to re-compile rjags object:
 		method.options <- method.options[names(method.options)!='rjags']
+		method.options
 	}else{
 		inits <- runjags.object$end.state
 	}
@@ -199,19 +204,21 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		if(is.na(max.time)) stop("Unrecognised unit of maximum time -'", time.unit, "'")
 	}
 	
-	if(adaptive$type=="adapt"){
-		burnadapt <- 0
+	# For legacy compatibility:
+	if(is.list(adaptive)){
+		if(!any(names(adaptive)=="length")) stop("The 'adaptive' argument must be a numeric integer")
 		adapt <- adaptive$length
+		warning("The list specification of the 'adaptive' argument is deprecated")
 	}else{
-		if(adaptive$type!="burnin") stop("Adaptive type not recognised - choose one of 'burnin' or 'adapt'")
-		burnadapt <- adaptive$length
-		adapt <- 0
+		adapt <- adaptive
 	}
 	
 	newlines <- if(silent.jags) "\n" else "\n\n"
 	
 	# Check to see if this is using an rjags method, and if it is get the method.options$rjags stuff set up:	
 	if(method %in% c("background","bgparallel")) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
+
+	swcat("\nAuto-run JAGS",newlines,sep="")
 
 	###########
 	### Setup rjags stuff:
@@ -223,6 +230,10 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}
 	if(method%in%runjagsprivate$rjagsmethod){
 	
+		if(any(c("popt", "pd.i") %in% monitor)){
+			stop("Cannot monitor popt or pd.i with the rjags method.  Try using the interuptible or simple method instead, or removing the pd.i and popt monitors.")
+		}					
+
 		# RNG in >4 rjparallel chains should be lecuyer - if the lecuyer module is loaded when the rjags object compiles (unless it already has RNGnames) it will be
 		if(n.chains > 4 && method=='rjparallel'){
 		
@@ -241,45 +252,23 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 						return(dump.format(x))
 					})
 					class(inits) <- "runjags.inits"
+					runjags.object$end.state <- inits
 					method.options <- method.options[names(method.options)!='rjags']
 					# The inits now don't have .RNG.name and we have loaded the lecuyer module - so when the model re-compiles (as it will be forced to), the new inits will be set as lecuyer
 				}
 			}
 		}
 	
-		# Module loading MUST be done before model compilation:
-		for(m in modules){
-			if(m!=""){
-				if(m=="runjags"){
-					success <- try(load.runjagsmodule())
-				}else{
-					success <- try(load.module(m))
-				}
+		runjags.object$modules <- modules
 		
-				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
-			}
-		}		
-	
-		if(! 'rjags' %in% names(method.options)){
-			# Just in case this has changed (drop RNG, drop chains etc):
-			runjags.object$end.state <- inits
-			method.options <- c(method.options, list(rjags=as.jags(runjags.object)))
+		if('rjags' %in% names(method.options)){
+			# Checks compiled:
+			method.options$rjags <- as.jags(runjags.object, adapt=adapt, quiet=TRUE)
+		}else{
+			# Sets up and compiles:
+			method.options <- c(method.options, list(rjags=as.jags(runjags.object, adapt=adapt, quiet=TRUE)))
 		}
-		checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
-		if(class(checkcompiled)=="try-error"){
-			if(silent.jags){
-				o <- capture.output(method.options$rjags$recompile()) 
-			}else{
-				swcat("Compiling rjags model...\n")
-			 	method.options$rjags$recompile()
-			}
-			checkcompiled <- try(stats::coef(method.options$rjags),silent=TRUE)
-			if(class(checkcompiled)=="try-error") stop(paste("There was an error creating the rjags method for this JAGS model:  ", as.character(checkcompiled), sep=""))
-		}
-
-		if(any(c("popt", "pd.i") %in% monitor)){
-			stop("Cannot monitor popt or pd.i with the rjags method.  Try using the interuptible or simple method instead, or removing the pd.i and popt monitors.")
-		}					
+		
 	}else{
 		method.options <- method.options[names(method.options)!="rjags"]	
 	}	
@@ -289,8 +278,6 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	# popt and pd.i are guaranteed not to be a problem for autorun functions
 
 		
-	swcat("\nAuto-run JAGS",newlines,sep="")
-	
 	if(startsample>runjags.object$sample | !combine){
 		
 		swcat("Running a pilot chain...\n")
@@ -298,14 +285,15 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		
 		if(combine){
 			initialsample <- startsample - runjags.object$sample
-			totalburnin <- runjags.object$burnin + startburnin
+			totalburnin <- runjags.object$burnin + startburnin + adapt
 		}else{
 			initialsample <- startsample
-			totalburnin <- startburnin+runjags.object$burnin+runjags.object$sample
+			totalburnin <- adapt+startburnin+runjags.object$burnin+runjags.object$sample
 		}
 
 		# Call function to run simulation and return MCMC list and pd, popt, pd.i objects:
 		startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=inits, modules=modules, factories=runjags.object$factories, burnin = startburnin, sample = initialsample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+		
 		if(!startinfo$complete) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 		
 		if(all(c("mcmc","end.state") %in% names(startinfo))){
@@ -326,6 +314,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				swcat("\nThe simulation crashed; retrying...",newlines,sep="")			
 				crash.retry <- crash.retry - 1
 				startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=inits, modules=modules, factories=runjags.object$factories, burnin = startburnin, sample = initialsample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+				
 				if(!startinfo$complete) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 				
 				if(all(c("mcmc","end.state") %in% names(startinfo))){
@@ -457,7 +446,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				
 				totalburnin <- totalburnin + startsample*thin
 					
-				startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = burnadapt, sample = startsample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+				startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = 0, sample = startsample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
 				if(!startinfo$complete) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 
 				if(all(c("mcmc","end.state") %in% names(startinfo))){
@@ -478,7 +467,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 						}
 						swcat("\nThe simulation crashed; retrying...",newlines,sep="")			
 						crash.retry <- crash.retry - 1
-						startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = burnadapt, sample = startsample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+						startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = 0, sample = startsample*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+						
 						if(!startinfo$complete) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 						if(all(c("mcmc","end.state") %in% names(startinfo))){
 							if(!"pd" %in% names(startinfo)) startinfo$pd <- NA
@@ -655,7 +645,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		
 		swcat("\n")
 			
-		startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = burnadapt, sample = moreupdates*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+		startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = 0, sample = moreupdates*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+		
 		if(!startinfo$complete) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 
 		if(all(c("mcmc","end.state") %in% names(startinfo))){
@@ -676,7 +667,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				}
 				swcat("\nThe simulation crashed; retrying...",newlines,sep="")			
 				crash.retry <- crash.retry - 1
-				startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = burnadapt, sample = moreupdates*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+				startinfo <- runjags.start(model=runjags.object$model, monitor=monitor, data=runjags.object$data, inits=last.end.state, modules=modules, factories=runjags.object$factories, burnin = 0, sample = moreupdates*thin, adapt=adapt, thin = thin, tempdir=tempdir, dirname=directory, method=method, method.options=method.options, internal.options=list(jags = jags, silent.jags = silent.jags, jags.refresh=jags.refresh, batch.jags=batch.jags))
+				
 				if(!startinfo$complete) stop("The method specified to autorun.jags and autoextend.jags must run JAGS and wait for the results (ie the background method, and possibly other user specified methods, cannot be used)")
 
 				if(all(c("mcmc","end.state") %in% names(startinfo))){

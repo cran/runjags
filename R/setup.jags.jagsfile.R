@@ -211,32 +211,8 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	if(!all(is.character(modules))) stop("The vector provided for 'modules' must be a character vector naming one or more modules to be loaded in JAGS")
 	if(!all(is.character(factories)) || !all(factories=="" | (grepl("(",factories,fixed=TRUE) & grepl(")",factories,fixed=TRUE)))) stop("The vector provided for 'factories' must be a character vector naming one or more factories to be loaded in JAGS with the following format:  <facname>(<factype>)")
 
-	if(rjagsmethod){
-		if(length(modules)>0) for(m in modules){
-			if(m!=""){
-				if(m=="runjags"){
-					success <- try(load.runjagsmodule())
-				}else{
-					success <- try(load.module(m))
-				}
-				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
-			}
-		}
-	
-		if(length(factories)>0) for(i in 1:length(factories)){
-			if(factories[i]!=""){
-				f <- strsplit(gsub(")","",factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
-				fa <- ""
-				try(fa <- as.character(list.factories(f[2])$factory))
-				if(!f[1] %in% fa) stop(paste("The factory '", f[1], "' of type '", f[2], "' is not available - ensure any required modules are also provided", sep=""))
-				success <- try(set.factory(f[1],f[2],TRUE))			
-				if(class(success)=="try-error") stop(paste("Failed to load the factory '", f[1], "' of type '", f[2], "'", sep=""))
-			}
-		}
-		
-		# Model checking etc can be done by rjags later
-	
-	}else{
+	if(!rjagsmethod){
+		# Modules/factories and model setup/checking etc can be done by as.jags.runjags later
 		
 		resetsyspath=resetbinpath <- FALSE
 		if(.Platform$OS.type == "windows"){		
@@ -382,7 +358,7 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 		}
 	}else{
 		# Hidden option for datalist to be NaN in which case the warning about data being ignored from the model file (used by run.jags.study)
-		if(!is.nan(datalist) && (!identical(autodata, NA) | !identical(maindata, NA))) warning("Data was specified in the model block but will be ignored since data was specified in the arguments for (auto)run.jagsfile", call.=FALSE)
+		if(!is.nan(datalist) && (!identical(autodata, NA) | !identical(maindata, NA)) && runjags.getOption('blockcombine.warning')) warning("Data was specified in the model block but will be ignored since data was specified in the arguments for (auto)run.jagsfile", call.=FALSE)
 		outdata <- data
 	}
 	
@@ -416,7 +392,7 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 			}
 		}
 	}else{
-		if(!identical(autoinits, NA) | !identical(maininits, NA)) warning("Initial values were specified in the model block but will be ignored since initial values were specified in the arguments for (auto)run.jagsfile", call.=FALSE)
+		if((!identical(autoinits, NA) | !identical(maininits, NA)) && runjags.getOption('blockcombine.warning')) warning("Initial values were specified in the model block but will be ignored since initial values were specified in the arguments for (auto)run.jagsfile", call.=FALSE)
 		outinits <- inits
 	}
 	
@@ -428,7 +404,7 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 	}
 		
 	if(!all(is.na(monitor))){
-		if(!identical(params$monitor, NA)) warning("Monitors were specified in the model block but will be ignored since monitors were specified in the arguments to the function call", call.=FALSE)
+		if(!identical(params$monitor, NA)  && runjags.getOption('blockcombine.warning')) warning("Monitors were specified in the model block but will be ignored since monitors were specified in the arguments to the function call", call.=FALSE)
 		outmonitor <- monitor
 	}else{
 		outmonitor <- params$monitor

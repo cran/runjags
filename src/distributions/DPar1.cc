@@ -44,10 +44,11 @@ vector<double const *> const &par, bool give_log) const
   if (x < c)
     return give_log ? JAGS_NEGINF : 0;
 
-  if (give_log)
+  if (give_log){
     return log(alpha) + alpha * log(c) - (alpha + 1) * log(x);
-  else
+  }else{
     return alpha * exp(alpha * log(c) - (alpha + 1) * log(x));
+  }
 }
 
 double 
@@ -79,18 +80,18 @@ DPar1::q(double p, vector<double const *> const &par, bool lower,
     double logp;
 
     if (!lower) {
-	if (log_p)
-	    logp = p;
-	else
-	    logp = log(p);
-    }
-    else {
-	if (log_p)
-	    logp = log(1 - exp(p)); 
-	else
-	    logp = log(1 - p);
-    }
-  
+		if (log_p){
+		    logp = p;
+		}else{
+		    logp = log(p);
+		}
+	} else {
+		if (log_p){
+		    logp = log(1 - exp(p)); 
+		}else{
+		    logp = log(1 - p);
+	    }
+	}
     return exp(log(C(par)) - logp/ALPHA(par));
 }
 

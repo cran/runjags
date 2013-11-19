@@ -458,31 +458,99 @@ as.jags.runjags <- function(x, ...){
 	
 	runjags.object <- x
 	
-	dataenv <- list.format(as.character(runjags.object$data))
-	inits <- lapply(runjags.object$end.state,list.format)
-	s <- try({
-	if(length(inits[[1]])==0){
-		if(as.character(runjags.object$data)==""){
-			jags.object <- jags.model(textConnection(runjags.object$model), n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)
-		}else{
-			jags.object <- jags.model(textConnection(runjags.object$model), data=dataenv, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)				
-		}
-	}else{
-		if(as.character(runjags.object$data)==""){
-			jags.object <- jags.model(textConnection(runjags.object$model), inits=inits, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)
-		}else{
-			jags.object <- jags.model(textConnection(runjags.object$model), data=dataenv, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=0, quiet=TRUE)				
-		}
-	}})
+	passed <- list(...)
+	if('n.adapt'%in%names(passed)) adapt <- passed$n.adapt else adapt <- 1000
+	if('quiet'%in%names(passed)) quiet <- passed$quiet else quiet <- FALSE
 	
-	if(class(s)=="try-error"){
-		assign("model", runjags.object$model, envir=failedjags)
-		assign("inits", runjags.object$end.state, envir=failedjags)
-		assign("data", runjags.object$data, envir=failedjags)
+	
+	# Module loading MUST be done before model compilation - doesn't do any harm to re-load modules:
+	for(m in runjags.object$modules){
+		if(m!=""){
+			if(m=="runjags"){
+				success <- try(load.runjagsmodule())
+			}else{
+				success <- try(load.module(m))
+			}
 		
-		stop("There was an error reading the model, data or initial values (see output above for more details, and examine 'failedjags$model', 'failedjags$data' and 'failedjags$inits' to see model/data/inits syntax with line numbers)",call.=FALSE)
+			if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
+		}
+	}		
+	# And factories:
+	if(length(runjags.object$factories)>0) for(i in 1:length(runjags.object$factories)){
+		if(runjags.object$factories[i]!=""){
+			f <- strsplit(gsub(")","",runjags.object$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
+			fa <- ""
+			try(fa <- as.character(list.factories(f[2])$factory))
+			if(!f[1] %in% fa) stop(paste("The factory '", f[1], "' of type '", f[2], "' is not available - ensure any required modules are also provided", sep=""))
+			success <- try(set.factory(f[1],f[2],TRUE))			
+			if(class(success)=="try-error") stop(paste("Failed to load the factory '", f[1], "' of type '", f[2], "'", sep=""))
+		}
 	}
 
+	# See if the model already exists on the runjags object:
+	if( 'rjags' %in% names(runjags.object$method.options)){
+		
+		jags.object <- runjags.object$method.options$rjags
+		
+	}else{
+		
+		cat("Compiling rjags model", if(adapt>0) paste(" and adapting for ", adapt, " iterations", sep=""), "...\n",sep="")
+		flush.console()
+	
+		model <- textConnection(runjags.object$model)
+		dataenv <- list.format(as.character(runjags.object$data))
+		inits <- lapply(runjags.object$end.state,list.format)
+		o <- capture.output({s <- try({
+		if(length(inits[[1]])==0){
+			if(as.character(runjags.object$data)==""){
+				jags.object <- jags.model(model, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)
+			}else{
+				jags.object <- jags.model(model, data=dataenv, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)				
+			}
+		}else{
+			if(as.character(runjags.object$data)==""){
+				jags.object <- jags.model(model, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)
+			}else{
+				jags.object <- jags.model(model, data=dataenv, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)				
+			}
+		}}, silent=TRUE)})
+	
+		close(model)
+		flush.console()
+	
+		if(class(s)=="try-error"){
+			jagsout <- as.character(s)
+			class(jagsout) <- "rjags.output"
+			assign("model", runjags.object$model, envir=failedjags)
+			assign("inits", runjags.object$end.state, envir=failedjags)
+			assign("data", runjags.object$data, envir=failedjags)
+			assign("output", jagsout, envir=failedjags)
+			stop(paste("The following error occured when compiling and adapting the model using rjags:\n ",jagsout,"\nIt may help to examine 'failedjags$model', 'failedjags$data' and 'failedjags$inits' to see model/data/inits syntax with line numbers",sep=""),call.=FALSE)
+		}
+		
+	}	
+	
+	# Now check it has compiled:
+	
+	checkcompiled <- try(stats::coef(jags.object),silent=TRUE)
+	
+	if(class(checkcompiled)=="try-error"){
+		cat("Re-compiling rjags model and adapting...\n")
+		o <- capture.output(s <- try(jags.object$recompile(),silent=TRUE))
+		if(class(s)=="try-error"){
+			jagsout <- as.character(s)
+			class(jagsout) <- "rjags.output"
+			assign("model", runjags.object$model, envir=failedjags)
+			assign("inits", runjags.object$end.state, envir=failedjags)
+			assign("data", runjags.object$data, envir=failedjags)
+			assign("output", jagsout, envir=failedjags)
+			stop(paste("The following error occured when re-compiling and adapting the model using rjags:\n ",jagsout,"\nIt may help to examine 'failedjags$model', 'failedjags$data' and 'failedjags$inits' to see model/data/inits syntax with line numbers",sep=""),call.=FALSE)
+		}
+		
+		checkcompiled <- try(stats::coef(jags.object),silent=TRUE)
+		if(class(checkcompiled)=="try-error") stop(paste("There was an unexpected error re-compiling this JAGS model:  ", as.character(checkcompiled), sep=""))
+	}
+	
 	return(jags.object)
 }
 
@@ -500,9 +568,9 @@ as.runjags.jags <- function(x, monitor = stop("No monitored variables supplied")
 }
 
 runjagsprivate <- new.env()
-
+.Platform$OS.type=='unix' && (.Platform$GUI!="AQUA" & Sys.info()['user']=='nobody' && !(method %in% c('rjags','simple')))
 # Use 'expression' for functions to avoid having to evaluate before the package is fully loaded:
-assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages()) 'rjags' else 'interruptible'), tempdir=TRUE, newwindows=expression(!.Platform$GUI%in%c("AQUA","Rgui")), modules="", factories="", linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE), envir=runjagsprivate)
+assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages(TRUE)){'rjags'}else{if(Sys.info()['user']=='nobody') 'simple' else 'interruptible'}), tempdir=TRUE, newwindows=expression(!.Platform$GUI%in%c("AQUA","Rgui")), modules="", factories="", linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE), envir=runjagsprivate)
 assign("options",runjagsprivate$defaultoptions,envir=runjagsprivate)
 assign("rjagsmethod",c('rjags','rjparallel'),envir=runjagsprivate)
 assign("parallelmethod",c('parallel','bgparallel','snow','rjparallel','xgrid'),envir=runjagsprivate)
@@ -517,8 +585,8 @@ runjags.options <- function(...){
 			warning(paste("Igoring unmatched or ambiguous option(s): ", paste(names(opts)[is.na(recognised)],collapse=", ")))
 		}
 		optnames <- names(options)[recognised[!is.na(recognised)]]
-		for(i in 1:length(opts)){
-			options[optnames[i]] <- opts[[i]]
+		if(length(optnames)>0) for(i in 1:length(optnames)){
+			options[optnames[i]] <- opts[[as.character(optnames[i])]]
 		}
 		assign("options",options,envir=runjagsprivate)
 	}

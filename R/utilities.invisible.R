@@ -395,7 +395,6 @@ safe.gelman.diag <- function(x, warn=TRUE,...){
 		}, silent=TRUE)
 		
 		if(class(success)=="try-error"){
-			#print("TEMP")
 			#name <- new_unique("gelman.failed", ".Rsave")
 			#save(failedmcmc, file=name)
 			stop("An error occured while calculating the Gelman-Rubin statistic")
