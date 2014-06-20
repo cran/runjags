@@ -17,6 +17,10 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		assign(argnames[i], eval(get(argnames[i])))
 	}
 	
+	if(class(model)=="runjags.model") class(model) <- "character"
+	if(class(data)=="runjags.data") class(data) <- "character"
+	if(class(inits)=="runjags.inits") class(inits) <- "character"
+
 	jags.status <- testjags(jags, silent=TRUE)
 	if(jags.status$JAGS.available==FALSE){
 		if(jags.status$os=="windows"){
@@ -87,75 +91,105 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		}
 	}
 	
-	if(class(data)=="list") suppressWarnings(try(data <- dump.format(data), silent=TRUE))
-	suppressWarnings(if(is.na(data)) data <- "")	
-	if(class(data)!="character" | length(data)!=1){
-		stop("The data must be provided either as a named list or in R dump format (see dump.format())")
+	if(class(data)=="function"){
+		
+		if(!is.null(formals(data))) stop("The data should be specified as a function with no argument", call.=FALSE)
+		s <- try(newdata <- data())
+		if(class(s)=="try-error") stop("There was an error using the function supplied for 'data' - this function must take exactly 0 arguments", call.=FALSE)
+		data <- newdata
+	}
+	
+	if(class(data)=="list"){
+		if(any(names(data)=="") || length(unique(names(data)))!=length(data)) stop('All elements in the data list must have unique names', call.=FALSE)
+		suppressWarnings(try(data <- dump.format(data), silent=TRUE))
+	}
+	if(all(is.na(data))) data <- ""
+	if(class(data)!="character" || length(data)!=1){
+		stop("The data must be provided either as a named list or in R dump format (see dump.format())", call.=FALSE)
 	}
 	data <- paste(data, "\n", sep="")
 	if(gsub("[[:space:]]", "", data)=="") data <- ""
 		
 	valid <- checkvalidforjags(data)	
-	if(!valid$valid) stop(paste("The following problem was identified in the data provided:  ", valid$probstring, sep=""))		
-		
+	if(!valid$valid) stop(paste("The following problem was identified in the data provided:  ", valid$probstring, sep=""), call.=FALSE)		
+	
 	### SORT OUT INITS
 	# If initial value list is a function, run it to get some actual initial values:
 	if(class(inits)=="function"){
-		if(is.null(formals(inits))){
-			newinits <- lapply(1:n.chains, function(x) return(inits()))
+		
+		if(is.na(n.chains)) stop("Unable to determine the number of chains required from the init function; please supply a value for n.chains")	
+		
+		### Copy the function first, in case the same function environment is being used by many simulations (don't think this is necessary):
+		localinits <- inits
+		
+		# Add the data as a named list in the environment in which inits is being evaluated:
+		assign('data', list.format(data), environment(localinits))
+		
+		if(is.null(formals(localinits))){
+			newinits <- lapply(1:n.chains, function(x) return(localinits()))
 		}else{
-			s <- try(newinits <- lapply(1:n.chains, function(x) return(inits(x))))
-			if(class(s)=="try-error") stop("There was an error using the function supplied for 'inits' - this function must take either 0 or 1 arguments")
+			s <- try(newinits <- lapply(1:n.chains, function(x) return(localinits(x))))
+			if(class(s)=="try-error") stop("There was an error using the function supplied for 'inits' - this function must take either 0 or 1 arguments", call.=FALSE)
 		}
-		if(! (all(sapply(newinits,class)=="list") || all(sapply(newinits,class)=="character"))) stop("There was an error using the function supplied for 'inits' - this function must return either a named list or a character vector")
+		if(! (all(sapply(newinits,class)=="list") || all(sapply(newinits,class)=="character"))) stop("There was an error using the function supplied for 'inits' - this function must return either a named list or a character vector", call.=FALSE)
 		inits <- newinits
 	}
 	
-	# If initial value list is a list of character strings, make it a vector of characters:
-	if(class(inits)=="list" && all(sapply(inits,class)=="character")) inits <- unlist(inits)
-	
-	# If initial value list is a list of non-lists (i.e. specified for 1 chain we hope), make it into the expected format:
-	if(class(inits)=="list" && !all(sapply(inits,class)=="list")){
-		if(any(names(inits)=="")) stop("Unable to determine the intended format of the list provided as initial values; this should either be a list of named lists, or a character vector representing values for each chain")
-		inits <- list(inits)
-	}
+	if(class(inits)=="list"){
 
+		# If initial value list has some lists and some others, fail:
+		if(any(sapply(inits,class)=="list") && !all(sapply(inits,class)=="list")) stop("A list of mixed types including other lists was provided for initial values - please provide either a list of lists, or a list of initial values for a single chain", call.=FALSE)
+
+		# If initial value list is a list of character strings, make it a vector of characters:
+		if(all(sapply(inits,class)=="character") && !'.RNG.name'%in%names(inits)) inits <- unlist(inits)
+	}
+	
+	if(class(inits)=="list" && !any(sapply(inits,class)=="list")){   #### Need to start a new IF in case inits was unlisted above
+		
+		# If initial value list is a list of non-lists (i.e. specified for 1 chain we hope), make it into the expected format:
+		if(any(names(inits)=="")) stop("Unable to determine the intended format of the list provided as initial values; this should either be a list of named lists, or a character vector representing values for each chain", call.=FALSE)
+		inits <- list(inits)
+	
+	}
+	
 	# Now convert inits to characters if it is a list:
 	if(class(inits)=="list"){
 		newinits <- character(length(inits))
 		for(i in 1:length(inits)){
+			if(length(unique(names(inits[[i]])))!=length(inits[[i]])) stop("Duplicated names were provided in the list of initial values - please make sure all names are unique", call.=FALSE)
 			suppressWarnings(try(newinits[i] <- dump.format(inits[[i]]), silent=TRUE))				
 		}
 		inits <- newinits		
 	}
 	
-	if(class(inits)!='character' && (class(inits)!='list' || !(all(sapply(inits,class)=="list") || all(sapply(inits,class)=="character")))) stop("The format of the 'inits' variable supplied was not recognised - consult the help file for run.jags for the supported options")
-		
-	for(i in 1:length(inits)){
-		valid <- checkvalidforjags(inits[i])	
-		if(!valid$valid) stop(paste("The following problem was identified in the initial values provided for chain ", i, ":  ", valid$probstring, sep=""))				
-	}
+	if(class(inits)!='character' && (class(inits)!='list' || !(all(sapply(inits,class)=="list") || all(sapply(inits,class)=="character")))) stop("The format of the 'inits' variable supplied was not recognised - consult the help file for run.jags for the supported options", call.=FALSE)
 	
 	if(all(is.na(inits))) inits <- replicate(n.chains, NA)
-	if(length(inits)==1){
-		inits <- replicate(n.chains, inits)
-		if(n.chains!=1 && runjags.getOption('inits.warning')) warning("Only one set of initial values was provided.  The same initial values will be used across all chains (this is not recommended)", call.=FALSE)
-	}
 	
-	if(all(!is.na(inits)) & any(class(inits)!="character")){
-		stop("Initial values must be provided as a list of named lists, or a character vector in the R dump format (see dump.format()), with length equal to the number of chains required")
-	}
-
-	if(!is.na(n.chains)){
-		if(length(inits) != n.chains){
+	
+	if(!is.na(n.chains) && length(inits)!=n.chains){
+		if(length(inits)==1){
+			if(runjags.getOption('inits.warning')) warning("Only one set of initial values was provided.  The same initial values will be used across all chains (this is not recommended)", call.=FALSE)
+			inits <- replicate(n.chains, inits)
+		}else{
+			if(runjags.getOption('inits.warning')) warning("The number of chains specified did not match the number of initial value strings supplied.  Some initial value strings were recycled or ignored", call.=FALSE)
 			temp <- inits
 			inits <- character(n.chains)
-		
-			suppressWarnings(inits[] <- temp)
-			if(runjags.getOption('inits.warning')) warning("The number of chains specified did not match the number of initial value strings supplied.  Some initial value strings will be recycled or ignored", call.=FALSE)
+			suppressWarnings(inits[] <- temp)			
 		}
 	}
 	n.chains <- length(inits)
+	
+	if(all(!is.na(inits)) & any(class(inits)!="character")){
+		stop("Initial values must be provided as a list of named lists, or a character vector in the R dump format (see dump.format()), with length equal to the number of chains required", call.=FALSE)
+	}
+
+	for(i in 1:length(inits)){
+		valid <- checkvalidforjags(inits[i])	
+		if(!valid$valid) stop(paste("The following problem was identified in the initial values provided for chain ", i, ":  ", valid$probstring, sep=""), call.=FALSE)	
+	}
+	
+	
 	
 	if(length(grep('base::Mersenne-Twister', inits)>0) & as.numeric(jags.status$JAGS.version) < 2) warning('Using the RNG "base::Mersenne-Twister" (used by default for chain 4) may cause problems with restarting subsequent simulations using the end state of previous simulations due to a bug in JAGS version 1.x.  If you encounter the error "Invalid .RNG.state", please update JAGS to version 2.x and try again.  Or, you can change the random number generator by changing the .RNG.name to (for example) "base::Super-Duper" and remove the .RNG.state element of the list.', call.=FALSE)
 	
@@ -181,22 +215,12 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	n.params <- length(monitor)
 	params.names <- monitor
 	
-	
-	temp.directory <- tempfile('runjagsdir')
-	dir.create(temp.directory)
-	cwd <- getwd()
-	on.exit({
-		setwd(cwd)
-		unlink(temp.directory, recursive=TRUE)
-		})
+	if(!all(is.character(modules))) stop("The vector provided for 'modules' must be a character vector naming one or more modules to be loaded in JAGS")
+	if(!all(is.character(factories)) || !all(factories=="" | (grepl("(",factories,fixed=TRUE) & grepl(")",factories,fixed=TRUE)))) stop("The vector provided for 'factories' must be a character vector naming one or more factories to be loaded in JAGS with the following format:  <facname>(<factype>)")
 
-	setwd(temp.directory)
-
-	cat(model, file="model.txt",sep="")  
-	cat(data, file="data.txt",sep="")  
 	for(i in 1:n.chains){
 		if(is.na(inits[i])) inits[i] <- ""
-		
+	
 		# Combine inits blocks, change \r to \n and get rid of double spacing:
 		inits[i] <- paste(inits[i], "\n", sep="", collapse="\n")
 		inits[i] <- gsub("\r","\n",inits[i])
@@ -204,15 +228,24 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		inits[i] <- gsub("\n\n","\n",inits[i])
 
 		if(gsub("[[:space:]]", "", inits[i])=="") inits[i] <- ""
-			
-		cat(inits[i], file=paste("inits",i,".txt",sep=""),sep="")
-	}
+	}	
 	
-	if(!all(is.character(modules))) stop("The vector provided for 'modules' must be a character vector naming one or more modules to be loaded in JAGS")
-	if(!all(is.character(factories)) || !all(factories=="" | (grepl("(",factories,fixed=TRUE) & grepl(")",factories,fixed=TRUE)))) stop("The vector provided for 'factories' must be a character vector naming one or more factories to be loaded in JAGS with the following format:  <facname>(<factype>)")
-
 	if(!rjagsmethod){
 		# Modules/factories and model setup/checking etc can be done by as.jags.runjags later
+		temp.directory <- tempfile('runjagsdir')
+		dir.create(temp.directory)
+		cwd <- getwd()
+		on.exit({
+			setwd(cwd)
+			unlink(temp.directory, recursive=TRUE)
+			})
+		setwd(temp.directory)
+
+		cat(model, file="model.txt",sep="")  
+		cat(data, file="data.txt",sep="")  
+		for(i in 1:n.chains){
+			cat(inits[i], file=paste("inits",i,".txt",sep=""),sep="")
+		}	
 		
 		resetsyspath=resetbinpath <- FALSE
 		if(.Platform$OS.type == "windows"){		
@@ -318,9 +351,13 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 		assign(argnames[i], eval(get(argnames[i])))
 	}
 	
+	if(class(model)=="runjags.model") class(model) <- "character"
+	if(class(data)=="runjags.data") class(data) <- "character"
+	if(class(inits)=="runjags.inits") class(inits) <- "character"
+	
 	if(class(data)=="list") suppressWarnings(try(data <- dump.format(data), silent=TRUE))
 
-	suppressWarnings(if(is.na(data)) class(data) <- "character")
+	if(!is.function(data) && all(is.na(data))) class(data) <- "character"
 	
 	if(class(initlist)=="function"){
 		success <- suppressWarnings(try(newinitlist <- initlist(1), silent=TRUE))
@@ -332,8 +369,6 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 		if(class(success)=="try-error") newdatalist <- datalist()
 		if(class(newdatalist)!="list") stop("datalist must return a named list if specified as a function")
 	}
-	
-	if(is.na(n.chains) && !any(is.function(inits)) && any(!is.na(inits))) n.chains <- length(inits)
 	
 	path <- model
 	params <- read.winbugs(path)
@@ -348,17 +383,21 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 	
 	# This function should always (within runjags package) be called from the top level function, AND NOT DIRECTLY, otherwise the scoping will be out:
 	parselevel <- 3
-	if(is.na(data)){
-		if(all(is.na(maindata))) maindata <- ""
-		outdata <- as.character(maindata)
+	if(!is.function(data)){
+		if(all(is.na(data))){
+			if(all(is.na(maindata))) maindata <- ""
+			outdata <- as.character(maindata)
 		
-		if(!all(is.na(autodata))){
-			autodata <- find.parameters(autodata, datalist, parselevel)
-			outdata <- paste(outdata, dump.format(autodata), sep="\n")
+			if(!all(is.na(autodata))){
+				autodata <- find.parameters(autodata, datalist, parselevel)
+				outdata <- paste(outdata, dump.format(autodata), sep="\n")
+			}
+		}else{
+			# Hidden option for datalist to be NaN in which case the warning about data being ignored from the model file (used by run.jags.study)
+			if(!is.nan(datalist) && (!identical(autodata, NA) | !identical(maindata, NA)) && runjags.getOption('blockcombine.warning')) warning("Data was specified in the model block but will be ignored since data was specified in the arguments for (auto)run.jagsfile", call.=FALSE)
+			outdata <- data
 		}
 	}else{
-		# Hidden option for datalist to be NaN in which case the warning about data being ignored from the model file (used by run.jags.study)
-		if(!is.nan(datalist) && (!identical(autodata, NA) | !identical(maindata, NA)) && runjags.getOption('blockcombine.warning')) warning("Data was specified in the model block but will be ignored since data was specified in the arguments for (auto)run.jagsfile", call.=FALSE)
 		outdata <- data
 	}
 	
@@ -398,9 +437,9 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 	
 	if(!is.function(outinits)) outinits[outinits==""] <- NA
 	
-	if(outdata==""){
+	if(!is.function(outdata) && all(outdata=="")){
 		outdata <- NA
-		warning("The model was run without data since no data was provided or found in the model block.", call.=FALSE)
+		if(failincomplete) warning("The model was run without data since no data was provided or found in the model block.", call.=FALSE)
 	}
 		
 	if(!all(is.na(monitor))){
@@ -415,21 +454,6 @@ setup.jagsfile <- function(model, datalist = NA, initlist = NA, n.chains=NA, dat
 	outmonitor <- sort(outmonitor[!is.na(outmonitor)])
 	
 	if(length(outmonitor)==0 && failincomplete) stop("No monitors were specified or found in the model block", call.=FALSE)
-	
-	if(is.na(n.chains)){
-		if(is.function(outinits)) stop("Unable to determine the number of chains required from the init function; please supply a value for n.chains")	
-		n.chains <- length(outinits)
-	}
-	
-	if(!is.function(outinits) && n.chains!=length(outinits)){
-		
-		temp <- outinits
-		outinits <- character(n.chains)
-		
-		suppressWarnings(outinits[] <- temp)
-		if(runjags.getOption('inits.warning')) warning("The number of chains specified did not match the number of initial value strings supplied.  Some initial value strings were recycled or ignored", call.=FALSE)
-	}
-	
 	
 	lengths <- lapply(params, length)
 	if(any(lengths==0) && failincomplete) stop(paste("No ", paste(names(lengths[lengths==0]), collapse=" or "), " blocks or tags were found", sep=""))

@@ -338,8 +338,13 @@ xgrid.results.jags <- function(background.runjags.object, wait=TRUE, cleanup=TRU
 		summaries <- list(summary=message, HPD=message, hpd=message, mcse=message, psrf=message, autocorr=message, crosscorr=message, stochastic=message, dic=message, trace=message, density=message)
 	}
 	
-	combinedoutput <- c(combinedoutput, list(end.state=end.state, burnin=burnin, sample=niter(combinedoutput$mcmc), thin=runjags.object$thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=runjags.object$modules, factories=runjags.object$factories, method=runjags.object$method, method.options=runjags.object$method.options))
+	combinedoutput <- c(combinedoutput, list(end.state=end.state, burnin=burnin, sample=niter(combinedoutput$mcmc), thin=runjags.object$thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=runjags.object$modules, factories=runjags.object$factories, method=runjags.object$method, method.options=runjags.object$method.options, timetaken=NA, runjags.version=c(runjagsprivate$runjagsversion, R.Version()$version.string, .Platform$OS.type, .Platform$GUI, .Platform$pkgType, format(Sys.time()))))
 	class(combinedoutput) <- 'runjags'
+	
+	# Check to see if we have identical RNG states after the run:
+	if(length(combinedoutput$end.state) > 1 && any(combinedoutput$end.state[2:length(combinedoutput$end.state)]==combinedoutput$end.state[1])){
+		warning("Identical RNG states have been produced for multiple chains - this probably means the chains are identical.  Try again using different parameter values and/or RNG samplers as inits.", call.=FALSE)
+	}
 	
 	swcat("Finished running the simulation\n")
 	

@@ -28,8 +28,7 @@ Requires Just Another Gibbs Sampler (JAGS) for most functions, see:
 JAGS is a program which allows analysis of Bayesian models using Markov
 chain Monte Carlo (MCMC) simulation, and was developed by Martyn Plummer
 to be an alternative to BUGS that ran on UNIX systems as well as Windows
-systems (see: \url{http://mcmc-jags.sourceforge.net} for more
-information).  The R package rjags is a native R interface to the JAGS
+systems.  The R package rjags is a native R interface to the JAGS
 library, and allows a greater level of control for compiled models,
 which may be more useful for model development.  This package was
 intended to provide additional functions to help automate the process of
@@ -42,7 +41,10 @@ distributed computing cluster such as those provided by snow and Apple's
 
 The package also includes a JAGS extension module providing additional
 distributions in the Pareto family - for more details see the vignette
-in the 'doc' folder of the installed package.
+for this installed package.  A standalone version of this JAGS module
+(as well as a version of the runjags package without this module
+included) is available from the runjags sourceforge page at:
+\url{https://sourceforge.net/projects/runjags/}
 
 }
 

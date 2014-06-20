@@ -34,16 +34,18 @@ run.jags.study(simulations, model=NULL, datafunction=NULL,
 \item{simulations}{the number of datasets to run the model on}
 
 \item{model}{the JAGS model to use, in the same format as would be
-specified to \code{\link{run.jags}}}
+specified to \code{\link{run.jags}}, except that use of the #inits#
+tag is not allowed (initial values must be specified using the inits
+argument, which may be a function - see the example below).}
 
 \item{datafunction}{an optional function that will be used to specify
-the data.  If provided, this must take exactly one argument,
-representing the simulation number, and return either a named list or
-character vector in the R dump format containing the data specific to
-that simulation.  It is possible to specify any data that does not
-change for each simulation using a #data# <variable> tag in the model
-code.  If a datafunction is not provided, the data will be the same for
-all simulations (and a warning will be printed).}
+the data. If provided, this must take either zero arguments, or one
+argument representing the simulation number, and return either a named
+list or character vector in the R dump format containing the data
+specific to that simulation.  It is possible to specify any data that
+does not change for each simulation using a #data# <variable> tag in 
+the model code.  If a datafunction is not provided, the data will be the
+same for all simulations (and a warning will be printed).}
 
 \item{targets}{a named list of variables (which can include
 vectors/arrays) with values to which the model outputs are compared (if
@@ -126,7 +128,6 @@ model{
 	precision ~ dexp(1)
 	
 	#data# N, X
-	#inits# m, c, precision, .RNG.seed, .RNG.name
 }"
 
 # Simulate the data
@@ -136,15 +137,23 @@ X <- 1:N
 Y <- rnorm(length(X), 2*X + 1, 1)
 
 # Some initial values to use for 2 chains:
-m <- list(-10,10)
-c <- list(10,-10)
-precision <- list(0.01,100)
 
-.RNG.seed <- function(chain){
-	return(switch(chain, "1"= 1, "2"= 2))
-}
-.RNG.name <- function(chain){
-	return(switch(chain, "1"= "base::Super-Duper", "2"= "base::Wichmann-Hill"))
+initfun <- function(chain){
+
+	# data is made available within this function when it
+	# is evaluated for each simulation:
+	stopifnot(length(data$X) == data$N)
+	
+	m <- c(-10,10)[chain]
+	c <- c(10,-10)[chain]
+	precision <- c(0.01,100)[chain]
+
+	.RNG.seed <- chain
+	.RNG.name <- c("base::Super-Duper", 
+	"base::Wichmann-Hill")[chain]
+	
+	return(list(m=m, c=c, precision=precision, 
+	.RNG.seed=.RNG.seed, .RNG.name=.RNG.name))
 }
 
 # A simple function that removes (over-writes with NA) one datapoint at a time:
@@ -162,7 +171,8 @@ cl <- makeCluster(20)
 
 # Call the 20 simulations over the snow cluster:
 results <- run.jags.study(simulations=20, model=themodel, datafunction=datafun, 
-targets=list(Y=Y, m=2, c=1), runjags.options=list(n.chains=2), cl=cl)
+targets=list(Y=Y, m=2, c=1), runjags.options=list(n.chains=2, inits=initfun),
+cl=cl)
 
 # Examine the results:
 

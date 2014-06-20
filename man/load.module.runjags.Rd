@@ -123,18 +123,19 @@ package.
 \author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
-
-	# A simple model to sample from a Lomax distribution:	
-	m <- "model{
-		L ~ dlomax(1,1)
-	}"	
-	results <- run.jags(m, monitor="L", method="rjags", 
-	modules="runjags")
 	
-	# Load the module for use with any rjags model:
-	require("rjags")
-	load.runjagsmodule()
-		
+	# A simple model to sample from a Lomax distribution.	
+	# (Requires the rjags or rjparallel methods)
+	if(require("rjags")){
+		m <- "model{
+			L ~ dlomax(1,1)
+		}"	
+		results <- run.jags(m, monitor="L", method="rjags", 
+		modules="runjags")
+	
+		# Load the module for use with any rjags model:
+		load.runjagsmodule()
+	}
 }
 
 \keyword{methods}

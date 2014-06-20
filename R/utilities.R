@@ -456,10 +456,11 @@ testJAGS <- testjags
 
 as.jags.runjags <- function(x, ...){
 	
+	if(!require('rjags')) stop('The rjags package is required for jags/runjags conversion tools')
 	runjags.object <- x
 	
 	passed <- list(...)
-	if('n.adapt'%in%names(passed)) adapt <- passed$n.adapt else adapt <- 1000
+	if('adapt'%in%names(passed)) adapt <- passed$adapt else adapt <- 1000
 	if('quiet'%in%names(passed)) quiet <- passed$quiet else quiet <- FALSE
 	
 	
@@ -469,7 +470,7 @@ as.jags.runjags <- function(x, ...){
 			if(m=="runjags"){
 				success <- try(load.runjagsmodule())
 			}else{
-				success <- try(load.module(m))
+				success <- try(rjags::load.module(m))
 			}
 		
 			if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
@@ -480,9 +481,9 @@ as.jags.runjags <- function(x, ...){
 		if(runjags.object$factories[i]!=""){
 			f <- strsplit(gsub(")","",runjags.object$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
 			fa <- ""
-			try(fa <- as.character(list.factories(f[2])$factory))
+			try(fa <- as.character(rjags::list.factories(f[2])$factory))
 			if(!f[1] %in% fa) stop(paste("The factory '", f[1], "' of type '", f[2], "' is not available - ensure any required modules are also provided", sep=""))
-			success <- try(set.factory(f[1],f[2],TRUE))			
+			success <- try(rjags::set.factory(f[1],f[2],TRUE))			
 			if(class(success)=="try-error") stop(paste("Failed to load the factory '", f[1], "' of type '", f[2], "'", sep=""))
 		}
 	}
@@ -494,7 +495,7 @@ as.jags.runjags <- function(x, ...){
 		
 	}else{
 		
-		cat("Compiling rjags model", if(adapt>0) paste(" and adapting for ", adapt, " iterations", sep=""), "...\n",sep="")
+		swcat("Compiling rjags model", if(adapt>0) paste(" and adapting for ", adapt, " iterations", sep=""), "...\n",sep="")
 		flush.console()
 	
 		model <- textConnection(runjags.object$model)
@@ -503,15 +504,15 @@ as.jags.runjags <- function(x, ...){
 		o <- capture.output({s <- try({
 		if(length(inits[[1]])==0){
 			if(as.character(runjags.object$data)==""){
-				jags.object <- jags.model(model, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)
+				jags.object <- rjags::jags.model(model, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)
 			}else{
-				jags.object <- jags.model(model, data=dataenv, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)				
+				jags.object <- rjags::jags.model(model, data=dataenv, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)				
 			}
 		}else{
 			if(as.character(runjags.object$data)==""){
-				jags.object <- jags.model(model, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)
+				jags.object <- rjags::jags.model(model, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)
 			}else{
-				jags.object <- jags.model(model, data=dataenv, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)				
+				jags.object <- rjags::jags.model(model, data=dataenv, inits=inits, n.chains=length(runjags.object$end.state), n.adapt=adapt, quiet=quiet)				
 			}
 		}}, silent=TRUE)})
 	
@@ -535,7 +536,7 @@ as.jags.runjags <- function(x, ...){
 	checkcompiled <- try(stats::coef(jags.object),silent=TRUE)
 	
 	if(class(checkcompiled)=="try-error"){
-		cat("Re-compiling rjags model and adapting...\n")
+		swcat("Re-compiling rjags model and adapting...\n")
 		o <- capture.output(s <- try(jags.object$recompile(),silent=TRUE))
 		if(class(s)=="try-error"){
 			jagsout <- as.character(s)
@@ -556,6 +557,8 @@ as.jags.runjags <- function(x, ...){
 
 as.runjags.jags <- function(x, monitor = stop("No monitored variables supplied"), modules=runjags.getOption('modules'), factories=runjags.getOption('factories'), check=TRUE, jags = runjags.getOption('jagspath'), ...){
 	
+	if(!require('rjags')) stop('The rjags package is required for jags/runjags conversion tools')
+
 	jags.object <- x
 	model <- paste(jags.object$model(),collapse="\n")
 	data <- dump.format(jags.object$data())
@@ -568,13 +571,12 @@ as.runjags.jags <- function(x, monitor = stop("No monitored variables supplied")
 }
 
 runjagsprivate <- new.env()
-.Platform$OS.type=='unix' && (.Platform$GUI!="AQUA" & Sys.info()['user']=='nobody' && !(method %in% c('rjags','simple')))
 # Use 'expression' for functions to avoid having to evaluate before the package is fully loaded:
-assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages(TRUE)){'rjags'}else{if(Sys.info()['user']=='nobody') 'simple' else 'interruptible'}), tempdir=TRUE, newwindows=expression(!.Platform$GUI%in%c("AQUA","Rgui")), modules="", factories="", linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE), envir=runjagsprivate)
+assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages(TRUE)){'rjags'}else{if(Sys.info()['user']=='nobody') 'simple' else 'interruptible'}), tempdir=TRUE, newwindows=expression(!.Platform$GUI%in%c("AQUA","Rgui")), modules="", factories="", linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE, silent.jags=FALSE, silent.runjags=FALSE, predraw.plots=TRUE), envir=runjagsprivate)
 assign("options",runjagsprivate$defaultoptions,envir=runjagsprivate)
 assign("rjagsmethod",c('rjags','rjparallel'),envir=runjagsprivate)
 assign("parallelmethod",c('parallel','bgparallel','snow','rjparallel','xgrid'),envir=runjagsprivate)
-
+assign("runjagsversion", "notset", envir=runjagsprivate)
 
 runjags.options <- function(...){
 	opts <- list(...)

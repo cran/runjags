@@ -8,14 +8,14 @@ xgrid.jobs <- function(comment=FALSE, user=FALSE, jobs=10, mgridpath=system.file
 
 	# Note ugly workarounds to stop console appearing to freeze on Aqua:
 	if(.Platform$GUI=="AQUA"){
-		cat("Retrieving current job list from xgrid...")
+		swcat("Retrieving current job list from xgrid...")
 		system("printf '\n'")
 		wrapper <- tempfile()
 		cat("#!/bin/bash\n", command, "\nexit 0\n", sep="", file=wrapper)
 		Sys.chmod(wrapper)
 		output <- system(wrapper, intern=TRUE)
 		unlink(wrapper)
-		cat(gsub("Retrieving current job list from xgrid...\r","",paste(output,collapse="\n"),fixed=TRUE), "\n")
+		swcat(gsub("Retrieving current job list from xgrid...\r","",paste(output,collapse="\n"),fixed=TRUE), "\n")
 		
 	}else{
 		system(command, intern=FALSE)

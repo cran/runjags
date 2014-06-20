@@ -48,9 +48,10 @@ Requires Just Another Gibbs Sampler (JAGS), see
 run.jags(model, monitor = NA, data=NA, n.chains=NA, inits = NA, 
 	burnin = 4000, sample = 10000, adapt=1000, 
 	datalist=NA, initlist=NA, jags = runjags.getOption('jagspath'), 
-	silent.jags = FALSE, summarise = TRUE, confidence=0.95,
-	plots = summarise, psrf.target = 1.05, normalise.mcmc = TRUE,
-	check.stochastic = TRUE, modules=runjags.getOption('modules'), 
+	silent.jags = runjags.getOption('silent.jags'), summarise = TRUE, 
+	confidence=0.95, plots = runjags.getOption('predraw.plots') && summarise, 
+	psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, 
+	modules=runjags.getOption('modules'), 
 	factories=runjags.getOption('factories'), thin = 1,
 	monitor.deviance = FALSE, monitor.pd = FALSE, monitor.pd.i = FALSE,
 	monitor.popt = FALSE, check.conv = summarise, keep.jags.files =
@@ -63,8 +64,10 @@ extend.jags(runjags.object, add.monitor=character(0),
 	drop.monitor=character(0), drop.chain=numeric(0),
 	combine=length(c(add.monitor,drop.monitor,drop.chain))==0, 
 	burnin = 0, sample = 10000, adapt=1000, 
-	jags = runjags.getOption('jagspath'), silent.jags = FALSE, 
-	summarise = TRUE, confidence=0.95, plots = summarise, 
+	jags = runjags.getOption('jagspath'), 
+	silent.jags = runjags.getOption('silent.jags'), 
+	summarise = TRUE, confidence=0.95, 
+	plots = runjags.getOption('predraw.plots') && summarise, 
 	psrf.target = 1.05, normalise.mcmc = TRUE, 
 	check.stochastic = TRUE, thin = runjags.object$thin, 
 	keep.jags.files	= FALSE, tempdir=runjags.getOption('tempdir'), 
@@ -100,9 +103,10 @@ monitored nodes won't appear as variables in the summary statistics or
 plots.  Note: multiple chains are required for calculation of 'pd.i',
 'pd', 'popt' and 'dic'.  No default.}
 
-\item{data}{a character string in the R dump format (or a named list)
+\item{data}{a named list (or character string in the R dump format)
 containing the data.  If left as NA, no external data is used in the
-model.  Default NA.}
+model.  A function (taking exactly 0 arguments) can also be provided,
+which will be evaluated by runjags to generate the data.  Default NA.}
 
 \item{n.chains}{the number of chains to use with the simulation.  More
 chains will improve the sensitivity of the convergence diagnostic, but
@@ -121,7 +125,9 @@ are sampled from the prior distribution by JAGS.  Values left as NA
 result in all initial values for that chain being sampled from the prior
 distribution.  The special variables '.RNG.seed', '.RNG.name', and
 '.RNG.state' are allowed for explicit control over random number
-generators in JAGS.  Default NA.}
+generators in JAGS.  If a function is provided, the data is available
+inside the function as a named list 'data' - this may be useful for
+setting initial values that depend on the data.  Default NA.}
 
 \item{runjags.object}{the model to be extended - the output of a
 run.jags (or autorun.jags or extend.jags etc) function, with class
@@ -148,10 +154,14 @@ run should be combined with the previous chains.  Default TRUE if not
 adding or removing variables or chains, and FALSE otherwise.}
 
 \item{burnin}{the number of burnin iterations (not sampled) to use
-(numeric).  Default 5000 iterations.}
+(numeric).  Note that burnin occurs after adaptation, so the number
+of adapt iterations specified must also be considered.  Default 4000 
+iterations (after adaptive phase).}
 
 \item{sample}{the number of sampling iterations to use (numeric).
-Default 10000 iterations.}
+This must be an integer >=2 (although for extend.jags a value of
+0 can be used if combine=TRUE - this allows summaries and plots
+to be calculated for stored runjags objects).  Default 10000.}
 
 \item{adapt}{the length of the adaptive phase to use when compiling
 models.  This will be run for every new simulation, although extending
@@ -189,7 +199,9 @@ findjags() to attempt to locate JAGS on your system.}
 
 \item{silent.jags}{should the JAGS output be suppressed? (logical)  If
 TRUE, no indication of the progress of individual models is supplied.
-Default FALSE.}
+Note that output will still be produced by runjags even if silent.jags
+is set to TRUE - to suppress all output set silent.jags and silent.runjags
+using \code{\link{runjags.options}}.}
 
 \item{summarise}{should summary statistics be assessed after the model
 has completed?  Default TRUE.}
@@ -198,14 +210,17 @@ has completed?  Default TRUE.}
 calculation of confidence intervals.  Default 0.95 (95\% confidence
 intervals).}
 
-\item{plots}{should traceplots and density plots be produced for each
-monitored variable?  If TRUE, the returned list will include elements
+\item{plots}{should traceplots and density plots be pre-drawn by runjags
+to facilitate more convinient assessment of convergence after the model
+has finished running?  If TRUE, the returned list will include elements
 'trace' and 'density' which consist of a list of lattice objects
-accessible using the plot method for the \code{\link{runjags-class}}. 
-The alternative is to use (for example) plot(as.mcmc.list(results)) to
-look at the density and traceplots for each variable using the
-traditional graphics system. Default follows the summarise argument
-(which is required to be TRUE for plots to be produced).}
+accessible using the plot method for the \code{\link{runjags-class}} -
+this will save time when displaying plots at the cost of increased
+storage requirement for the runjags object. The alternative is to use
+(for example) plot(as.mcmc.list(results)) to look at the density and
+traceplots for each variable using the traditional graphics system.
+Default follows the summarise argument (which is required to be TRUE for
+plots to be produced) if the runjags option predraw.plots is TRUE.}
 
 \item{psrf.target}{the value of the point estimate for the potential
 scale reduction factor of the Gelman Rubin statistic below which the
@@ -394,21 +409,21 @@ inits1 <- list(m=1, c=1, precision=1,
 inits2 <- list(m=0.1, c=10, precision=1,
 .RNG.name="base::Wichmann-Hill", .RNG.seed=2)
 
+\dontrun{
 # Run the model and produce plots 
 results <- run.jags(model=model, monitor=c("m", "c", "precision"), 
-data=data, n.chains=2, method="rjags", inits=c(inits1,inits2), 
+data=data, n.chains=2, method="rjags", inits=list(inits1,inits2), 
 plots = TRUE)
 
 # Plot the monitored variables:
-\dontrun{
 plot(results)
-}
 
 # Look at the summary statistics:
 print(results)
 
 # Extract only the coefficient as an mcmc.list object:
 coeff <- as.mcmc.list(results,vars="m")
+}
 
 
 # The same model but using embedded shortcuts to specify data, inits and monitors,

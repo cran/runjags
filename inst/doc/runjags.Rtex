@@ -8,7 +8,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% almost as usual
-\author{Matthew J Denwood\\University of Glasgow}
+\author{Matthew J Denwood\\University of Copenhagen}
 \title{\pkg{runjags}:  An \proglang{R} Package Providing Interface Utilities, Distributed Computing Methods and Additional Distributions For MCMC Models in \proglang{JAGS}}
 
 %% for pretty printing and a nice hypersummary also set:
@@ -37,12 +37,12 @@
 %% in the following format:
 \Address{
   Matthew J Denwood\\
-  School of Veterinary Medicine\\
-  College of Medical, Veterinary and Life Sciences\\
-  University of Glasgow\\
-  UK\\
-  E-mail: \email{matthew.denwood@glasgow.ac.uk}\\
-  URL: \url{http://www.gla.ac.uk/boydorr/people/byname/matthewdenwood/}
+  Section for Animal Welfare and Disease Control\\
+  Faculty of Health and Medical Sciences\\
+  University of Copenhagen\\
+  Denmark\\
+  E-mail: \email{md@sund.ku.dk}\\
+  URL: \url{http://iph.ku.dk/english/employees/?pure=en/persons/487288/}
 }
 %% It is also possible to add a telephone and fax number
 %% before the e-mail in the following format:
@@ -601,6 +601,10 @@ Given the flexibility and ease of use of \proglang{BUGS} type software packages,
 There are huge advantages to using MCMC, but also some potential disadvantages associated with failure to identify poor convergence and high Monte Carlo error, as well as sensitivity of the inference made to using subtly different model specifications and prior distributions.  The \pkg{runjags} package attempts to partially safeguard against some of these difficulties by calculating and automatically reporting convergence and sample length diagnostics every time a \proglang{JAGS} model is run, and providing a more user friendly way to access commonly used visual convergence diagnostics and summary statistics.  The methods used to call the underlying executable are generalised and flexible, and can be used to parallellise model runs with multiple chains.  A further attraction of this package is the facilitation of simulation studies, with analysis of an arbitrary number of replicate datasets fully automated and parallelised using a single function call.
 
 There has been considerable debate in the literature concerning the relative merits of subjective and objective Bayesian inference (see for example \citet{Berger:1988uv,Berger2006,Lele2009}).  Where prior information is available and can be justified, there can be no doubt that use of this information will have a beneficial effect on the posterior distributions of all parameters of interest - however, there are many applied fields where use of such prior information is often considered to be unjustified by the mainstream community.  In these situations, it may be desirable to use a minimally informative prior, however there is always the potential for inference to be sensitive even to priors that are intended to be minimally informative, especially when dealing with small datasets.  For over-dispersed count data with properties similar to that generated here, it appears that the prior distribution suggested by \citet{DuMouchel1994} (a Lomax or Pareto Type-II distribution) is a suitable minimally informative prior, however the most appropriate prior for other applications is likely to be highly specific to that application.  Embarking on a full simulation study to validate the model formulation used can be computationally demanding, but the availability of ever-increasing computing power brings these procedures well within reach.  Where there is any doubt over the optimal model formulation for a particular application, a pragmatic and robust approach should therefore include some validation of the choice of model against simulated data.
+
+\section*{Acknowledgements}
+
+The author is grateful to Stefano Conti for useful discussions about the use of Pareto family distributions as priors, and to John Kruschke, Jan Gläscher, Richard Reeve, and all of the people mentioned in the CHANGELOG file for reporting bugs and making comments and suggestions that have greatly aided in development of the \pkg{runjags} package.
 
 
 \begin{thebibliography}{33}

@@ -5,7 +5,7 @@ library(runjags)
 runjags.options(inits.warning=FALSE, rng.warning=FALSE)
 
 # Require for as.mcmc.list and niter:
-library(coda)
+library("coda")
 
 
 model <- "model {
@@ -28,7 +28,7 @@ initfunction <- function(chain) return(switch(chain, "1"=list(m=-10), "2"=list(m
 
 
 # Get the JAGS path - rjags adds the JAGS path to the PATH in Windows...
-library(rjags)
+try(library(rjags))
 jagspath <- findjags()
 
 # Only run the JAGS methods tests if we have found JAGS and have permission to run it:
@@ -43,7 +43,7 @@ if(jagspath!="JAGS not found" && testjags(jagspath)$JAGS.available){
 		temp <- testjags()
 		print(file.info(jagspath))
 		print(file.info(getwd()))
-		cat("All test methods except rjags were skipped\n")
+		cat("All test methods (except possibly rjags) were skipped\n")
 	}else{
 		stopifnot(niter(as.mcmc.list(results))==1000)
 
@@ -78,17 +78,41 @@ if(jagspath!="JAGS not found" && testjags(jagspath)$JAGS.available){
 			t <- t+1
 		}
 		stopifnot(niter(as.mcmc.list(results))==1000)
+		
+		# Check combine.mcmc does what it says on the tin:
+		stopifnot(niter(combine.mcmc(results, return.samples=1000, collapse.chains=TRUE))==1000)
+		stopifnot(niter(combine.mcmc(results, return.samples=11, collapse.chains=TRUE))==11)
+		stopifnot(niter(combine.mcmc(results, return.samples=100, collapse.chains=FALSE))==100)
+		stopifnot(niter(combine.mcmc(results, thin=1, collapse.chains=TRUE))==2000)
+		stopifnot(niter(combine.mcmc(results, thin=10, collapse.chains=TRUE))==200)
+		stopifnot((niter(combine.mcmc(results, thin=15, collapse.chains=TRUE))*15)>=2000)
+		stopifnot(niter(combine.mcmc(results, thin=10, collapse.chains=FALSE))==100)
+		
+		# Check we can use the extend wrapper:
+		newres <- extend.jags(results, sample=0)
+		stopifnot(newres$burnin==results$burnin)
+		stopifnot(niter(as.mcmc.list(newres))==niter(as.mcmc.list(results)))
+		
+		# Check the version number is correct:
+		stopifnot(newres$runjags.version[1]==runjags:::runjagsprivate$runjagsversion)
+		
 	}
 }else{
 	cat("JAGS could not be called externally at the path: ", jagspath, "\n")
-	cat("All test methods except rjags and rjagsparallel were skipped\n")	
+	cat("All test methods except possibly rjags and rjagsparallel were skipped\n")	
 }
 
-results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, initlist=initfunction, method='rjags')
-stopifnot(niter(as.mcmc.list(results))==1000)
+if(require("rjags")){
+	results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, initlist=initfunction, method='rjags')
+	stopifnot(niter(as.mcmc.list(results))==1000)
 
-results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, initlist=initfunction, method='rjparallel')
-stopifnot(niter(as.mcmc.list(results))==1000)
+	runjags.options(silent.jags=TRUE, silent.runjags=TRUE)
+	output <- capture.output(results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, initlist=initfunction, method='rjparallel'))
+	stopifnot(length(output)==0)
+	stopifnot(niter(as.mcmc.list(results))==1000)
+}else{
+	cat("The rjags and rjagsparallel method checks were skipped as the rjags package is not installed\n")
+}
 
 cat("All methods checks passed\n")
 

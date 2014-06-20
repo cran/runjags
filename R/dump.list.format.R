@@ -8,8 +8,10 @@ dump.format <- function(namedlist=list(), checkvalid=TRUE){
 		names(data) <- names[[1]]
 	}
 	
-	if(class(data)!="list" | length(data)==0) stop("Data must be provided as a named list")
-	if(any(names(data)=="") | is.null(names(data))) stop("Data must be provided as a named list")
+	if(class(data)!="list" | length(data)==0) stop("Data must be provided as a named list", call.=FALSE)
+	if(any(names(data)=="") | is.null(names(data))) stop("Data must be provided as a named list", call.=FALSE)
+	if(length(unique(names(data)))!=length(data)) stop('All elements in the data list must have unique names', call.=FALSE)
+	
 	
 	if(checkvalid){
 		valid <- checkvalidforjags(data)

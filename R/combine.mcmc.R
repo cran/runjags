@@ -14,7 +14,7 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 		
 	returnmcmcs <- all(sapply(mcmc.objects,class)=="mcmc")
 	if(returnmcmcs && collapse.chains){
-		warning("Can't collapse mcmc.list chains of mcmc objects")		
+		warning("Can't collapse chains of single-chain mcmc objects")
 		collapse.chains <- FALSE
 	}
 	
@@ -124,11 +124,10 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 			thin <- 1
 			if(return.samples!=Inf) warning('Specified return.samples was longer than the chains provided - returning shorter MCMC object length')
 		}else{
-			thin <- rowlengths / (return.samples-1)
+			thin <- rowlengths / return.samples
 		}
 	}else{
 		return.samples <- Inf
-		thin <- 1
 	}
 
 	currentthin <- thin(newobjects)
@@ -151,7 +150,7 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 	# If collapse chains recursive call (after thinning to approx double what we will need, for efficiency):
 	if(collapse.chains){
 		class(newobjects) <- "list"
-		newobjects <- combine.mcmc(newobjects, collapse.chains=FALSE, return.samples=startretsamples, thin=startthin, vars=NA)	
+		newobjects <- combine.mcmc(newobjects, collapse.chains=FALSE, return.samples=startretsamples, thin=1, vars=NA)	
 	}else{
 		if(returnmcmcs) newobjects <- newobjects[[1]]			
 	}

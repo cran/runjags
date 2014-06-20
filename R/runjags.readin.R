@@ -54,7 +54,7 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 			}else{
 				# file.rename may not work on all platforms for directories so use file.copy instead:
 				file.copy(from=file.path(temp.directory, list.files(temp.directory)), to=new.directory, recursive=TRUE)
-				cat("JAGS files were saved to the '", new.directory, "' folder in your current working directory\n", sep="")
+				swcat("JAGS files were saved to the '", new.directory, "' folder in your current working directory\n", sep="")
 			}
 		}
 		if(delete) unlink(temp.directory, recursive = TRUE)
@@ -127,7 +127,7 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 			indexok <- file.exists(paste("sim.",1:n.sims,.Platform$file.sep,"CODAindex.txt",sep=""))
 			if(all(indexok)) break
 			tries <- tries +1
-			if(tries==msgtime) cat("Waiting for the CODA index files to be created...\n")
+			if(tries==msgtime) swcat("Waiting for the CODA index files to be created...\n")
 			if(tries==timeout) stop(paste("Timed out waiting for the CODA index files to be created - the files available at time out were: ", paste(list.files(recursive=TRUE),collapse=", "), ".  Please file a bug report (including this message) to the runjags package author.", sep=""))
 			Sys.sleep(increment)
 		}
@@ -139,18 +139,19 @@ runjags.readin <- function(directory, copy, delete, silent.jags, target.iters, n
 			indexok <- file.exists(codapaths)
 			if(all(indexok)) break
 			tries <- tries +1
-			if(tries==msgtime) cat("Waiting for the CODA files to be created...\n")
+			if(tries==msgtime) swcat("Waiting for the CODA files to be created...\n")
 			if(tries==timeout) stop(paste("Timed out waiting for the CODA files to be created - the files available at time out were: ", paste(list.files(recursive=TRUE),collapse=", "), ".  Please file a bug report (including this message) to the runjags package author.", sep=""))
 			Sys.sleep(increment)
 		}
 		
-		# Now wait for all of the codachain files to be at least 95% of the max file size (always seem to be much closer than this):
+		# Now wait for all of the codachain files to be at least 92% of the max file size (usually seem to be much closer than this).
+		# The biggest discrepancy I've had reported is 0.9495155 (chain 1 % chain 4) for 4 chains
 		tries <- 0
 		repeat{
 			fi <- file.info(codapaths)
-			if(all(fi[,'size']>0) && all(fi[,'size']/max(fi[,'size']) > 0.95)) break
+			if(all(fi[,'size']>0) && all(fi[,'size']/max(fi[,'size']) > 0.92)) break
 			tries <- tries +1
-			if(tries==msgtime) cat("Waiting for the CODA files to be completed...\n")
+			if(tries==msgtime) swcat("Waiting for the CODA files to be completed...\n")
 				# If the coda files exist, wait a LONG time for them to be the correct sizes before giving up!
 			if(tries==(60*5/increment)) stop(paste("Timed out waiting for the CODA files to be completed - the file size and modification times at ", Sys.time(), " were: ", paste(paste(codapaths,fi[,'size'],as.character(fi[,'mtime']), sep=" : "),collapse=", "), ".  Please file a bug report (including this message) to the runjags package author.", sep=""))
 			Sys.sleep(increment)

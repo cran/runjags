@@ -42,14 +42,16 @@ getjagsnames <- function(targets){
 
 swcat <- function(...){
 	
-	pargs <- list(...)
-	pasted <- do.call(paste, pargs)
-	pasted <- gsub('\r', '\n', pasted)
+	if(!runjags.getOption('silent.runjags')){
+		pargs <- list(...)
+		pasted <- do.call(paste, pargs)
+		pasted <- gsub('\r', '\n', pasted)
 	
-	# White space is destroyed by strwrap so preserve \n by splitting on them (and append a ' ' [which is removed by strwrap anyway] to preserve any trailing \n)
-	pasted <- unlist(strsplit(paste(pasted,' ',sep=''), '\n'))
-	pasted <- strwrap(pasted)
-	cat(paste(pasted, collapse='\n'))
+		# White space is destroyed by strwrap so preserve \n by splitting on them (and append a ' ' [which is removed by strwrap anyway] to preserve any trailing \n)
+		pasted <- unlist(strsplit(paste(pasted,' ',sep=''), '\n'))
+		pasted <- strwrap(pasted)
+		cat(paste(pasted, collapse='\n'))
+	}
 }
 
 versionmatch <- function(required, actual){

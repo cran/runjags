@@ -37,11 +37,11 @@ autorun.jags(model, monitor = NA, data=NA, n.chains=NA,
 	check.stochastic = TRUE, modules=runjags.getOption('modules'), 
 	factories=runjags.getOption('factories'), 
 	raftery.options = list(), crash.retry=1, summarise = TRUE,
-	confidence=0.95, plots = summarise, thin.sample = FALSE, 
-	jags = runjags.getOption('jagspath'), 
-	silent.jags = FALSE, interactive=FALSE, max.time=Inf,
-	adaptive=1000, thin = 1, monitor.deviance
-	= FALSE, monitor.pd = FALSE, tempdir=runjags.getOption('tempdir'), 
+	confidence=0.95, plots = runjags.getOption('predraw.plots') && summarise, 
+	thin.sample = FALSE, jags = runjags.getOption('jagspath'), 
+	silent.jags = runjags.getOption("silent.jags"), interactive=FALSE, 
+	max.time=Inf, adaptive=1000, thin = 1, monitor.deviance = FALSE, 
+	monitor.pd = FALSE, tempdir=runjags.getOption('tempdir'), 
 	jags.refresh=0.1, batch.jags=silent.jags, 
 	method=runjags.getOption('method'), method.options=list())
 
@@ -51,12 +51,12 @@ autoextend.jags(runjags.object, add.monitor=character(0),
 	startburnin = 0, startsample = 10000, psrf.target = 1.05,
 	normalise.mcmc = TRUE, check.stochastic = TRUE, 
 	raftery.options = list(), crash.retry=1, summarise = TRUE, 
-	confidence=0.95, plots = summarise, thin.sample = FALSE, 
-	jags = runjags.getOption('jagspath'), silent.jags = FALSE, 
-	interactive=FALSE, max.time=Inf, adaptive=1000, 
-	thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), 
-	jags.refresh=0.1, batch.jags=silent.jags, method=NA,
-	method.options=NA)
+	confidence=0.95, plots = runjags.getOption('predraw.plots') && summarise, 
+	thin.sample = FALSE, jags = runjags.getOption('jagspath'), 
+	silent.jags = runjags.getOption('silent.jags'),	interactive=FALSE, 
+	max.time=Inf, adaptive=1000, thin = runjags.object$thin, 
+	tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, 
+	batch.jags=silent.jags, method=NA, method.options=NA)
 
 }
 
@@ -106,7 +106,9 @@ are sampled from the prior distribution by JAGS.  Values left as NA
 result in all initial values for that chain being sampled from the prior
 distribution.  The special variables '.RNG.seed', '.RNG.name', and
 '.RNG.state' are allowed for explicit control over random number
-generators in JAGS.  Default NA.}
+generators in JAGS.  If a function is provided, the data is available
+inside the function as a named list 'data' - this may be useful for
+setting initial values that depend on the data.  Default NA.}
 
 \item{runjags.object}{the model to be extended - the output of a
 run.jags (or autorun.jags or extend.jags etc) function, with class
@@ -129,7 +131,7 @@ run should be combined with the previous chains.  Default TRUE if not
 adding or removing variables or chains, and FALSE otherwise.}
 
 \item{startburnin}{the number of burnin iterations, NOT including the
-adaptive iterations.}
+adaptive iterations to use for the initial pilot run of the chains.}
 
 \item{startsample}{the total number of samples (including the chains
 supplied in runjags.object for autoextend.jags) on which to assess
@@ -215,14 +217,17 @@ for the output chains?  Default TRUE.}
 calculation of confidence intervals.  Default 0.95 (95\% confidence
 intervals).}
 
-\item{plots}{should traceplots and density plots be produced for each
-monitored variable?  If TRUE, the object of class 'runjags' returned
-will include elements 'trace' and 'density' which consist of a list of
-lattice objects, with a specific print function that can also be
-accessed using plot(results).  The alternative is to use
-plot(as.mcmc.list(results)) to look at the density and traceplots for
-each variable using the traditional graphics system. See also
-\code{\link{runjags-class}}. Default TRUE.}
+\item{plots}{should traceplots and density plots be pre-drawn by runjags
+to facilitate more convinient assessment of convergence after the model
+has finished running?  If TRUE, the returned list will include elements
+'trace' and 'density' which consist of a list of lattice objects
+accessible using the plot method for the \code{\link{runjags-class}} -
+this will save time when displaying plots at the cost of increased
+storage requirement for the runjags object. The alternative is to use
+(for example) plot(as.mcmc.list(results)) to look at the density and
+traceplots for each variable using the traditional graphics system.
+Default follows the summarise argument (which is required to be TRUE for
+plots to be produced) if the runjags option predraw.plots is TRUE.}
 
 \item{thin.sample}{option to thin the final MCMC chain(s) before
 calculating summary statistics and returning the chains.  Thinning very
@@ -244,7 +249,9 @@ findjags() to attempt to locate JAGS on your system.}
 
 \item{silent.jags}{should the JAGS output be suppressed? (logical)  If
 TRUE, no indication of the progress of individual models is supplied.
-Default FALSE.}
+Note that output will still be produced by runjags even if silent.jags
+is set to TRUE - to suppress all output set silent.jags and silent.runjags
+using \code{\link{runjags.options}}.}
 
 \item{interactive}{option to allow the simulation to be interactive, in
 which case the user is asked if the simulation should be extended when

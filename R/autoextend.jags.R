@@ -1,4 +1,4 @@
-autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = summarise, thin.sample = FALSE, jags = runjags.getOption('jagspath'), silent.jags = FALSE, interactive=FALSE, max.time=Inf, adaptive=1000, thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
+autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=character(0), drop.chain=numeric(0), combine=length(c(add.monitor,drop.monitor,drop.chain))==0, startburnin = 0, startsample = 10000, psrf.target = 1.05, normalise.mcmc = TRUE, check.stochastic = TRUE, raftery.options = list(), crash.retry=1, summarise = TRUE, confidence=0.95, plots = runjags.getOption('predraw.plots') && summarise, thin.sample = FALSE, jags = runjags.getOption('jagspath'), silent.jags = runjags.getOption('silent.jags'), interactive=FALSE, max.time=Inf, adaptive=1000, thin = runjags.object$thin, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=NA, method.options=NA){
 	
 	# We may be passed some unevaluated function arguments so evaluate everything here:
 	argnames <- names(formals(autoextend.jags))
@@ -372,7 +372,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	
 	suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmcfun(additional$mcmc, normalise=normalise.mcmc, warn=FALSE, check.stochastic = check.stochastic), transform=FALSE, autoburnin=FALSE), silent=TRUE))
 	if(class(success)=="try-error"){
-		stop("An error occured while calculating the Gelman-Rubin statistic.  Check that different chains have not been given the same starting values and random seeds.",call.=FALSE)
+		stop("An error occured while calculating the Gelman-Rubin statistic.  Check that different chains have not been given the same starting values and random seeds, and that there is at least one monitored stochastic variable.",call.=FALSE)
 	}
 	
 	convergence <- c(convergence, psrf.target=psrf.target)
@@ -424,9 +424,14 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 			# Use pre-calcuated convergence:
 			summaries$psrf <- convergence
 	
-			combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken)))
+			combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken), runjags.version=c(runjagsprivate$runjagsversion, R.Version()$version.string, .Platform$OS.type, .Platform$GUI, .Platform$pkgType, format(Sys.time()))))
 			class(combinedoutput) <- 'runjags'
-	
+			
+			# Check to see if we have identical RNG states after the run:
+			if(n.chains > 1 && any(combinedoutput$end.state[2:n.chains]==combinedoutput$end.state[1])){
+				warning("Identical RNG states have been produced for multiple chains - this probably means the chains are identical.  Try again using different parameter values and/or RNG samplers as inits.", call.=FALSE)
+			}
+			
 			swcat("Returning UNCONVERGED simulation results\n\n")
 			return(combinedoutput)
 		}else{
@@ -490,7 +495,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				thrownaway <- thrownaway+neededupdates
 				suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmcfun(additional$mcmc, normalise=normalise.mcmc, warn=FALSE, check.stochastic = check.stochastic), transform=FALSE, autoburnin=FALSE), silent=TRUE))
 				if(class(success)=="try-error"){
-					stop("An error occured while calculating the Gelman-Rubin statistic.  Check that different chains have not been given the same starting values and random seeds.", call.=FALSE)
+					stop("An error occured while calculating the Gelman-Rubin statistic.  Check that different chains have not been given the same starting values and random seeds, and that there is at least one stochastic monitored variable.", call.=FALSE)
 				}
 					
 				convergence <- c(convergence, psrf.target=psrf.target)
@@ -536,9 +541,14 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 						# Use pre-calcuated convergence:
 						summaries$psrf <- convergence
 	
-						combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken)))
+						combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken), runjags.version=c(runjagsprivate$runjagsversion, R.Version()$version.string, .Platform$OS.type, .Platform$GUI, .Platform$pkgType, format(Sys.time()))))
 						class(combinedoutput) <- 'runjags'
 	
+						# Check to see if we have identical RNG states after the run:
+						if(n.chains > 1 && any(combinedoutput$end.state[2:n.chains]==combinedoutput$end.state[1])){
+							warning("Identical RNG states have been produced for multiple chains - this probably means the chains are identical.  Try again using different parameter values and/or RNG samplers as inits.", call.=FALSE)
+						}
+						
 						swcat("Returning UNCONVERGED simulation results\n\n")
 						return(combinedoutput)
 							
@@ -561,9 +571,14 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				# Use pre-calcuated convergence:
 				summaries$psrf <- convergence
 	
-				combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken)))
+				combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken), runjags.version=c(runjagsprivate$runjagsversion, R.Version()$version.string, .Platform$OS.type, .Platform$GUI, .Platform$pkgType, format(Sys.time()))))
 				class(combinedoutput) <- 'runjags'
-	
+				
+				# Check to see if we have identical RNG states after the run:
+				if(n.chains > 1 && any(combinedoutput$end.state[2:n.chains]==combinedoutput$end.state[1])){
+					warning("Identical RNG states have been produced for multiple chains - this probably means the chains are identical.  Try again using different parameter values and/or RNG samplers as inits.", call.=FALSE)
+				}
+				
 				swcat("Returning UNCONVERGED simulation results\n\n")
 				return(combinedoutput)
 			}
@@ -633,9 +648,14 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				# Use pre-calcuated convergence:
 				summaries$psrf <- convergence
 	
-				combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken)))
+				combinedoutput <- c(list(mcmc=additional$mcmc, pd=additional$pd, popt=additional$popt, pd.i=additional$pd.i), summaries, list(end.state=last.end.state, burnin=updatesthrown, sample=niter(additional$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=runjags.object$monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken), runjags.version=c(runjagsprivate$runjagsversion, R.Version()$version.string, .Platform$OS.type, .Platform$GUI, .Platform$pkgType, format(Sys.time()))))
 				class(combinedoutput) <- 'runjags'
-	
+				
+				# Check to see if we have identical RNG states after the run:
+				if(n.chains > 1 && any(combinedoutput$end.state[2:n.chains]==combinedoutput$end.state[1])){
+					warning("Identical RNG states have been produced for multiple chains - this probably means the chains are identical.  Try again using different parameter values and/or RNG samplers as inits.", call.=FALSE)
+				}
+				
 				swcat("Simulation aborted\n\n")
 				return(combinedoutput)
 					
@@ -727,8 +747,13 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}
 	
 	class(last.end.state) <- 'runjags.inits'
-	combinedoutput <- c(combinedoutput, list(end.state=last.end.state, burnin=totalburnin, sample=niter(combinedoutput$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken)))
+	combinedoutput <- c(combinedoutput, list(end.state=last.end.state, burnin=totalburnin, sample=niter(combinedoutput$mcmc), thin=thin), summaries, list(model=runjags.object$model, data=runjags.object$data, monitor=monitor, modules=modules, factories=runjags.object$factories, method=method, method.options=method.options, timetaken=(difftime(Sys.time(), starttime) + runjags.object$timetaken), runjags.version=c(runjagsprivate$runjagsversion, R.Version()$version.string, .Platform$OS.type, .Platform$GUI, .Platform$pkgType, format(Sys.time()))))
 	class(combinedoutput) <- 'runjags'
+	
+	# Check to see if we have identical RNG states after the run:
+	if(n.chains > 1 && any(combinedoutput$end.state[2:n.chains]==combinedoutput$end.state[1])){
+		warning("Identical RNG states have been produced for multiple chains - this probably means the chains are identical.  Try again using different parameter values and/or RNG samplers as inits.", call.=FALSE)
+	}
 	
 	swcat("Auto-run JAGS complete.\n\n")
 	

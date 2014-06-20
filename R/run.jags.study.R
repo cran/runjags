@@ -60,6 +60,9 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	# The special 'NaN' argument suppresses the warning about data in the model being ignored:
 	runjags.options$datalist <- NaN
 	
+	# Auto-inits aren't allowed as it's too complicated to work out what to pass where:
+	if(grepl("#inits#",model)) warning('The #inits# statement in the model was ignored - to pass initial values to simulation studies, use the inits argument (this could be a function, which is evaluated separately for each simulation with "data" in the working environment)', call.=FALSE)
+	
 	# Get the data auto-specified in the model so we can copy and possibly over-write it:
 	modelsetup <- setup.jagsfile(model,n.chains=1,call.setup=FALSE,failincomplete=FALSE,method=eval(runjags.options$method))
 	modeldata <- modelsetup$data
@@ -70,14 +73,14 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	
 	# Now check that the datafunction gives us some data and if it does include it with the setup call
 	if(!is.null(datafunction)){
-		if(!is.function(datafunction) || length(formals(datafunction))!=1){
-			stop("The datafunction argument provided must be a function with a single argument representing the simulation number")
+		if(!is.function(datafunction) || length(formals(datafunction))>1){
+			stop("The datafunction argument provided must be a function with either zero arguments or a single argument representing the simulation number")
 		}		
 
 		data <- vector('list',length=simulations)
 		alreadywarned <- FALSE
 		for(i in 1:simulations){
-			thedata <- datafunction(i)
+			if(length(formals(datafunction))==0) thedata <- datafunction() else thedata <- datafunction(i)
 			if(class(thedata)=="character") thedata <- list.format(thedata)
 			if(class(thedata)!="list") stop("The data function must return either a named list or a character string representing the data for that iteration")
 			
@@ -117,15 +120,19 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	if(identical(targets,list())) stop("A named list of variables and their values must be provided to the 'target' option")
 	if(class(targets)!="list" || length(targets)==0 || any(names(targets)=="")) stop("The targets variable must be a named list of variable(s) to assess the model's performance on")
 	
-	# If we don't have any monitored variables make the targets monitors, otherwise add them later so we don't over-write the monitors in the model block:
-	addtargets <- TRUE
-	if(length(c(modelsetup$monitor,runjags.options$monitor))==0){
-		runjags.options$monitor <- names(targets)
-		addtargets <- FALSE
-	}
-	
 	# Now get the full argument list for autorun.jags with these modifications above:
-	runjags.options <- getargs(c('autorun.jags'), runjags.options, returnall=TRUE)	
+	runjags.options <- getargs(c('autorun.jags'), runjags.options, returnall=TRUE)
+	donteval <- c('inits','data', 'method', 'jags', 'tempdir')
+	for(i in which(!names(runjags.options)%in%donteval)){
+		runjags.options[[i]] <- eval(runjags.options[[i]])
+	}
+		
+	# If no monitors have been specified, leave it as a zero length character to be added to:
+	runjags.options$monitor <- eval(runjags.options$monitor)
+	runjags.options$model <- modelsetup$model
+	runjags.options$monitor <- modelsetup$monitor
+	if(length(runjags.options$monitor)==1 && is.na(runjags.options$monitor)) runjags.options$monitor <- character(0)
+	runjags.options$monitor <- c(runjags.options$monitor, names(targets))
 	
 	args <- runjags.options[which(names(runjags.options) %in% names(formals(setup.jagsfile)))]
 	obj <- do.call("setup.jagsfile", args=args)
@@ -134,13 +141,12 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	
 	if(any(c("popt", "pd.i") %in% obj$monitor)){
 		warning("Cannot monitor popt or pd.i with automatic run length functions - the specified monitor(s) have been removed")
-		obj$monitor <- obj$monitor[obj$monitor!="pd.i"]
-		obj$monitor <- obj$monitor[obj$monitor!="popt"]
+		runjags.options$monitor <- runjags.options$monitor[runjags.options$monitor!="pd.i"]
+		runjags.options$monitor <- runjags.options$monitor[runjags.options$monitor!="popt"]
 	}
 	if(!runjags.options$summarise && any(obj$monitor=="dic")){
 		runjags.options$summarise <- TRUE
 	}
-	if(addtargets) runjags.options$add.monitor <- names(targets)
 	
 	if(test){
 		testoptions <- runjags.options[which(names(runjags.options) %in% names(formals(extend.jags)))]
@@ -156,11 +162,7 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	}
 	
 	flush.console()
-	
-	# Slight hack - we're not calling actually run.jags so add combine=FALSE to the argument list:
-	runjags.options <- runjags.options[which(names(runjags.options) %in% names(formals(autoextend.jags)))]
-	runjags.options <- c(runjags.options, list(runjags.object=obj, combine=FALSE))
-	
+		
 	if(is.null(data)){
 		DATAS <- lapply(1:simulations, function(x) return(obj$data))
 	}else{
@@ -170,18 +172,23 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 	FUN <- function(x, DATAS=DATAS, runjags.options=runjags.options){
 		
 		runjags.options$method <- eval(runjags.options$method)
+		runjags.options$jags <- eval(runjags.options$jags)
+		runjags.options$tempdir <- eval(runjags.options$tempdir)
+		
 		# Detect common problems:
-		if(!require("runjags") || package_version(installed.packages()['runjags','Version'])<1) stop(paste("The runjags package (version >=1.0.0) is not installed on the cluster node '", Sys.info()['nodename'], "'", sep="")) 
+		if(!require("runjags") || package_version(utils::packageDescription('runjags', fields='Version'))<1) stop(paste("The runjags package (version >=1.0.0) is not installed on the cluster node '", Sys.info()['nodename'], "'", sep="")) 
 		if(runjags.options$method%in%runjagsprivate$rjagsmethod && !require("rjags")) stop(paste("The rjags package is not installed on the cluster node '", Sys.info()['nodename'], "' - try specifying runjags.options=list(method='simple')", sep="")) 
-		if(numeric_version(installed.packages()['runjags','Version']) < 1) stop("The runjags package (version >=1.0.0) must be installed on each cluster node")
+
 		if(runjags.options$method%in%runjagsprivate$rjagsmethod){
 			for(module in runjags.options$modules){
-				if(module=="runjags"){
-					success <- try(load.runjagsmodule())
-				}else{
-					success <- try(load.module(module))				
+				if(module!=''){
+					if(module=="runjags"){
+						success <- try(load.runjagsmodule())
+					}else{
+						success <- try(rjags::load.module(module))				
+					}
+					if(class(success)=="try-error") stop(paste("The required module '", module, "' is not installed on the cluster node '", Sys.info()['nodename'], "'", sep=""))
 				}
-				if(class(success)=="try-error") stop(paste("The required module '", module, "' is not installed on the cluster node '", Sys.info()['nodename'], "'", sep=""))
 			}
 		}else{
 			if(any(runjags.options$modules=="runjags")) stop("The runjags module is only available using the rjags method; to use the functions provided with other methods install (and specify using the module argument) the 'runjagsmodule' standalone module")
@@ -189,10 +196,10 @@ run.jags.study <- function(simulations, model=NULL, datafunction=NULL, targets=l
 		}
 		
 		thedata <- DATAS[[x]]
-		runjags.options$runjags.object$data <- thedata
+		runjags.options$data <- thedata
 		
 		output <- capture.output({
-			result <- try(do.call("autoextend.jags", args=runjags.options))
+			result <- try(do.call("autorun.jags", args=runjags.options))
 			})
 		
 		cat("Finished running simulation ", x, " of ", length(DATAS), "\n", sep="")
@@ -283,31 +290,54 @@ summarise.jags.study <- function(results, targets, confidence){
 	if(!length(confidence)>0 || any(confidence <= 0) || any(confidence > 1)) stop("The confidence variable must be a numeric vector between 0 and 1")
 	
 	# Targets is a named list of monitor variables (which are automatically added to monitor) and the true value (if an array magically catch and rename to var[1] var[2] etc) which is compared to MCMC output - return distribution of medians and confidence% LCI/UCI and % within confidence limits - confidence may be a vector
-
+	
+	# First take care of vectors:
+	targets <- getjagsnames(targets)
+	
+	matchtargets <- function(sim) return(lapply(1:length(targets), function(x){
+		# Allow a single variable name to match lots of sub-indexes (but not if it has square brackets already):
+		if(!grepl("[",names(targets)[x],fixed=TRUE)){
+			matching <- which(names(targets)[x] == gsub("\\[[[:digit:],]+\\]","",varnames(results[[sim]]$mcmc)))
+			ret <- unlist(rep(targets[[x]], length(matching)))
+			names(ret) <- varnames(results[[1]]$mcmc)[matching]
+		}else{
+			ret <- targets[[x]]
+			names(ret) <- names(targets)[x]
+		}
+		return(ret)
+	}))
+	
+	matchedtargets <- matchtargets(1)
+	
+	if(!(all(sapply(1:length(results), function(sim) return(length(unlist(matchtargets(sim)))))==length(unlist(matchedtargets))))){
+		stop("The specified named targets matched a different number of variables between simulations - ensure that any target arrays have equal dimensions between simulations", call.=FALSE)
+	}	
+	if(all(sapply(matchedtargets,length)==0)) stop(paste("None of the target variable(s) '", paste(names(targets),collapse="','"), "' were found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
+	if(any(sapply(matchedtargets,length)==0)) warning(paste("One or more of the target variable(s) '", paste(names(targets),collapse="','"), "' were not found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
+	
+	targets <- unlist(matchedtargets)
 	fullvars <- targets[order(names(targets))]
-	fullvars <- getjagsnames(fullvars)
 	
 	useindex <- which(varnames(results[[1]]$mcmc) %in% names(fullvars))
 	usevars <- fullvars[names(fullvars) %in% varnames(results[[1]]$mcmc)]
-
-	if(length(usevars)==0) stop(paste("None of the target variable(s) '", paste(names(fullvars),collapse="','"), "' were found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
-
-	if(length(usevars)!=length(fullvars)) warning(paste("One or more of the target variable(s) '", paste(names(fullvars),collapse="','"), "' were not found in the JAGS output ('", paste(varnames(results[[1]]$mcmc),collapse="','"),"')",sep=""))
-	
+		
 	usevars <- usevars[match(varnames(results[[1]]$mcmc),names(usevars))]
-	if(!(all(names(usevars)==varnames(results[[1]]$mcmc)[useindex]))){
+	usevars <- usevars[!is.na(usevars)]  # Need to exclude missing here - it's possible there are monitored variables that we don't care about
+	if(any(is.na(usevars)) || !(all(names(usevars)==varnames(results[[1]]$mcmc)[useindex]))){
 		stop(paste("Sorry - something has gone wrong with indexing the variables; I was expecting to see ", paste(names(usevars),collapse=","), " but saw ", paste(varnames(results[[1]]$mcmc)[useindex],collapse=","), " - please submit a bug report!", sep=""))
 	}
 	
 	simulations <- length(results)
 	sumtable <- vapply(results,function(result){
 		
-		result <- combine.mcmc(result$mcmc,collapse.chains=TRUE)[,useindex,drop=FALSE]
+		result <- combine.mcmc(result$mcmc,collapse.chains=TRUE,vars=names(usevars))
 		
 		rtable <- matrix(nrow=length(useindex), ncol=4+(length(confidence)*4),dimnames=list(names(usevars), c("Target","Median","Mean",apply(expand.grid(c("Lower","Upper","Range","Within"),confidence*100,"%CI"),1,paste,collapse=""),"AutoCorr(Lag10)")))
 
 		stochastic <- apply(result,2,var)!=0
-		if(!any(stochastic)) stop("One or more target variables is non-stochastic")
+		if(any(!stochastic)){
+			if(all(!stochastic)) stop("All target variables are non-stochastic", call.=FALSE)
+		}
 		
 		rtable[,1] <- usevars
 		
@@ -328,6 +358,9 @@ summarise.jags.study <- function(results, targets, confidence){
 	}, matrix(0,nrow=length(useindex), ncol=4+(length(confidence)*4)))
 	
 	values <- apply(sumtable[,2,,drop=FALSE],1,function(x) return(sum(!is.na(x))))
+	
+	if(any(values==0)) warning("One or more target variables is non-stochastic", call.=FALSE)
+	
 	meanable <- values>1
 	if(any(meanable)){
 		msum <- cbind(apply(sumtable[meanable,,,drop=FALSE],c(1,2),mean,na.rm=TRUE), Simulations=values[meanable])
@@ -340,6 +373,8 @@ summarise.jags.study <- function(results, targets, confidence){
 	}else{
 		isum <- NA	
 	}
+	
+	# Re-add the non-stochastic targets here???
 	
 #	sumsum[,((4*(length(confidence)-1))+6)] <- sumsum[,((4*(length(confidence)-1))+6)]*100
 	

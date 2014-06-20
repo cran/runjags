@@ -1,4 +1,4 @@
-This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Torrin Liddell, Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.
+This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Steven Novick, David Norris, Glenn Meyers, Avraham Adler, Jared Laufenberg, Torrin Liddell, Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.
 
 
 OPEN ISSUES
@@ -13,10 +13,48 @@ FEATURES TO BE IMPLEMENTED
 
 A utility function to generate pairwise comparisons within fixed effects.
 
+Overhaul the plotting mechanism for runjags objects
 
 
 
 VERSION HISTORY
+
+
+Version 1.2.1
+
+NEW FEATURES
+
+Contact details updated to reflect my move to the University of Copenhagen
+
+Default .runjags.options can now be set at package load
+
+runjags.options has additional features such as total suppression of all messages to screen (intended for use in batch mode - thanks to Avraham Adler for the suggestion), and suppression of pre-drawn plots
+
+If a function is provided as the 'inits' argument, the data is now available internally to this function at evaluation time
+
+The version of runjags is now included as part of the runjags object (this will be used to determine plotting methods for saved objects in future)
+
+Failed JAGS objects can now be passed directly to run.jags
+
+
+BUG FIXES
+
+Check bypass introduced in case the rjags package isn't installed
+
+Bug fixed that prevented the adaptive phase length being passed to the rjags method
+
+Bug fixed that caused the thin argument to combine.mcmc to be ignored (thanks to Jared Laufenberg for pointing out the bug)
+
+Bug fixed that could cause the number of iterations returned by combine.mcmc to be less than specified by the return.samples argument
+
+Duplicate names in inits and data are now detected, and a related typo has been fixed in the inits specification for one of the examples in the run.jags help file
+
+Bug fixed that prevented the DIC monitor being added when extending a simulation using the rjags method
+
+Bugs fixed in run.jags.study relating to matching target variable names, and erroneous error message about no data being present
+
+Other minor bug fixes
+
 
 
 Version 1.2.0

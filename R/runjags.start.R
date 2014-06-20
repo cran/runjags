@@ -72,7 +72,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 				if(m=="runjags"){
 					success <- try(load.runjagsmodule())
 				}else{
-					success <- try(load.module(m))
+					success <- try(rjags::load.module(m))
 				}
 		
 				if(class(success)=="try-error") stop(paste("Failed to load the module '", m, "'",sep=""))
@@ -83,9 +83,9 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 			if(extra.options$factories[i]!=""){
 				f <- strsplit(gsub(")","",extra.options$factories[i],fixed=TRUE),"(",fixed=TRUE)[[1]]					
 				fa <- ""
-				try(fa <- as.character(list.factories(f[2])$factory))
+				try(fa <- as.character(rjags::list.factories(f[2])$factory))
 				if(!f[1] %in% fa) stop(paste("The factory '", f[1], "' of type '", f[2], "' is not available - ensure any required modules are also provided", sep=""))
-				success <- try(set.factory(f[1],f[2],TRUE))			
+				success <- try(rjags::set.factory(f[1],f[2],TRUE))			
 				if(class(success)=="try-error") stop(paste("Failed to load the factory '", f[1], "' of type '", f[2], "'", sep=""))
 			}
 		}
@@ -96,7 +96,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		tmodel <- textConnection(model)
 		
 		# Once we have a way of changing states without recompiling, this won't be required:
-		rjags <- jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=extra.options$adapt, quiet=TRUE)
+		rjags <- rjags::jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=extra.options$adapt, quiet=TRUE)
 		close(tmodel)
 		
 		if(extra.options$burnin>0){
@@ -107,9 +107,9 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		}
 
 		flush.console()
-		samples <- jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin)
+		samples <- rjags::jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin)
 		# This is just a dummy call so that we can get the names of the variables:
-		suppressWarnings(varnames <- coda::varnames(coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
+		suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
 		flush.console()
 	
 		mcmcout <- lapply(samples, function(x){
@@ -448,7 +448,8 @@ runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, o
 		}
 	})
 	
-	cat("\n")
+	flush.console()
+	swcat("\n")
 	setwd(thed)
 	return(retval)	
 
@@ -534,7 +535,7 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 		repeat{
 			if(!silent.jags) cat("Following the progress of chain ", s, " (the program will wait for all chains to finish before continuing):\n", sep="")			
 			output <- tailf(paste('sim.', s, '/jagsoutput.txt', sep=''), refresh=jags.refresh, start=1, min.static=2, stop.text="Deleting model", print=!silent.jags, return=TRUE)
-			cat("\n")
+			if(!silent.jags) cat("\n")
 			if(output$interrupt) break
 
 			# The first sim should be finished last ... but give the others up to 5 seconds to catch up before switching to them...
@@ -550,7 +551,7 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 			}
 
 			if(all(simsdone)){
-				cat("All chains have finished\n")
+				swcat("All chains have finished\n")
 				break
 			}
 
@@ -584,7 +585,8 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 		}
 	
 	})
-		
+	
+	flush.console()	
 	return(retval)
 
 }
@@ -615,9 +617,9 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 	by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
 	if(!silent.jags) cat("  Running the model for ", format(extra.options$sample,scientific=FALSE), " iterations...\n",sep="")
 	flush.console()
-	samples <- jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin)
+	samples <- rjags::jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin)
 	# This is just a dummy call so that we can get the names of the variables:
-	suppressWarnings(varnames <- varnames(coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
+	suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
 	flush.console()
 	
 	mcmcout <- lapply(samples[names(samples)!='pD'], as.mcmc.list)
@@ -813,6 +815,9 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			if(!identical(method.options, list()) && !identical(names(method.options), c('jobname', 'command', 'customart', 'jagspath', 'submitandstop', 'max.threads', 'mgridpath', 'hostname', 'password')) && !all(names(method.options)%in%c("nsims","cl","remote.jags","rjags","by","progress.bar"))) warning("The supplied value for method.options is ignored when using an inbuilt method (except for 'nsims' which can be provided for parallel methods, 'cl' and 'remote.jags' which can be provided for the snow method, and 'by' and 'progress.bar' which can be supplied for the rjags method)")
 			method.options <- internal.options
 		}
+		
+		# Ignore tempdir argument if using rjagsmethod
+		if(method%in%runjagsprivate$rjagsmethod) tempdir <- TRUE
 		
 		# Getting a strange no visible binding error from R CMD check - can't track it down but this should cure it:
 		jags <- method.options$jags
@@ -1100,10 +1105,10 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			}else{
 				rjagsloaded <- 'rjags' %in% .packages()
 				if(!require("rjags")) stop("The rjags package is required to generate initial values for more than 4 parallel chains")
-				success <- try(load.module("lecuyer"))
+				success <- try(rjags::load.module("lecuyer"))
 				if(class(success)=="try-error") stop("Failed to load the lecuyer module - ensure that the latest version of JAGS and rjags is installed")
 				
-				rngname <- sapply(parallel.seeds("lecuyer::RngStream", n.chains), dump.format)		
+				rngname <- sapply(rjags::parallel.seeds("lecuyer::RngStream", n.chains), dump.format)		
 				modules <- c(modules, "lecuyer")
 				modules <- unique(modules)
 				if(!rjagsloaded) unloadNamespace('rjags')		

@@ -302,7 +302,7 @@ exit 0
 				warning("Xgrid files could not be copied to the working directory as it is not writable")
 			}else{
 				file.copy(from=paste(temp.directory, list.files(temp.directory), sep=.Platform$file.sep), to=new.directory, recursive=TRUE)
-				cat("Xgrid files were saved to the '", new.directory, "' folder in your current working directory\n", sep="")
+				swcat("Xgrid files were saved to the '", new.directory, "' folder in your current working directory\n", sep="")
 			}
 			unlink(temp.directory, recursive=TRUE)
 		}
@@ -411,7 +411,7 @@ xgrid.results <- function(jobinfo, wait=TRUE, partial.retrieve=!wait, cleanup=!p
 	
 	results <- xgrid.read(threads=threads, niters=niters, iterations=iterations)
 
-	if(any(results$failed)) cat('Results for iterations ', paste(which(results$failed),collapse=','), ' were not returned\n', sep='')
+	if(any(results$failed)) swcat('Results for iterations ', paste(which(results$failed),collapse=','), ' were not returned\n', sep='')
 	if(any(results$failed)) swcat('\nJob ', round(1-((sum(results$failed)/length(results$failed))), digits=2)*100, '% complete\n', sep='') else swcat('\nJob complete\n')	
 
 	return(results$results)

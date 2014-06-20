@@ -11,10 +11,11 @@
 \description{
 
 Utility function to change the default options for the runjags package.
-Options will be used for all runjags function calls for the remainder
-of the JAGS session; for a permanent solution consider adding this function
-call to your R profile file.
-
+Options will be used for all runjags function calls until the runjags
+package is unloaded.  For a permanent solution, create a list named 
+named '.runjags.options' containing the desired options in an R profile
+file - on loading, runjags will check to see if this object exists in
+the global environment and set the options automatically.
 }
 
 \usage{
@@ -71,6 +72,14 @@ situations)
 blockcombine.warning - display a warning message if multiple data or
 inits blocks are combined in a WinBUGS style model file
 
+silent.jags - suppress output of JAGS (or rjags) when updating models
+
+silent.runjags - suppress feedback provided by the runjags functions
+
+predraw.plots - automatically pre-calculate convergence diagnostic plots
+(this will save time when displaying plots at the cost of increased
+storage requirement for the runjags object)
+
 }
 
 \value{
@@ -95,6 +104,27 @@ changes specified) is returned invisibly as a named list.
 
 \author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
+\examples{
 
+\dontrun{
+
+# Create a list of options in the global environment (perhaps in an
+# R startup profile file) BEFORE load()ing runjags:
+.runjags.options <- list(inits.warning=FALSE, rng.warning=FALSE)
+# Or if it is run in a different environment:
+# .runjags.options <<- list(inits.warning=FALSE, rng.warning=FALSE)
+
+# Then load runjags and verify that the options have been set:
+library('runjags')
+print(runjags.options())
+
+
+# Change the default option to remove all feedback provided by
+# runjags and JAGS/rjags (only errors will be printed to screen):
+runjags.options(silent.jags=TRUE, silent.runjags=TRUE)
+
+}
+
+}
 
 \keyword{methods}

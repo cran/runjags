@@ -10,7 +10,7 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 			m <- NA
 		}else{
 		
-			chainstring <- if(nchain(x$mcmc)==1) "(single chain)" else paste("(", if(x$thin>1) "thin = 1 in ", if(x$thin>1) x$thin, if(x$thin>1) "; ", "chains = ", nchain(x$mcmc), "; burnin = ", x$burnin, ")",sep="")
+			chainstring <- if(nchain(x$mcmc)==1) "(single chain)" else paste("(", if(x$thin>1) "thin = 1 in ", if(x$thin>1) x$thin, if(x$thin>1) "; ", "chains = ", nchain(x$mcmc), "; adapt+burnin = ", x$burnin, ")",sep="")
 			if(is.character(x$summary)){
 				cat("\nJAGS model with ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, "\n", sep="")
 				cat("\nFull summary statistics aren't available as this model was last extended using summarise=FALSE argument - you can use eg summary(as.mcmc.list(results)) or extend.jags(results, sample=0, summarise=TRUE) to append summary statistics\n\n", sep="")
@@ -365,7 +365,7 @@ print.runjags.study <- function(x,...){
 		cat("The ", sum(x$crashed), " error", if(sum(x$crashed)>1) "s", " returned ", if(sum(x$crashed)>1) "have " else "has ", "been stored in the '$errors' element of the list returned from run.jags.study\n\n",sep="")
 	}
 	cat("Average time taken:  ", timestring(mean(as.numeric(x$timetaken, units="secs"))), " (range: ", timestring(min(as.numeric(x$timetaken, units="secs"))), " - ", timestring(max(as.numeric(x$timetaken, units="secs"))), ")\n", sep="")
-	cat("Average burnin required:  ", round(mean(x$burnin)), " (range: ", round(min(x$burnin)), " - ", round(max(x$burnin)), ")\n", sep="")
+	cat("Average adapt+burnin required:  ", round(mean(x$burnin)), " (range: ", round(min(x$burnin)), " - ", round(max(x$burnin)), ")\n", sep="")
 	cat("Average samples required:  ", round(mean(x$sample)), " (range: ", round(min(x$sample)), " - ", round(max(x$sample)), ")\n", sep="")
 	cat("\n")
 	invisible(rettab)
