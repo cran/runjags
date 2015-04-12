@@ -1,77 +1,65 @@
-print.runjags <- function(x, vars=NA, digits = 5, ...){
-	
-	# First check that we have matching variables:
-	selected <- matchvars(vars, varnames(x$mcmc))
-	
-	numbers <- NULL
-	success <- try({
-		if(!is.list(x$method) && is.na(x$method)){
-			cat("\nJAGS model summary:  Model not yet updated\n\n")
-			m <- NA
-		}else{
-		
-			chainstring <- if(nchain(x$mcmc)==1) "(single chain)" else paste("(", if(x$thin>1) "thin = 1 in ", if(x$thin>1) x$thin, if(x$thin>1) "; ", "chains = ", nchain(x$mcmc), "; adapt+burnin = ", x$burnin, ")",sep="")
-			if(is.character(x$summary)){
-				cat("\nJAGS model with ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, "\n", sep="")
-				cat("\nFull summary statistics aren't available as this model was last extended using summarise=FALSE argument - you can use eg summary(as.mcmc.list(results)) or extend.jags(results, sample=0, summarise=TRUE) to append summary statistics\n\n", sep="")
-				m <- NA
-			}else{
-				cat("\nJAGS model summary statistics from ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, ":\n", sep="")
+#' @title Print methods for runjags helper classes
+#' @name runjags.printmethods
+#' @aliases runjags.printmethods print.runjagsmodel print.runjagsdata print.runjagsinits print.runjagsoutput print.mcsestats print.crosscorrstats print.gelman.with.target print.dicstats print.runjagsbginfo
 
-				if(any(c(is.character(x$hpd),is.character(x$summary),is.character(x$mcse),is.character(x$autocorr)))){
-					m <- "There was an error calculating summary statistics - use $summary, $hpd etc to access individual elements"
-				}else{				
+#' @export
 
-					# Add 'NA' for non-stochastic variables:
-					autocorrs=mcse=pos=sse=psrfs <- replicate(length(x$stochastic),NA)
-					autocorrs[x$stochastic] <- x$autocorr[4,]
-					mcse[x$stochastic] <- x$mcse$mcse
-					sse[x$stochastic] <- round(x$mcse$sse)
-					pos[x$stochastic] <- round((x$mcse$mcse/x$summary$statistics[x$stochastic,2])*100,1)
-					
-					x$summary$statistics[,1:2,drop=FALSE]
-					
-					# Catch if only 1 chain
-					if(is.character(x$psrf)){
-						psrfs <- replicate(length(x$mcse$mcse), NA)
-					} else {
-						psrfs[x$stochastic] <- x$psrf$psrf[,1]
-					}
+#' @description
+#' Print methods for a number of classes that are associated with runjags objects, such as model, data and initial values files etc.
 
-					numbers <- cbind(x$hpd[,1:3,drop=FALSE], x$summary$statistics[,1:2,drop=FALSE], mcse, pos, sse, autocorrs, psrfs)
-					dimnames(numbers) <- list(dimnames(x$hpd)[[1]], c(dimnames(x$hpd)[[2]],"Mean","SD","MCerr","MC%ofSD","SSeff",gsub("Lag ", "AC.", dimnames(x$autocorr)[[1]][4]),"psrf"))
-				
-					selected <- matchvars(vars, dimnames(numbers)[[1]])
-					numbers <- numbers[selected,,drop=FALSE]
-				
-					m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="")
-				
-				}
-			
-				print.noquote(m)
-				cat("\n")
+#' @keywords methods
+
+#' @seealso
+#' \code{\link{runjags-class}} for print and plot methods associated with the main runjags class
+
+#' @param x the object to be printed or converted.
+
+#' @param object the object to be summarised.
+
+#' @param linenumbers option to display line numbers alongside model, data and initial values output (this may be helpful for debugging).  Defualt uses the option set in \code{\link{runjags.options}}.
+
+#' @param vars an optional character vector of variable names.  If supplied, only variable names in the object supplied with a partial match to anything in 'vars' will be used.  Note that regular expressions are not allowed, but the caret (^) token can be used to specify the match at the start of a variable name, and a quoted vars will be matched exactly.  Default NA meaning all variables available are returned.
+
+#' @param digits the number of digits to display for printed numerical output.
+
+#' @param ... other arguments which are passed to the default print method for some methods but ignored (with/without a warning) for others
+NULL
+
+
+
+#' @rdname runjags.printmethods
+#' @method print failedjags
+print.failedjags <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
+
+	if(!identical(list(), list(...)))
+		warning('Additional arguments to print.failedjags are ignored')
+	type <- names(x)
+	if(all(sapply(x,identical,NA))){
+		cat('No failed JAGS model available!\n')
+	}else{
 	
-				if(class(x$dic)!="character"){
-					cat("Model fit assessment (DIC):  ", format(round(x$dic$dic, digits=digits), scientific=FALSE), "  (range between chains: ", format(round(min(x$dic$dic.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$dic.chains), digits=digits), scientific=FALSE), ")\n", sep="")
-					cat("Estimated effective number of parameters (pD):  ", format(round(x$dic$meanpd, digits=digits), scientific=FALSE), "\n\n", sep="")
-				}
-				
-			    cat("Total time taken: ", timestring(as.numeric(x$timetaken, units="secs")), "\n\n", sep="")
-			}
+		if('model' %in% type && !identical(x$model, NA)){
+			print.runjagsmodel(x$model, linenumbers=linenumbers)
 		}
-		})
-	if(class(success)=="try-error") stop("An unexpected error occured in the print method for runjags class")
-	invisible(numbers)
+		if('data' %in% type && !identical(x$data, NA)){
+			print.runjagsdata(x$data, linenumbers=linenumbers)
+		}
+		if('inits' %in% type && !identical(x$inits, NA)){
+			print.runjagsinits(x$inits, linenumbers=linenumbers)
+		}
+		if('end.state' %in% type && !identical(x$end.state, NA)){
+			print.runjagsinits(x$end.state, linenumbers=linenumbers)
+		}
+		if('output' %in% type && !identical(x$output, NA)){
+			print.runjagsoutput(x$output, linenumbers=linenumbers)
+		}
+	}
+	invisible(x)
 }
 
-summary.runjags <- function(object, ...){
-	
-	if(!identical(list(), list(...))) warning("Additional arguments supplied to summary.runjags were ignored")
-	return(object$summary)
-}
-
-
-print.runjags.model <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
+#' @rdname runjags.printmethods
+#' @method print runjagsmodel
+print.runjagsmodel <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	if(linenumbers){
 		split <- strsplit(x,"\n",fixed=TRUE)[[1]]
 		lines <- length(split)
@@ -81,7 +69,9 @@ print.runjags.model <- function(x, linenumbers=runjags.getOption('linenumbers'),
 	invisible(x)
 }
 
-print.runjags.data <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
+#' @rdname runjags.printmethods
+#' @method print runjagsdata
+print.runjagsdata <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	if(x==""){
 		cat("\nNo data supplied\n")
 	}else{
@@ -94,7 +84,9 @@ print.runjags.data <- function(x, linenumbers=runjags.getOption('linenumbers'), 
 	}
 	invisible(x)
 }
-print.runjags.inits <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
+#' @rdname runjags.printmethods
+#' @method print runjagsinits
+print.runjagsinits <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 	cat(c("","JAGS chains initial values / end states:"),sep="\n")
 	if(linenumbers){
 		for(i in 1:length(x)){
@@ -112,15 +104,18 @@ print.runjags.inits <- function(x, linenumbers=runjags.getOption('linenumbers'),
 	cat("\n")
 	invisible(x)
 }
-print.runjags.output <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
+#' @rdname runjags.printmethods
+#' @method print runjagsoutput
+print.runjagsoutput <- function(x, linenumbers=runjags.getOption('linenumbers'), ...){
 
-	# For runjags.study error outputs:
-	if(all(grepl("simulation",names(x)))){
-		cat(c("","Crashed JAGS model outputs:"),sep="\n")
+	# For runjagsstudy error outputs:
+	if(!is.null(names(x)) && all(grepl("simulation",names(x)))){
+		cat("\nCrashed JAGS model output(s):\n")
 		simnos <- as.numeric(gsub("[[:alpha:][:punct:]]","",names(x)))
 		printsimno <- TRUE
+		linenumbers <- FALSE		
 	}else{
-		cat(c("","rjags model output:"),sep="\n")
+		cat("\nJAGS model output(s):\n")
 		simnos <- 1:length(x)
 		printsimno <- length(x)>1
 	}
@@ -140,14 +135,17 @@ print.runjags.output <- function(x, linenumbers=runjags.getOption('linenumbers')
 	cat("\n")
 	invisible(x)
 }
-print.rjags.output <- function(x, ...){
-	# For runjags.study error outputs:
-	if(all(grepl("simulation",names(x)))){
-		cat(c("","Crashed rjags model outputs:"),sep="\n")
+#' @rdname runjags.printmethods
+#' @method print rjagsoutput
+print.rjagsoutput <- function(x, ...){
+	# For runjagsstudy error outputs:
+	if(!is.null(names(x)) && all(grepl("simulation",names(x)))){
+		cat("\nCrashed rjags model output(s):\n")
 		simnos <- as.numeric(gsub("[[:alpha:][:punct:]]","",names(x)))
 		printsimno <- TRUE
+		linenumbers <- FALSE		
 	}else{
-		cat(c("","rjags model output:"),sep="\n")
+		cat("\nrjags model output(s):\n")
 		simnos <- 1:length(x)
 		printsimno <- length(x)>1
 	}
@@ -168,126 +166,30 @@ print.rjags.output <- function(x, ...){
 	cat("\n")
 	invisible(x)
 }
-
-print.runjags.plots <- function(x,vars=NA,layout=c(1,1),newwindows=runjags.getOption('newwindows'),file="",add.crosscorr=FALSE,...){
-	
-	if(!length(layout)==2) stop("The layout option must be a numeric vector of length 2")
-	if(!all(layout>0)) stop("All dimensions in the layout vector must be >=1")
-	
-	if(class(x)=="runjags"){
-		# Interleave trace and density for the same variable:
-		toplot <- c(x$trace, x$density)
-		if(class(toplot)=="character"){
-			cat(toplot)
-			invisible(toplot)
-		}
-		plotnums <- 2
-
-		orignames <- names(toplot)
-		for(i in 1:length(x$trace)){
-			toplot[[((i-1)*2)+1]] <- x$trace[[i]]
-			toplot[[((i-1)*2)+2]] <- x$density[[i]]
-		}
-		# Fix the names:
-		names(toplot) <- orignames[((1:(length(x$trace)*2))/2) + c(0.5,length(x$trace))]
-	}else{
-		toplot <- x
-		if(class(toplot)=="character"){
-			cat(toplot)
-			invisible(toplot)
-		}
-		plotnums <- 1
-	}	
-	
-	selected <- matchvars(vars, names(toplot))
-	toplot <- toplot[selected]
-	
-	if(file==""){
-		if(!newwindows){
-			cat("Producing ", length(selected)+!identical(add.crosscorr,FALSE), " plots for ", length(selected)/plotnums," variables to the active graphics device\n(see ?runjagsclass for options to this S3 method)\n",sep="")
-		}else{
-			cat("Producing ", length(selected)+!identical(add.crosscorr,FALSE), " plots for ", length(selected)/plotnums," variables to separate graphics devices\n",sep="")
-		}
-	}else{
-		cat("Producing ", length(selected)+!identical(add.crosscorr,FALSE), " plots for ", length(selected)/plotnums," variables to file\n",sep="")
-	}			
-	
-	# Make layout consistent with ordering of dimensions of arrays:
-	layout <- layout[2:1]
-	
-	output <- capture.output({
-		
-		if(file!="") pdf(file,...)
-
-		if(!identical(add.crosscorr,FALSE)){
-			safe.crosscorr.plot(add.crosscorr)
-			title(sub="Cross-correlation")
-			# This stops the xyplots being overlaid onto the crosscorr.plot:
-			plot.new()		
-		}
-	
-		N <- length(toplot)
-		numperpage <- layout[1] * layout[2]
-		numpages <- ceiling(N/numperpage)
-	
-		mores <- numeric(N)	
-		mores[] <- TRUE
-		mores[(0:numpages)*numperpage] <- FALSE
-		mores[length(mores)] <- FALSE
-		
-		newpage <- TRUE
-		p1 <- 1
-		p2 <- 1
-		
-		for(i in 1:N){
-			if(newpage && file=="" && newwindows){
-				dev.new()
-			}
-			class(toplot[[i]]) <- "trellis"
-			print(toplot[[i]], split=c(p1,p2,layout[1],layout[2]), more=mores[i], newpage=newpage, ...)
-	
-			newpage <- FALSE
-			p1 <- p1+1
-			if(p1 > layout[1]){
-				p1 <- 1
-				p2 <- p2+1
-				if(p2 > layout[2]){
-					p2 <- 1
-					newpage <- TRUE
-				}
-			}
-		}
-		
-		if(file!="") dev.off()
-		
-	})
-	invisible(toplot)
-}
-
-
-print.crosscorr.stats <- function(x, vars=NA, digits=5, ...){
+#' @rdname runjags.printmethods
+#' @method print crosscorrstats
+print.crosscorrstats <- function(x, vars=NA, digits=5, ...){
     cat("Cross-correlation matrix:\n")
 
-	selected <- matchvars(vars, dimnames(x)[[1]])
+	selected <- matchvars(checkvalidmonitorname(vars),  dimnames(x)[[1]])
 	x <- x[selected,selected,drop=FALSE]
 		
 	m <- prettifytable(x, digits=digits, colsequal=FALSE, nastring="")
 	
 	print.noquote(m)
 	
-	cat("\n[See also 'crosscorr.plot(as.mcmc(runjags.object))' for a prettier output]\n")
-	
 	invisible(x)
 }
-
-print.mcse.stats <- function(x, vars=NA, digits = 5, ...){
+#' @rdname runjags.printmethods
+#' @method print mcsestats
+print.mcsestats <- function(x, vars=NA, digits = 5, ...){
 	
 	x <- unlist(x)
 	varnames <- names(x)
 	varnames <- varnames[grepl("sseff.",varnames)]
 	varnames <- gsub("sseff.","",varnames)
 
-	selected <- matchvars(vars, varnames)
+	selected <- matchvars(checkvalidmonitorname(vars),  varnames)
 	x <- x[c(selected, selected+length(varnames), selected+(2*length(varnames)))]
 	varnames <- varnames[selected]
 	
@@ -307,15 +209,14 @@ print.mcse.stats <- function(x, vars=NA, digits = 5, ...){
 	invisible(numbers)
 }
 
-
-
-print.gelman.target <- function(x, vars=NA, digits = 3, ...){
-
-	selected <- matchvars(vars, dimnames(x))
-	x <- x[selected,drop=FALSE]
-
+#' @rdname runjags.printmethods
+#' @method print gelmanwithtarget
+print.gelmanwithtarget <- function(x, vars=NA, digits = 3, ...){
+	
+	  selected <- matchvars(checkvalidmonitorname(vars),  dimnames(x$psrf)[[1]])
+	
     cat("Potential scale reduction factors:\n\n")
-    print.default(x$psrf, digits = digits, ...)
+    print.default(x$psrf[selected,drop=FALSE], digits = digits, ...)
     if (!is.null(x$mpsrf)) {
         cat("\nMultivariate psrf (for all monitored variables):\n\n")
         cat(format(x$mpsrf, digits = digits))
@@ -326,43 +227,68 @@ print.gelman.target <- function(x, vars=NA, digits = 3, ...){
     cat("\n")
 	invisible(x)
 }
-
-print.dic.stats <- function(x, digits=3, ...){
+#' @rdname runjags.printmethods
+#' @method print dicstats
+print.dicstats <- function(x, digits=3, ...){
 	if(class(x)=="character"){
 		cat(x)
 	}else{
-		string <- paste("Model fit statistics:\n\nDeviance information criterion [mean(deviance)+mean(pd)]:  ", round(x$dic, digits=digits), "\n", sep="")
-		string <- paste(string, "(Individual chains: ", paste(round(x$dic.chains, digits=digits), collapse=", "), ")\n", sep='')
-		if(!is.na(x$ped)){
-			string <- paste(string, "\nPenalized Expected Deviance [mean(deviance)+sum(popt)]):  ", round(x$ped, digits=digits), "\n", sep="")
-			string <- paste(string, "(Individual chains: ", paste(round(x$ped.chains, digits=digits), collapse=", "), ")\n", sep='')
-		}
+		string <- paste("Deviance information criterion [mean(deviance)+mean(pd)]:  ", round(x$dic, digits=digits), "\n", sep="")
+		string <- paste(string, "Penalized Expected Deviance [mean(deviance)+mean(popt)]):  ", round(x$ped, digits=digits), "\n", sep="")
+			
 		swcat(string)
 	}
 	invisible(x)
 }
 
-print.runjags.study <- function(x,...){
+#' @rdname runjags.printmethods
+#' @method print runjagsbginfo
+print.runjagsbginfo <- function(x, ...){
+
+	cat("\nJAGS model summary:  Model currently running in the background ... use 'results.jags(\"", x$jobname, "\")' to retrieve the results.\nStarted on ", as.character(x$startedon), " in the following directory: '", x$directory, "'\n\n", sep="")
+	invisible(x)
+		
+}
+
+#' @rdname runjags.printmethods
+#' @method print runjagsstudy
+print.runjagsstudy <- function(x,...){
+	
+	if(! any(c('means','singles') %in% names(x)))
+		stop('Summary statistics are not available; please email the package maintainer for help!', call.=FALSE)
+	
+	if(identical(x$means, NA) && identical(x$singles, NA))
+		stop('Summary statistics are all missing; please email the package maintainer for help!', call.=FALSE)
+	
+	passed <- list(...)
+	if(!identical(passed, list()))
+		warning('Options to the print and summary class for the runjagsstudy class are ignored', call.=FALSE)
+	
+	n.sims <- x$simulations-sum(x$crashed)
+	dropk <- x$dropk
+	if(is.null(dropk))
+		dropk <- FALSE
 	
 	if(!identical(x$means, NA)){
-		cat("\nAverage values obtained from a JAGS study with a total of ", x$simulations-sum(x$crashed), " simulations", if(sum(x$crashed)>0) paste(" (excluding ", sum(x$crashed), " crashed simulations)", sep=""), ":\n\n", sep="")
-		print.default(x$means,...)
+		cat("\nAverage values obtained from a ", if(dropk) "drop-k" else "JAGS", " study with a ", if(n.sims==1) "single simulation" else paste("total of ", n.sims, " simulations", sep=""), if(sum(x$crashed)>0) paste(" (excluding ", sum(x$crashed), " crashed simulation", if(sum(x$crashed)>1) "s", ")", sep=""), ":\n", sep="")
+		toprint <- prettifytable(x$means, colsequal=FALSE, nastring="--")
+		print.noquote(toprint)
 		rettab <- x$means
 		if(!identical(x$singles, NA)){
-			cat("\nValues obtained for variables that were stochastic for only 1 simulation:\n\n", sep="")
-			print.default(x$singles,...)
+			cat("\nValues obtained for variables that were stochastic for only 1 simulation:\n", sep="")
+			print.noquote(prettifytable(x$singles, colsequal=FALSE),...)
 			rettab <- rbind(rettab, cbind(x$singles,1))
 		}		
 	}else{
 		if(!identical(x$singles, NA)){
-			cat("\nValues obtained from a JAGS study with a total of ", x$simulations-sum(x$crashed), " simulations", if(sum(x$crashed)>0) paste(" (excluding ", sum(x$crashed), " crashed simulations)", sep=""), ":\n\n", sep="")
-			print.default(x$singles,...)
+			cat("\nValues obtained from a ", if(dropk) "drop-k" else "JAGS", " study with a ", if(n.sims==1) "single simulation" else paste("total of ", n.sims, " simulations", sep=""), if(sum(x$crashed)>0) paste(" (excluding ", sum(x$crashed), " crashed simulation", if(sum(x$crashed)>1) "s", ")", sep=""), ":\n", sep="")
+			print.noquote(prettifytable(x$singles, colsequal=FALSE),...)
 			rettab <- cbind(x$singles, Simualtions=1)
 		}			
 	}
 	cat("\n")
 	if(sum(x$crashed)>0){
-		cat("The ", sum(x$crashed), " error", if(sum(x$crashed)>1) "s", " returned ", if(sum(x$crashed)>1) "have " else "has ", "been stored in the '$errors' element of the list returned from run.jags.study\n\n",sep="")
+		cat("The ", sum(x$crashed), " error", if(sum(x$crashed)>1) "s", " returned ", if(sum(x$crashed)>1) "have " else "has ", "been stored in the '$errors' element of the list returned from ", if(dropk) "drop.k" else "run.jags.study", "\n",sep="")
 	}
 	cat("Average time taken:  ", timestring(mean(as.numeric(x$timetaken, units="secs"))), " (range: ", timestring(min(as.numeric(x$timetaken, units="secs"))), " - ", timestring(max(as.numeric(x$timetaken, units="secs"))), ")\n", sep="")
 	cat("Average adapt+burnin required:  ", round(mean(x$burnin)), " (range: ", round(min(x$burnin)), " - ", round(max(x$burnin)), ")\n", sep="")
@@ -371,120 +297,35 @@ print.runjags.study <- function(x,...){
 	invisible(rettab)
 }
 
-as.mcmc.runjags <- function(x){
+#' @rdname runjags.printmethods
+#' @method summary runjagsstudy
+summary.runjagsstudy <- function(object,...){
 	
-	m <- x$mcmc
+	x <- object
+	if(! any(c('means','singles') %in% names(x)))
+		stop('Summary statistics are not available; please email the package maintainer for help!', call.=FALSE)
 	
-	# as.mcmc doesn't have ... in it's arguments so I can't add anything to it here:
-	vars <- NA
-	collapse.chains <- TRUE
+	if(identical(x$means, NA) && identical(x$singles, NA))
+		stop('Summary statistics are all missing; please email the package maintainer for help!', call.=FALSE)
 	
-	if(collapse.chains){
-		# Probably better to be semi-consistent with as.mcmc on an mcmc list and at least throw a warning here:
-		if(class(m)=="mcmc.list"){
-			if(length(m)>1) warning(paste("Combining the ", length(m), " mcmc chains together", sep=""))
-		}		
-		m <- combine.mcmc(m, collapse.chains=TRUE)
+	passed <- list(...)
+	if(!identical(passed, list()))
+		warning('Options to the print and summary class for the runjagsstudy class are ignored', call.=FALSE)
+	
+	toret <- x$means
+	if(identical(NA, toret)){
+		toret <- cbind(x$singles, Simulations=1)
+	}else{
+		if(!identical(x$singles, NA)){
+			toret <- rbind(toret, cbind(x$singles, 1))
+		}
 	}
-	
-	m <- as.mcmc(m)
-
-	selected <- matchvars(vars, varnames(m))
-	if(class(m)=="mcmc.list") thevarnames <- dimnames(m[[1]]) else thevarnames <- dimnames(m)
-	m <- m[,varnames(m)[selected],drop=FALSE]	
-	dimnames(m) <- list(thevarnames[[1]], thevarnames[[2]][selected])
-	
-	return(m)
+	return(toret)
 	
 }
 
-
-as.mcmc.list.runjags <- function(x, vars=NA, ...){
-	
-	m <- as.mcmc.list(x$mcmc)
-	
-	selected <- matchvars(vars, varnames(m))
-	thevarnames <- dimnames(m[[1]])
-	m <- m[,varnames(m)[selected],drop=FALSE]	
-	for(i in 1:length(m)){
-		dimnames(m[[i]]) <- list(thevarnames[[1]], thevarnames[[2]][selected])
-	}
-	
-	return(as.mcmc.list(m))
-	
+#' @rdname runjags.printmethods
+#' @method plot runjagsstudy
+plot.runjagsstudy <- function(x, ...){
+	stop('There is currently no plot method assocaited with the runjagsstudy class', call.=FALSE)
 }
-
-plot.runjags <- function(x,vars=NA,layout=NA, newwindows=runjags.getOption('newwindows'),file="",type="all", ...){
-	
-	if(is.na(newwindows)) newwindows <- !.Platform$GUI%in%c("AQUA","Rgui")
-		
-	type <- c("trace","density","crosscorr","all")[pmatch(tolower(type), c("trace","density","crosscorr","all"))]
-
-	if(length(type)==0 || any(is.na(type))) stop("The type options supplied must be in 'trace', 'density', 'crosscorr' or 'all'")
-	type <- unique(type)
-	
-	if(any(type=="all")){
-		type <- c("trace","density","crosscorr")
-	}
-		
-	toplot <- x
-	tlayout <- c(1,2)
-	
-	if(any("trace"%in%type) && !any("density"%in%type)){
-		toplot <- x$trace
-		tlayout <- c(1,1)
-	}
-	if(any("density"%in%type) && !any("trace"%in%type)){
-		toplot <- x$density
-		tlayout <- c(1,1)
-	}
-	
-	crosscorr <- FALSE
-	if(any("crosscorr"%in%type)){
-		crosscorr <- combine.mcmc(x, vars=vars, return.samples=1000)
-	}
-	
-	if(length(layout)==1 && is.na(layout)) layout <- tlayout
-	
-	if(!any("density"%in%type) && !any("trace"%in%type)){
-		if(file!="") pdf(file,...)
-		safe.crosscorr.plot(crosscorr,sub="Cross-correlation")
-		if(file!="") dev.off()
-		invisible(crosscorr)
-	}else{	
-		invisible(print.runjags.plots(toplot,vars=vars,layout=layout,newwindows=newwindows,file=file,add.crosscorr=crosscorr))
-	}
-}
-
-print.runjags.bginfo <- function(x, ...){
-
-	cat("\nJAGS model summary:  Model currently running in the background ... use 'results.jags(background.runjags.object)' to retrieve the results.\nStarted on ", as.character(x$startedon), " in the following directory: '", x$directory, "'\n\n", sep="")
-	invisible(x)
-		
-}
-
-
-plot.runjags.plots <- print.runjags.plots
-
-as.jags <- function(x, adapt=1000, quiet=FALSE, ...){
-	UseMethod("as.jags")
-}
-as.jags.default <- function(x, ...){
-	stop("Conversion to jags objects is only possible for specific classes of object (such as objects of class 'runjags')")
-}
-
-as.runjags <- function(x, ...){
-	UseMethod("as.runjags")
-}
-as.runjags.default <- function(x, ...){
-	stop("Conversion to runjags objects is only possible for specific classes of object (such as objects of class 'jags')")
-}
-
-failedjags <- new.env()
-
-assign("model", "No failed model available!", envir=failedjags)
-assign("data", "No failed data available!", envir=failedjags)
-assign("inits", "No failed initial values available!", envir=failedjags)
-assign("output", "No failed model output available!", envir=failedjags)
-assign("end.state", "No failed model parameter state available!", envir=failedjags)
-assign("study", "No failed runjags study available!", envir=failedjags)

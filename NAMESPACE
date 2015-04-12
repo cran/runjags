@@ -13,21 +13,34 @@ autoextend.JAGS,
 
 run.jags,
 autorun.jags,
-run.jagsfile,
-autorun.jagsfile,
 
 run.jags.study,
 run.JAGS.study,
+drop.k,
+drop.k.jags,
+drop.k.JAGS,
 
 run.JAGS,
 autorun.JAGS,
-run.JAGSfile,
-autorun.JAGSfile,
 results.jags,
 results.JAGS,
+cleanup.jags,
+cleanup.JAGS,
 
 combine.mcmc,
 combine.MCMC,
+combine.jags,
+combine.JAGS,
+divide.jags,
+divide.JAGS,
+
+failed.jags,
+failed.JAGS,
+failedjags,   # deprecated - to be removed
+
+contrasts.mcmc,
+contrasts.MCMC,
+prec2sd,
 
 dump.format,
 list.format,
@@ -37,9 +50,20 @@ extend.JAGS,
 
 read.winbugs,
 read.WinBUGS,
+read.jagsfile,
+read.JAGSfile,
+write.jagsfile,
+write.JAGSfile,
+template.jags,
+template.JAGS,
+
+extract.runjags,
+extract,
 
 as.jags,
 as.runjags,
+is.runjags,
+add.summary,
 
 ask,
 findjags,
@@ -50,6 +74,8 @@ findJAGS,
 testJAGS,
 load.runjagsmodule,
 load.runJAGSmodule,
+unload.runjagsmodule,
+unload.runJAGSmodule,
 
 xgrid.run.jags,
 xgrid.autorun.jags,
@@ -78,7 +104,6 @@ xapply,
 xgrid.jobs,
 xgrid.delete,
 
-failedjags,
 runjags.options,
 runjags.getOption
 
@@ -87,26 +112,36 @@ runjags.getOption
 S3method(print, runjags)
 S3method(summary, runjags)
 
-S3method(print, runjags.model)
-S3method(print, runjags.data)
-S3method(print, runjags.inits)
-S3method(print, runjags.output)
-S3method(print, rjags.output)
-S3method(print, mcse.stats)
-S3method(print, crosscorr.stats)
-S3method(print, gelman.target)
-S3method(print, dic.stats)
-S3method(print, runjags.study)
-S3method(print, runjags.bginfo)
+S3method(print, runjagsmodel)
+S3method(print, runjagsdata)
+S3method(print, runjagsinits)
+S3method(print, runjagsoutput)
+S3method(print, rjagsoutput)
+S3method(print, mcsestats)
+S3method(print, crosscorrstats)
+S3method(print, gelmanwithtarget)
+S3method(print, dicstats)
+S3method(print, runjagsstudy)
+S3method(summary, runjagsstudy)
+S3method(plot, runjagsstudy)
+S3method(print, runjagsbginfo)
 
 S3method(as.mcmc, runjags)
 S3method(as.mcmc.list, runjags)
+S3method(fitted, runjags)
+S3method(residuals, runjags)
 
 S3method(as.runjags, default)
 S3method(as.jags, default)
 S3method(as.runjags, jags)
 S3method(as.jags, runjags)
 
+S3method(extract, runjags)
+S3method(fitted, runjags)
+S3method(residuals, runjags)
+
 S3method(plot, runjags)
-S3method(plot, runjags.plots)
-S3method(print, runjags.plots)
+S3method(plot, runjagsplots)
+S3method(print, runjagsplots)
+
+S3method(print, failedjags)

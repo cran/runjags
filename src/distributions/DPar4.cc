@@ -139,7 +139,7 @@ DPar4::q(double p, vector<double const *> const &par, bool lower,
   	
 // Pareto:
 //	x = exp(log(C(par)) - logp/ALPHA(par));
-	x = (exp(log(exp(logp / -alpha) -1) / (1/gamma)) * sigma) + mu;
+	x = (exp(log(exp(logp / -alpha) -1) * gamma) * sigma) + mu;
 		
     return x;
 }

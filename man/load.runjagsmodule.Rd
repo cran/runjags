@@ -1,6 +1,9 @@
 \name{load.runjagsmodule}
 \alias{load.runjagsmodule}
 \alias{load.runJAGSmodule}
+\alias{unload.runjagsmodule}
+\alias{unload.runJAGSmodule}
+
 
 \title{Load the internal JAGS module provided by runjags}
 \description{
@@ -12,14 +15,21 @@
    standalone JAGS module for use with any JAGS method (or independent JAGS 
    runs) please see:
 
-   http://sourceforge.net/projects/runjags/
+   https://sourceforge.net/projects/runjags/files/paretoprior/
 }
+
 \usage{
-	load.runjagsmodule()
+	load.runjagsmodule(fail=TRUE, silent=FALSE)
 
+	unload.runjagsmodule()
 }
 
-\value{Invisibly returns TRUE if able to load the module, or FALSE otherwise}
+\arguments{
+\item{fail}{should the function fail using stop() if the module cannot be loaded?}
+\item{silent}{if !fail, the function will by default print a diagnostic message if the module cannot be loaded - the silent option suppresses this message.}
+}
+
+\value{Invisibly returns TRUE if able to (un)load the module, or FALSE otherwise}
 
 \details{
 This module provides the following distributions for JAGS:
@@ -77,16 +87,6 @@ p(x) = (\alpha / \sigma) (1 + (x / \sigma)) ^ -(\alpha+1)
 \deqn{\alpha > 0, \sigma > 0, x > 0}{\alpha > 0, \sigma > 0, x > 0}
 
 
-DUMOUCHEL:  dmouch(sigma)
-
-\deqn{
-p(x) = \frac{\sigma}{\left(x+\sigma\right)^2}
-}{
-p(x) = \sigma / ((x + \sigma)^2)
-}
-
-\deqn{\sigma > 0, x > 0}{\sigma > 0, x > 0}
-
 GENERALISED PARETO:  dgenpar(sigma, mu, xi)
 
 \deqn{
@@ -105,36 +105,54 @@ p(x) = (1 / \sigma) e^(-(x-\mu)/\sigma)
 
 \deqn{\sigma > 0, x > \mu}{\sigma > 0, x > \mu}
 
-For an easier to read version of these PDF equations, either see the PDF version of the
-help files or the 'module_distributions.pdf' file included in the doc folder of this
-package.
+
+DUMOUCHEL:  dmouch(sigma)
+
+\deqn{
+p(x) = \frac{\sigma}{\left(x+\sigma\right)^2}
+}{
+p(x) = \sigma / ((x + \sigma)^2)
+}
+
+\deqn{\sigma > 0, x > 0}{\sigma > 0, x > 0}
+
+
+HALF CAUCHY:  dhalfcauchy(sigma)
+
+\deqn{
+p(x) = \frac{2 \sigma}{\pi \left(x^2+\sigma^2\right)}
+}{
+p(x) = 2 \sigma / (\pi (x^2 + \sigma^2))
+}
+
+\deqn{\sigma > 0, x > 0}{\sigma > 0, x > 0}
+
+
+For an easier to read version of these PDF equations, see the userguide vignette.
 }
 
 \references{
-	M. J. Denwood, "runjags: An R Package Providing Interface Utilities, Distributed 
-	Computing Methods and Additional Distributions For MCMC Models in JAGS," Journal 
-	of Statistical Software, [Under review].
+M. J. Denwood, "runjags: An R Package Providing Interface utilities, 
+model templates, parallel computing methods and additional distributions 
+for MCMC models in JAGS." Journal of Statistical Software, [In review].
 }
 
 \seealso{
-   \code{\link{runjags-class}}
+   \code{\link{runjags-class}}, \code{\link[rjags]{load.module}}
 }
-
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 	
-	# A simple model to sample from a Lomax distribution.	
-	# (Requires the rjags or rjparallel methods)
-	if(require("rjags")){
+	# Load the module for use with any rjags model:
+	available <- load.runjagsmodule(fail=FALSE)
+	if(available){
+		# A simple model to sample from a Lomax distribution.	
+		# (Requires the rjags or rjparallel methods)
 		m <- "model{
 			L ~ dlomax(1,1)
 		}"	
 		results <- run.jags(m, monitor="L", method="rjags", 
 		modules="runjags")
-	
-		# Load the module for use with any rjags model:
-		load.runjagsmodule()
 	}
 }
 

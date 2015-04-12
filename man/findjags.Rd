@@ -45,6 +45,4 @@ for example "C:/Program Files/JAGS/bin/jags-terminal.exe" or
    \code{\link{run.jags}}
 }
 
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
 \keyword{methods}

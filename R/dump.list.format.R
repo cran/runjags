@@ -1,6 +1,9 @@
-dump.format <- function(namedlist=list(), checkvalid=TRUE){
+dump.format <- function(namedlist=list(), checkvalid=TRUE, convertfactors=TRUE){
 	
 	data <- namedlist
+	
+	if(identical(data, list()))
+		return('')
 	
 	if(length(data)==2 & is.null(names(data)) & class(data[[1]])=="character" & length(data[[1]])==1){  # allows old style dump.format (length = 1)
 		names <- data
@@ -8,10 +11,16 @@ dump.format <- function(namedlist=list(), checkvalid=TRUE){
 		names(data) <- names[[1]]
 	}
 	
-	if(class(data)!="list" | length(data)==0) stop("Data must be provided as a named list", call.=FALSE)
-	if(any(names(data)=="") | is.null(names(data))) stop("Data must be provided as a named list", call.=FALSE)
+	if(class(data)=='data.frame')
+		data <- as.list(data)
+	if(class(data)!="list" | length(data)==0) stop("Data must be provided as a named list or data frame", call.=FALSE)
+	if(any(names(data)=="") | is.null(names(data))) stop("Data must be provided as a named list or data frame", call.=FALSE)
 	if(length(unique(names(data)))!=length(data)) stop('All elements in the data list must have unique names', call.=FALSE)
 	
+	if(convertfactors){
+		for(c in which(sapply(data,class)=='factor'))
+			data[[c]] <- as.numeric(data[[c]])
+	}
 	
 	if(checkvalid){
 		valid <- checkvalidforjags(data)
@@ -56,11 +65,10 @@ dump.format <- function(namedlist=list(), checkvalid=TRUE){
 
 list.format <- function(data=character(), checkvalid=TRUE){
 	
-	if(! class(data)%in%c("character","runjags.data","runjags.inits") || length(data)==0) stop("Data must be provided as a character string in the R dump format")
-	if(checkvalid){
-		valid <- checkvalidforjags(data)
-		if(!valid$valid) stop(paste("The following problem was identified in the data provided:  ", valid$probstring, sep=""))				
-	}
+	if(! class(data)%in%c("character","runjagsdata","runjagsinits") || length(data)==0) stop("Data must be provided as a character string in the R dump format")
+	
+	if(all(data=='' | data=='\n'))
+		return(list())
 	
 	out <- vector('list', length=length(data))
 
@@ -69,15 +77,23 @@ list.format <- function(data=character(), checkvalid=TRUE){
 			out[[i]] <- list()
 		}else{
 			str <- data[i]
-			str <- gsub("<-", "=", str)
+      # Remove anything following a comment:
+      str <- gsub('#[^\n]*', '', str)
+      # Remove leading and trailing white space:
+			str <- gsub('^ *\n', '', str)
+			str <- gsub('\n *\n$', '\n', str)
+			
+      str <- gsub("<-", "=", str)
 			str <- gsub("`", "", str)
 			str <- gsub("= \n", "=", str)
 			str <- gsub("^\n", "", str)
 			str <- gsub("\n\n", "\n", str)
 			str <- gsub("\n\n", "\n", str)
 			str <- gsub("\n\n", "\n", str)
+      str <- gsub(",\n.Dim", ", .Dim", str, fixed=TRUE)
 			str <- gsub("\n", ",", str)
-			if(strsplit(str, split="")[[1]][length(strsplit(str, split="")[[1]])] == ",") str <- paste(strsplit(str, split="")[[1]][1:(length(strsplit(str, split="")[[1]])-1)], collapse="")
+			
+			if(str!='' && strsplit(str, split="")[[1]][length(strsplit(str, split="")[[1]])] == ",") str <- paste(strsplit(str, split="")[[1]][1:(length(strsplit(str, split="")[[1]])-1)], collapse="")
 			out[[i]] <- eval(parse(text=paste('list(', str, ')'))) 
 		}
 	}
@@ -86,6 +102,12 @@ list.format <- function(data=character(), checkvalid=TRUE){
 		names(out) <- paste('Chain.', 1:length(data), sep='')
 	}else{
 		out <- out[[1]]
+	}
+	
+	if(checkvalid){
+		valid <- checkvalidforjags(out)
+		if(!valid$valid)
+			stop(paste("The following problem was identified in the data provided:  ", valid$probstring, sep=""))				
 	}
 	
 	return(out)

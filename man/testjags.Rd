@@ -28,8 +28,8 @@ JAGS executable or the enclosing /bin or /JAGS folder is required.}
 
 }
 
-\value{ A named list of values containing information about the JAGS
-installs found on the user's system. }
+\value{A named list of values containing information about the JAGS
+installs found on the user's system (returned invisibly).}
 
 \seealso{
 
@@ -40,14 +40,9 @@ installs found on the user's system. }
 }
 
 
-
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
-
-
 \examples{ 
 # Run the function to determine if JAGS is installed: 
-results <- testjags() 
+testjags() 
 }
 
 \keyword{methods}

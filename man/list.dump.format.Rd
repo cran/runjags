@@ -9,7 +9,8 @@
    directly by JAGS as either data or initial values.
 }
 \usage{
-	dump.format(namedlist=list(), checkvalid=TRUE)
+	dump.format(namedlist=list(), checkvalid=TRUE,
+		convertfactors = TRUE)
 	
 	list.format(data=character(), checkvalid=TRUE)
 
@@ -24,7 +25,11 @@
    
    \item{checkvalid}{option to ensure that the object returned from the
    function does not contain any values that would be invalid for import
-   into JAGS, such as Inf, -Inf, character or factor values etc.}
+   into JAGS, such as Inf, -Inf or character values etc.}
+
+   \item{convertfactors}{option to automatically convert any factor
+   variables to numeric (otherwise the presence of factors will
+   create an error if checkvalid==TRUE).}
 }
 \value{Either a character string in the R dump format (for dump.format), or a named list (for list.format).
 }
@@ -40,8 +45,6 @@ ensure compatibility with JAGS).}
    \code{\link{run.jags}},
    \code{\link[base]{dump}}
 }
-
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
 
 \examples{
 

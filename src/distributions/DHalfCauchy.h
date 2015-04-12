@@ -24,8 +24,8 @@
  */
 
 
-#ifndef DHCAUCHY_H_
-#define DHCAUCHY_H_
+#ifndef DHALFCAUCHY_H_
+#define DHALFCAUCHY_H_
 
 #include "jags/RScalarDist.h"
 
@@ -33,15 +33,15 @@ namespace runjags {
 
 /**
  * <pre>
- * x ~ dhcauchy(alpha);
- * f(x) = (2*alpha) / (pi * (x^2 + alpha^2)); x >= 0
+ * x ~ dhalfcauchy(alpha);
+ * f(x) = (2*sigma) / (pi * (x^2 + sigma^2)); x >= 0
  * </pre>
  * @short Half Cauchy distribution
  */
 
-class DHCauchy : public RScalarDist {
+class DHalfCauchy : public RScalarDist {
  public:
-  DHCauchy();
+  DHalfCauchy();
 
   double d(double x, PDFType type,
 	   std::vector<double const *> const &parameters, bool give_log) const;
@@ -56,4 +56,4 @@ class DHCauchy : public RScalarDist {
 
 }
 
-#endif /* DHCAUCHY_H_ */
+#endif /* DHALFCAUCHY_H_ */

@@ -68,11 +68,11 @@ xgrid.delete <- function(jobinfo, keep.files=FALSE){
 	if(!is.na(jobnum) && jobnum!=jobid) jobnum <- jobid
 	
 	if(length(jobnum) > 1) separatejobs <- TRUE else separatejobs <- FALSE
-	nsims <- length(jobnum)
+	n.sims <- length(jobnum)
 		
 	if(separatejobs){
 		
-		for(s in 1:nsims){
+		for(s in 1:n.sims){
 			xgriddeleteout <- system(paste('xgrid -job delete -id ', jobnum[s], sep=''), intern=TRUE)
 			if(paste(xgriddeleteout, collapse='')!='{}') warning(paste('Possible error deleting xgrid job number ', jobnum[s], ' - please check this manually', sep=''))
 		}
@@ -457,7 +457,7 @@ xgrid.retrieve <- function(jobinfo, wait, silent, cleanup, partialretrieve, jags
 		directory <- jobinfo$directory
 		jobid <- jobinfo$jobid	
 		
-		nsims <- 1
+		n.sims <- 1
 		separatejobs <- FALSE		
 		
 	}else{
@@ -484,16 +484,16 @@ xgrid.retrieve <- function(jobinfo, wait, silent, cleanup, partialretrieve, jags
 		}
 	
 		if(length(jobnum) > 1) separatejobs <- TRUE else separatejobs <- FALSE
-		nsims <- length(jobnum)
+		n.sims <- length(jobnum)
 		
 	}
 	
 		
 	if(separatejobs){
 		
-		status <- character(nsims)
-		done <- replicate(nsims, FALSE)
-		for(s in 1:nsims){
+		status <- character(n.sims)
+		done <- replicate(n.sims, FALSE)
+		for(s in 1:n.sims){
 			statusout <- system(paste('xgrid -job attributes -id ', jobnum[s], sep=''), intern=TRUE)
 			if(paste(statusout, collapse='')=="{    error = InvalidJobIdentifier;}") stop("One of the jobs specified is not on xgrid.  This can sometimes occur when a job is being initialised - you could try again in a minute or so...", call.=FALSE)
 			tstatus <- statusout[grep('jobStatus', statusout)]
@@ -504,7 +504,7 @@ xgrid.retrieve <- function(jobinfo, wait, silent, cleanup, partialretrieve, jags
 		if(!wait & !all(done) & !partialretrieve){
 			if(!silent){
 				swcat('Jobs not finished.  Statuses are "', paste(status, collapse=', '), '"\n\nThe job outputs (if any) are shown below:\n', sep='')
-				for(s in 1:nsims){
+				for(s in 1:n.sims){
 					system(paste('xgrid -job results -id ', jobnum[s], sep=''))
 					swcat('\n')
 				}
@@ -515,10 +515,10 @@ xgrid.retrieve <- function(jobinfo, wait, silent, cleanup, partialretrieve, jags
 		if(wait & !all(done)){			
 			swcat('Job statuses at ', format(Sys.time(), "%a %b %d %H:%M:%S"), ' were "', paste(status, collapse=', '), '".  Waiting for jobs to complete....\n', sep='')
 			
-			for(s in 1:nsims){
+			for(s in 1:n.sims){
 				res <- waitforxgridjob(j=jobnum[s])
 			}
-			for(s in 1:nsims){
+			for(s in 1:n.sims){
 				statusout <- system(paste('xgrid -job attributes -id ', jobnum[s], sep=''), intern=TRUE)
 				if(paste(statusout, collapse='')=="{    error = InvalidJobIdentifier;}") stop("One or more of the jobs has been deleted from xgrid", call.=FALSE)
 				tstatus <- statusout[grep('jobStatus', statusout)]
@@ -534,15 +534,15 @@ xgrid.retrieve <- function(jobinfo, wait, silent, cleanup, partialretrieve, jags
 			silent <- FALSE
 		}
 		
-		xgridoutput <- vector('list', length=nsims)
-		for(s in 1:nsims){
+		xgridoutput <- vector('list', length=n.sims)
+		for(s in 1:n.sims){
 			xgridoutput[[s]] <- c(paste('\n', if(jags) 'Chain' else 'Task', ' ', s, ':', sep=''), system(paste('xgrid -job results -id ', jobnum[s], ' -out "', directory, if(jags) '/sim.', if(jags) s, '"', sep=''), intern=TRUE))
 			if(length(xgridoutput[[s]])==0 & jags) stop(paste("The job produced no output for chain ", s, "; ensure that the jagspath supplied is accurate", sep=''), call.=FALSE)
 		}
 
 		if(!silent)	cat('Job was successfully retreived from xgrid\n\nThe xgrid output is displayed below:\n', unlist(xgridoutput), sep='\n')
 		if(cleanup){
-			for(s in 1:nsims){
+			for(s in 1:n.sims){
 				xgriddeleteout <- system(paste('xgrid -job delete -id ', jobnum[s], sep=''), intern=TRUE)
 				if(paste(xgriddeleteout, collapse='')!='{}') warning(paste('Possible error deleting xgrid job number ', jobnum[s], ' - please check this manually', sep=''))
 			}

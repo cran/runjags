@@ -23,7 +23,7 @@
 	
  */
 
-#include "DHCauchy.h"
+#include "DHalfCauchy.h"
 #include <util/nainf.h>
 #include <rng/RNG.h>
 
@@ -34,22 +34,22 @@ using namespace std;
 
 // M_PI is defined in cmath for some architecures but not all
 #define MYPI 3.14159265358979323846
-#define ALPHA(par) (*par[0])
+#define SIGMA(par) (*par[0])
 
 namespace runjags {
 
-DHCauchy::DHCauchy()
-    : RScalarDist("dhcauchy", 1, DIST_POSITIVE)
+DHalfCauchy::DHalfCauchy()
+    : RScalarDist("dhalfcauchy", 1, DIST_POSITIVE)
 {
 }
 
-bool DHCauchy::checkParameterValue (vector<double const *> const &par) const
+bool DHalfCauchy::checkParameterValue (vector<double const *> const &par) const
 {
-  return ALPHA(par) > 0;
+  return SIGMA(par) > 0;
 }
 
 double 
-DHCauchy::d(double x, PDFType type,
+DHalfCauchy::d(double x, PDFType type,
 vector<double const *> const &par, bool give_log) const
 {
 
@@ -57,14 +57,14 @@ vector<double const *> const &par, bool give_log) const
     return give_log ? JAGS_NEGINF : 0;
     
   if (give_log)
-  	return (log(2.0) + log(ALPHA(par))) - (log(MYPI) + log(pow(x,2.0) + pow(ALPHA(par),2.0)));
+  	return (log(2.0) + log(SIGMA(par))) - (log(MYPI) + log(pow(x,2.0) + pow(SIGMA(par),2.0)));
   else
-    return (2.0*ALPHA(par)) / (MYPI * (pow(x,2.0) + pow(ALPHA(par),2.0)));
+    return (2.0*SIGMA(par)) / (MYPI * (pow(x,2.0) + pow(SIGMA(par),2.0)));
   
 }
 
 double 
-DHCauchy::p(double x, vector<double const *> const &par, bool lower, bool give_log)
+DHalfCauchy::p(double x, vector<double const *> const &par, bool lower, bool give_log)
   const
 {
 
@@ -72,7 +72,7 @@ DHCauchy::p(double x, vector<double const *> const &par, bool lower, bool give_l
     return give_log ? JAGS_NEGINF : 0;
 
   // survival:
-  double q = 1 - (2 * atan(x/ALPHA(par))) / MYPI;
+  double q = 1 - ((2 * atan(x/SIGMA(par))) / MYPI);
   if (!lower) {
     return give_log ? log(q) : q;
   }
@@ -82,7 +82,7 @@ DHCauchy::p(double x, vector<double const *> const &par, bool lower, bool give_l
 }
 
 double 
-DHCauchy::q(double p, vector<double const *> const &par, bool lower, 
+DHalfCauchy::q(double p, vector<double const *> const &par, bool lower, 
 	bool log_p) const
 {
     if ( (log_p  && p > 0) || (!log_p && (p < 0 || p > 1)) )          
@@ -104,12 +104,12 @@ DHCauchy::q(double p, vector<double const *> const &par, bool lower,
 	    tp = p;
     }
 
-	x = ALPHA(par) * tan(MYPI*tp / 2.0);
+	x = SIGMA(par) * tan((MYPI*tp) / 2.0);
 	
     return x;
 }
 
-double DHCauchy::r(vector<double const *> const &par, RNG *rng) const
+double DHalfCauchy::r(vector<double const *> const &par, RNG *rng) const
 {
     return q(rng->uniform(), par, false, false);
 }

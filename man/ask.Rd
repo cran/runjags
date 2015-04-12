@@ -31,12 +31,4 @@ which is returned as NA}
    \code{\link[utils]{menu}}
 }
 
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
-\examples{
-#  Ask the user if they want to proceed
-\dontrun{
-ask("Do you want to start the program now?", type="logical")
-}
-}
 \keyword{methods}

@@ -37,7 +37,7 @@
 #include "distributions/DPar3.h"
 #include "distributions/DPar4.h"
 #include "distributions/DGenPar.h"
-//#include "distributions/DHCauchy.h"
+#include "distributions/DHalfCauchy.h"
 
 #include "distributions/jags/DFunction.h"
 #include "distributions/jags/QFunction.h"
@@ -69,7 +69,7 @@ runjagsModule::runjagsModule() : Module("runjags")
   Rinsert(new DLomax);
   Rinsert(new DMouchel);
   Rinsert(new DGenPar);
-//  Rinsert(new DHCauchy);
+  Rinsert(new DHalfCauchy);
 
 }
 

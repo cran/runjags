@@ -12,6 +12,12 @@
 \alias{xgrid.autoextend.JAGS}
 \alias{xgrid.results.jags}
 \alias{xgrid.results.JAGS}
+\alias{xgrid.autorun.jagsfile}
+\alias{xgrid.autorun.JAGSfile}
+\alias{xgrid.run.jagsfile}
+\alias{xgrid.run.JAGSfile}
+\alias{xgrid.submit.jagsfile}
+\alias{xgrid.submit.JAGSfile}
 
 
 \title{Run a JAGS Model using an Apple Xgrid distributed computing cluster from Within R}
@@ -34,8 +40,8 @@ used on machines running Mac OS X.  Further details of required
 environmental variables and the optional mgrid script to enable
 multi-task jobs can be found in the details section.
 
-*Note*  Apple has discontinued Xgrid from Mac OS 10.8 onwards, so future
-development and testing of these functions will be extremely limited
+*Note*  Apple has discontinued Xgrid from Mac OS 10.8 onwards, and
+these functions are deprecated as of runjags version 2.
 }
 
 
@@ -205,92 +211,13 @@ Equivalent to that of the \code{\link{run.jags}} family of functions.
 \seealso{
 
 \code{\link{run.jags}}, \code{\link{autorun.jags}} and
-\code{\link{runjags-class}} for more information on JAGS models.
+\code{\link{runjags-class}} for more information on JAGS models, 
+including operations on parallel processors
 
-\code{\link{xgrid.run}} for functions to execute user-specified
-functions on Xgrid.
-
-}
-
-
-
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
-
-\examples{
-
-# run a simple model on Xgrid using a single job:
-
-\dontrun{
-
-# Ensure the required environmental variables are set:
-Sys.setenv(XGRID_CONTROLLER_HOSTNAME="<hostname>")
-Sys.setenv(XGRID_CONTROLLER_PASSWORD="<password>")
-
-# Simulate the data
-X <- 1:100
-Y <- rnorm(length(X), 2*X + 10, 1)
-
-# Model in the JAGS format
-model <- "model {
-for(i in 1 : N){
-Y[i] ~ dnorm(true.y[i], precision);
-true.y[i] <- (m * X[i]) + c;
-}
-m ~ dunif(-1000,1000);
-c ~ dunif(-1000,1000);
-precision ~ dexp(1);
-}"
-
-# Run the model synchronously using the 'simple' method:
-results <- xgrid.run.jags(model=model, monitor=c("m", "c", 
-	"precision"), data=list(N=length(X), X=X, Y=Y), n.chains=2, 
-	plots = FALSE)
-
-# Analyse the results:
-results$summary
+\code{\link{run.jags.study}} for functions to execute JAGS model
+validation exercises over parallel processors
 
 }
 
-
-# Submit a job to xgrid and (later) retrieve the results.  Use an 
-# ART script to ensure the job is only sent to nodes with JAGS installed:
-
-\dontrun{
-
-# Ensure the required environmental variables are set:
-Sys.setenv(XGRID_CONTROLLER_HOSTNAME="<hostname>")
-Sys.setenv(XGRID_CONTROLLER_PASSWORD="<password>")
-
-# Simulate the data
-X <- 1:100
-Y <- rnorm(length(X), 2*X + 10, 1)
-
-# Model in the JAGS format
-model <- "model {
-for(i in 1 : N){
-Y[i] ~ dnorm(true.y[i], precision);
-true.y[i] <- (m * X[i]) + c;
-}
-m ~ dunif(-1000,1000);
-c ~ dunif(-1000,1000);
-precision ~ dexp(1);
-}"
-
-# Run the model asynchronously:
-
-name <- xgrid.submit.jags(model=model, monitor=c("m", "c", "precision"),
-data=list(N=length(X), X=X, Y=Y), n.chains=2, plots = FALSE,
-inits=list(list(.RNG.name='base::Wichmann-Hill'), 
-list(.RNG.name='base::Marsaglia-Multicarry')))
-
-# Retrieve the results:
-results <- xgrid.results.jags(name)
-
-}
-
-
-
-}
 
 \keyword{methods}

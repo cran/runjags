@@ -386,7 +386,7 @@ xgrid.submit <- function(f=function(iteration){}, niters=1, object.list=list(), 
 xgrid.results <- function(jobinfo, wait=TRUE, partial.retrieve=!wait, cleanup=!partial.retrieve, show.output=TRUE){
 	
 	# Special clause to see if jobname is actually a jags job (if jobname/jagsinfo.Rsave exists and jobname/jobname text file contains jagserror.txt and jagsout.txt) - bounce to xgrid.results.jags (with warning?):
-	if(class(jobinfo)=="runjags.bginfo"){
+	if(class(jobinfo)=="runjagsbginfo"){
 		warning("Attempting to retrieve results from an Xgrid JAGS run using the non-JAGS Xgrid function - redirecting the function call to xgrid.results.jags...")
 		return(xgrid.results.jags(background.runjags.object=jobinfo, wait=wait, cleanup=cleanup))			
 	}

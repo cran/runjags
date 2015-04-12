@@ -1,4 +1,4 @@
-This package is now feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Steven Novick, David Norris, Glenn Meyers, Avraham Adler, Jared Laufenberg, Torrin Liddell, Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.
+This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Carsten Dormann, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Höhle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Torrin Liddell, Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for continued development of the excellent JAGS software.
 
 
 OPEN ISSUES
@@ -11,13 +11,88 @@ None known.
 
 FEATURES TO BE IMPLEMENTED
 
-A utility function to generate pairwise comparisons within fixed effects.
-
-Overhaul the plotting mechanism for runjags objects
-
+A predict method for runjags objects
 
 
 VERSION HISTORY
+
+
+Version 2.0.1
+
+NEW FEATURES
+
+The extract method now allows a logical vector indicating stochastic variables to be extracted (and the help page has been improved)
+
+Martyn Plummer is now listed as an author [cph] to acknowledge the inclusion of code in /src/distributions/jags (and elsewhere where indicated)
+
+BUG FIXES
+
+A bug fixed that gave an incorrect number of burnin iterations when extending models with a different thin (thanks to Tomas Telensky)
+
+A bug fixed that failed to recognise that some curly braces were commented out (thanks to Michael Höhle)
+
+
+Version 2.0.0
+
+DEPRECATED ARGUMENTS
+
+method.options - permitted (with a note) for now, but it is preferred to pass the method arguments directly to the parent function call
+
+datalist and initlist - permitted (with a note) for now, but it is preferred to pass these lists to data and inits
+
+check.conv and check.stochastic - deprecated and ignored with a note - if summary=TRUE then both must be performed
+
+monitor.deviance, monitor.pd, monitor.pd.i, monitor.popt - deprecated and ignored with a warning
+
+Direct access to the failedjags environment is deprecated - use the failed.jags() function instead
+
+
+NEW FEATURES
+
+Added a quickstart vignette
+
+The behaviour of data and inits has changed somewhat - if #data# and #inits# are specified in the model, not all variables in the data or inits will be passed to JAGS
+
+The behaviour of the pD and pOpt monitors has changed to allow these to work with the rjags method:  pd.i no longer exists and is now pd, and what was pd is now full.pd.  The popt monitor remains unchanged.  See the help file for extract for more details.
+
+New failed.jags() function for viewing failed JAGS models
+
+New drop.k function
+
+New write.jagsfile function
+
+New read.jagsfile function to distinguish between row-major order (WinBUGS) and column-major (JAGS/R) arrays more easily
+
+New template.jags function for common GLMM applications
+
+New residuals and fitted methods for runjags objects
+
+New plotting and summary system allows plots and summary statistics to be post-calculated (see add.summary).  The default option for pre-calculating plots is now FALSE.
+
+New mutate option to summary functions, and contrasts.mcmc function provided to generate pairwise comparisons within fixed effects
+
+The Half Cauchy distribution is now implemented in the JAGS extension module
+
+There are now more options for recovering crashed models, particularly for parallel simulations, using results.jags
+
+Error messages for failed data and inits functions are now more helpful
+
+Variables that are stochastic in one chain but do not change in another chain are now handled specially
+
+If a model looks like a file path, the extensions .bug and .txt are now tried if the specified file couldn't be found
+
+For background methods, tempdir is now set to FALSE if not done so by the user (with a warning which can be deactivated via runjags.options())
+
+It is now possible to re-read any JAGS simulation (run with keep.jags.files=TRUE) using results.jags(path-to-folder)
+
+Many of the internal methods for reading JAGS files have been re-written to improve efficiency
+
+The autoextend.jags function is now compatible with the rjparallel method (although re-compilation will be required!)
+
+
+BUG FIXES
+
+Too many to detail here!
 
 
 Version 1.2.1

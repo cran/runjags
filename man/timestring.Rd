@@ -48,10 +48,6 @@ FALSE then just an integer is returned.  Default TRUE.}
 
 
 
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
-
-
 \examples{
 
 # time how long it takes to complete a task:

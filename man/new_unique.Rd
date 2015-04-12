@@ -53,8 +53,6 @@ existing files
    \code{\link{ask}}
 }
 
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
 \examples{
 #  Create a unique file name with a .R extension.
 new_unique(c("new_file", NA), ".R", ask=FALSE)

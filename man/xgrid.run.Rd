@@ -23,8 +23,8 @@
    The two utility functions xgrid.jobs and xgrid.delete allow the
    currently running jobs to be examined and deleted from inside R.
    
-   *Note*  Apple has discontinued Xgrid from Mac OS 10.8 onwards, so future
-   development and testing of these functions will be extremely limited
+   *Note*  Apple has discontinued Xgrid from Mac OS 10.8 onwards, and
+   these functions are deprecated as of runjags version 2.
 
    
 }
@@ -314,114 +314,11 @@ retrieved using xgrid.results).
 
 \seealso{
 
-\code{\link{xgrid.run.jags}} for functions to run JAGS models on Xgrid,
-or \code{\link{run.jags}} to do so locally.
-
 \code{\link[parallel]{mclapply}} and \code{\link[parallel]{parLapply}}
 in the parallel package for parallel execution of code over multiple
 local (or remote) cores.
 
 }
 
-
-
-\author{Matthew Denwood \email{matthew.denwood@glasgow.ac.uk}}
-
-
-
-\examples{
-
-# A basic example of synchronous running of code over 100 iterations, 
-# split up between 10 tasks:
-
-\dontrun{
-
-# The function to evaluate:
-f <- function(iteration){
-	# All objects supplied to object.list will be visible here, but
-	# remember to call all necessary libraries within the function
-	
-	cat("Running iteration", iteration, "\n")
-	# Some lengthy code evaluation....
-	
-	output <- rpois(10, iteration)
-	return(output)
-}
-
-# Run the function on xgrid for 100 iterations split between 10 machines:
-results <- xgrid.run(f, niters=100, threads=10)
-
-}
-
-
-
-# A basic example of xapply to calculate the mean of a list of numbers:
-
-\dontrun{
-
-# A list of 3 datasets from which to calculate the mean:
-datasets <- list(c(1,5,6,NA), c(9,2,NA,0), c(-1,4,10,20))
-
-# Standard lapply syntax:
-results1 <- lapply(datasets, mean, na.rm=TRUE)
-
-# Equivalent xapply syntax:
-results2 <- xapply(datasets, mean, 
-xgrid.options=list(wait.interval='15s'), na.rm=TRUE)
-
-# Or submit the job:
-id <- xapply(datasets, mean, xgrid.options=list(submitandstop=TRUE),
-na.rm=TRUE)
-# And retrieve the results:
-results3 <- xgrid.results(id)
-
-}
-
-
-
-
-\dontrun{
-
-# Subit an xgrid job just to see which packages are installed 
-# on a particular machine.
-
-
-# A function to harvest details of R version and installed packages:
-f <- function(i){
-
-archavail <- any(dimnames(installed.packages())[[2]]=='Archs')
-
-# To deal with older versions of R:
-if(archavail){
-packagesinst <- installed.packages()[,c('Version', 'Archs', 'Built')]
-}else{
-packagesinst <- installed.packages()[,c('Version', 'OS_type', 'Built')]
-}
-
-Rinst <- unlist(R.version[c('version.string', 'arch', 'platform')])
-names(Rinst) <- c('Version', 'Archs', 'Built')
-return(rbind(R=Rinst, packagesinst))
-
-}
-
-# Or to get more details about a particular package:
-g <- function(i){
-	p <- library(help='bayescount')
-	return(p$info)
-}
-
-# Get the information back from 2 specific machines called 'newnode1' 
-# and 'newnode2':
-results <- xgrid.run(f, niters=2, threads=2, 
-hostnode='newnode1:newnode2')
-
-# See the installed packages on the two nodes:
-results
-
-}
-
-
-
-}
 
 \keyword{methods}

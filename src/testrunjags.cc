@@ -36,7 +36,7 @@
 #include "distributions/DPar3.h"
 #include "distributions/DPar4.h"
 #include "distributions/DGenPar.h"
-#include "distributions/DHCauchy.h"
+#include "distributions/DHalfCauchy.h"
 
 #include "distributions/jags/DFunction.h"
 #include "distributions/jags/QFunction.h"
@@ -105,7 +105,7 @@ int runjagstestingfun(int disttype, int dpqr, int uselogi, int loweri, int N, do
 		dist = new DGenPar();
 	}else if(disttype==8){
 		if(npars!=1) return 1;
-		dist = new DHCauchy();
+		dist = new DHalfCauchy();
 	}else{
 		// Return status 2 if distribution not recognised:
 		return 2;
