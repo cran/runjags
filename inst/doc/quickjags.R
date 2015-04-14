@@ -95,9 +95,6 @@ results <- run.jags(model, n.chains = 2)
 results <- extend.jags(results, sample=5000)
 
 ## ----, results='hide'----------------------------------------------------
-autoresults <- autorun.jags(model, method='parallel')
-
-## ----, results='hide'----------------------------------------------------
 ctl <- c(4.17,5.58,5.18,6.11,4.50,4.61,5.17,4.53,5.33,5.14)
 trt <- c(4.81,4.17,4.41,3.59,5.87,3.83,6.03,4.89,4.32,4.69)
 group <- gl(2, 10, 20, labels = c("Ctl","Trt"))
@@ -126,12 +123,6 @@ summary(residuals(lm.D9) - residuals(JAGS.D9, output='mean'))
 
 ## ------------------------------------------------------------------------
 extract(JAGS.D9, what='samplers')
-
-## ----, results='hide'----------------------------------------------------
-datafit <- drop.k(JAGS.D9, 'weight[1:6]', k=1, n.cores=2)
-
-## ------------------------------------------------------------------------
-datafit
 
 ## ----, eval=FALSE--------------------------------------------------------
 #  ?runjags.options

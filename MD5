@@ -1,6 +1,6 @@
 97ea54b25d2b7b45a722fcfc04142dcd *CHANGELOG
 94d55d512a9ba36caa9b7df079bae19f *COPYING
-c3803030c0f2cd83d6a774bf931c46a1 *DESCRIPTION
+b757ed160a1d61aa8001d09e2d5d0c48 *DESCRIPTION
 e897e26670f0c84dd3543d4030553453 *NAMESPACE
 8e78c9311b434dd13e7fba397307db5f *R/autoextend.jags.R
 3a2330d52598c88c299e4974f79eb37e *R/combine.mcmc.R
@@ -27,17 +27,17 @@ cb06bc901e9e1a93cd327bb63807f3d3 *R/xgrid.run.jags.R
 cb101d24f306cf986bfce61de4955038 *R/xgrid.utilities.R
 e86a864fa5805185523ccd31d8e0b2ea *R/zzz.R
 95bf6a1d4952d527746f262651b00ac0 *README
-c7208dc52900f0eea7d8c2a69ff291c4 *build/vignette.rds
+02b34620b357ded88bd5040d79127d35 *build/vignette.rds
 607d47d7376b1948c2684625f3e79f54 *cleanup
 00d6afba653b5bb94ff50d693ab3a407 *configure
 b657453d8b7c426bf26fa4032cab6a00 *configure.ac
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 c39b51ccb07d452dde51a7b46eb96ed2 *inst/CITATION
 f4fcf3ee786c4d130f9a11e077bd0b3f *inst/doc/UserGuide.Rtex
-3924cb7642e65488110515ac3a4c1123 *inst/doc/UserGuide.pdf
-4cac0601b36aa8d8ba2edf8742cb4c9e *inst/doc/quickjags.R
-80c69a47b375058764a73e4a2804dd90 *inst/doc/quickjags.Rmd
-1fd755f6494bb12b0d86906177ec2207 *inst/doc/quickjags.html
+be9416cf38a21a0809ed3d45d280dc21 *inst/doc/UserGuide.pdf
+06bc91f0621682e410d09b94200622fe *inst/doc/quickjags.R
+af86a63895c8c8c0b609dffe646b3dc4 *inst/doc/quickjags.Rmd
+1bb31a494f1af99bdbe31bfc6fa89ded *inst/doc/quickjags.html
 641aba458cad498ffec9233029b19e15 *inst/xgrid/beep.bat
 73929f767d02063c7bd084469d94ad70 *inst/xgrid/mgrid.sh
 a6a104e643405dd5dce050eee0c36850 *man/add.summary.Rd
@@ -100,5 +100,5 @@ d8b9d4b97fbbd922808a382299580804 *src/distributions/jags/QFunction.h
 e27c6c3a13eb8def5bc88406735a793f *tests/checkstudy.R
 e59c6bc86d585819d6446b86854df4b5 *tests/moduletargets.Rsave
 f4fcf3ee786c4d130f9a11e077bd0b3f *vignettes/UserGuide.Rtex
-80c69a47b375058764a73e4a2804dd90 *vignettes/quickjags.Rmd
+af86a63895c8c8c0b609dffe646b3dc4 *vignettes/quickjags.Rmd
 d54225e6b223ed8e804c3ed60c73afd6 *vignettes/traceplots.pdf

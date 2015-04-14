@@ -13,7 +13,7 @@ library(parallel)
 
 # A quick-start guide to using the runjags package
 
-This document is intended as a short introduction to fitting MCMC models using JAGS and runjags, focussing on learning by example.  The document may grow slightly over time as new examples are added, but the intention is to keep this as breif as possible.  Additional information and more details are available in the [user guide](userguide.pdf).  For detailed documentation of individual functions, see the runjags manual for that function.
+This document is intended as a short introduction to fitting MCMC models using JAGS and runjags, focussing on learning by example.  The intention is to keep this document as brief as possible, but a slightly longer version with more examples is available from [here](http://runjags.sourceforge.net/quickjags.html).  Additional information and more details are available in the [user guide](userguide.pdf).  For detailed documentation of individual functions, see the runjags manual for that function.
 
 ## Preparation
 
@@ -35,7 +35,7 @@ A recommended introductory text for individuals not familiar with the BUGS langu
 
 Lunn D, Jackson C, Best N, Thomas A, Spiegelhalter D (2012). The BUGS book: A practical introduction to Bayesian analysis. CRC press.
 
-To illustrate how to use run.jags we will look at the Salmonella example from [chapter 6.5.2](http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-the-bugs-book/bugs-book-examples/the-bugs-book-examples-chapter-6-6-5-2/) of this book, with thanks to Lunn, Jackson, Best, Thomas, and Spiegelhalter 2012, for kind permission to reproduce this code.  The model below was taken from the WinBUGS example, modified to include a pair of curly brackets to demarcate the Data and Inits blocks (mandatory), and adding a second Inits block with different starting values for 2 chains:
+To illustrate how to use run.jags we will look at the Salmonella example from [chapter 6.5.2](http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-the-bugs-book/bugs-book-examples/the-bugs-book-examples-chapter-6-6-5-2/) of this book, with thanks to Lunn, Jackson, Best, Thomas, and Spiegelhalter 2012, for kind permission to reproduce this code.  The model below was taken from the WinBUGS example, modified to include a mandatory pair of curly brackets to demarcate the Data and Inits blocks, and adding an optional second Inits block with different starting values for 2 chains:
 
 ```{r}
 filestring <- "
@@ -145,13 +145,7 @@ The output of this function can be extended using:
 results <- extend.jags(results, sample=5000)
 ```
 
-This function call takes an additional 5000 samples and combines them with the original simulation.  To re-start the original simulation:
-
-```{r, results='hide'}
-autoresults <- autorun.jags(model, method='parallel')
-```
-
-This re-runs the original model, but this time the convergence and sample size is automatically monitored and controlled, and the two chains are run in parallel to speed up lengthy simulations.  Each of the functions run.jags, extend.jags, autorun.jags and autoextend.jags allows a method argument to be specified, with the options available detailed in the [user guide](userguide.pdf).
+This function call takes an additional 5000 samples and combines them with the original simulation.  It is also possible to automatically extend a model until it has converged (as assessed by Gelman and Rubin's convergence diagnostic) using the autorun.jags and autoextend.jags functions, although manual inspection of trace plots is always recommended to ensure chains have really converged.  Note also that each of the functions run.jags, extend.jags, autorun.jags and autoextend.jags allows a method argument to be specified, which allows separate chains to be run on parallel processors where available.  Full details are provided are in the user guide, but the most used options are 'rjags', 'interrputible', 'parallel' and 'background'.  
 
 ## Generating a GLMM template
 
@@ -202,26 +196,18 @@ summary(residuals(lm.D9) - residuals(JAGS.D9, output='mean'))
 
 ## Model evaluation
 
-The standard likelihood ratio, AIC and BIC statistics are not relevant to Bayesian methods such as MCMC.  Instead, the Deviance Information Criterion is typically used to compare models, and is displayed as part of the print method shwon above.  This can also be extracted from a runjags model using the extract method, along with other information such as the samplers used:
+The Deviance Information Criterion (DIC) is typically used to compare models fit using JAGS and BUGS, and is displayed as part of the print method shwon above.  This can also be extracted from a runjags model using the extract method, along with other information such as the samplers used:
 
 ```{r}
 extract(JAGS.D9, what='samplers')
 ```
 
-Another possible method to assess the fit of Bayesian models is using leave-one-out cross-validation, or a drop-k study.  A utility function is included within runjags to facilitate this - here we just assess the first 6 weight datapoints for brevity:
-
-```{r, results='hide'}
-datafit <- drop.k(JAGS.D9, 'weight[1:6]', k=1, n.cores=2)
-```
-```{r}
-datafit
-```
-For more details of simulation studies, see the [user guide](userguide.pdf).
+Another possible method to assess the fit of Bayesian models is using leave-one-out cross-validation, or a drop-k study.  A utility function is included within runjags to facilitate this - for more details see the help file for the drop.k function or the [extended version of this vignette](http://runjags.sourceforge.net/quickjags.html).
 
 
 ## Options
 
-There are a large number of global options that can be controlled using the runjags.options function.  For an explanation of these see the help file for this function:
+There are a large number of global options that can be controlled using the runjags.options function.  For an explanation of these see the help file for the relevant function:
 
 ```{r, eval=FALSE}
 ?runjags.options
@@ -230,7 +216,9 @@ There are a large number of global options that can be controlled using the runj
 
 ## Further information
 
-There is a [sourceforge repository](http://runjags.sourceforge.net/) associated with the runjags package, which contains an alternative compile-free version of the package amongst other things.  The [sourceforge version of this vignette](http://runjags.sourceforge.net/quickjags.html) may also contain additional material not found in the [version hosted on CRAN](http://cran.r-project.org/package=runjags).  This package is in constant development, so if you find any issues or the code does not behave as expected please email the pacckage developer to report the problem.  General comments and suggestions on how you find using this package are also very welcome.
+There is a [sourceforge repository](http://runjags.sourceforge.net/) associated with the runjags package, which contains additional versions of the package and internal JAGS module.  This page also contains the [extended version of this vignette](http://runjags.sourceforge.net/quickjags.html) which contains additional material and examples not found in the [version hosted on CRAN](http://cran.r-project.org/package=runjags).  
+
+This package is in constant development, so if you find any issues or the code does not behave as expected please either email the pacckage developer or visit the [bug-tracker page](https://sourceforge.net/p/runjags/tickets/) to report the problem.  General comments and suggestions on how you find using this package are also very welcome.
 
 
 ## Citation
