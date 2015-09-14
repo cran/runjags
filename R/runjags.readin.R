@@ -130,7 +130,18 @@ runjags.readin <- function(directory, silent.jags, target.adapt, target.burnin, 
 			tries <- 0
 			repeat{
 				outputs[[i]] <- try(paste(readLines(paste("sim.",i,"/jagsoutput.txt",sep=""), warn=FALSE), collapse="\n"), silent=TRUE)
-				if(class(outputs[[i]])!="try-error") break
+				if(class(outputs[[i]])!="try-error")
+					break
+
+				#	Makes results.jags very slow:
+#					simfinished <- grepl("[[:space:]]Deleting model",outputs[[i]])
+					# Wait up to 3 seconds for 'Deleting model' to be appended:
+#					if(simfinished || tries > 6)
+#						break
+#					if(runjags.getOption('debug'))
+#						swcat('Failed to find "Deleting model" in model output - re-trying...\n')
+#				}
+				
 				tries <- tries +1
 				if(tries==11){
 					if(n.sims==1) stop("An unexpected error occured: unable to read the output of the simulation") else stop(paste("An unexpected error occured: unable to read the output of simulation ", i, sep=""))
@@ -149,8 +160,10 @@ runjags.readin <- function(directory, silent.jags, target.adapt, target.burnin, 
 		if(target.adapt>0){
 			# After the model is compiled, adapt(0) will either return an error or TRUE
 			if(notadapted){	
-				if(runjags.getOption('adapt.incomplete')=='error')
+				if(runjags.getOption('adapt.incomplete')=='error'){
+					# Need to somehow kill rogue processes here but the PID information is lost by this point ...?					
 					return(list(errormessage=paste('The adaptation phase of ', if(n.sims>1) 'one or more models ' else 'the model ', 'was not completed in ', target.adapt, ' iterations - try increasing the number of iterations to the "adapt" argument', sep=''), call.=FALSE))
+				}
 				if(runjags.getOption('adapt.incomplete')=='warning')
 					warning(paste('The adaptation phase of ', if(n.sims>1) 'one or more models ' else 'the model ', 'was not completed in ', target.adapt, ' iterations, so the current samples may not be optimal - try increasing the number of iterations to the "adapt" argument', sep=''), call.=FALSE)
 			}
@@ -637,16 +650,17 @@ read.coda.subset <- function (output.file, index.file, start, end, thin, quiet =
       	
 		if(!identical(as.character(vars), as.character(NA))){
 			
-		  # Indexes of vars will be expanded earlier in runjags code
-      # For variables provided non-indexed:
-      nonindvars <- paste(vars,'\\[.*\\]',sep='')
-      
-      matchvarsfun <- function(x) return(any(x==vars) || any(sapply(nonindvars,grepl,x=x)))
-      readin <- which(sapply(vnames,matchvarsfun))
-      if(length(readin)==0) stop(paste('None of the specified monitor(s) "', paste(vars, collapse='", "'), '" were found in the coda files', sep=''), call.=FALSE)
-      vars <- vnames[readin]
-			
-			starts <- 1
+			# Indexes of vars will be expanded earlier in runjags code
+			# For variables provided non-indexed:
+			nonindvars <- paste(vars,'\\[.*\\]',sep='')
+
+			matchvarsfun <- function(x) return(any(x==vars) || any(sapply(nonindvars,grepl,x=x)))
+			readin <- which(sapply(vnames,matchvarsfun))
+			if(length(readin)==0)
+				stop(paste('None of the specified monitor(s) "', paste(vars, collapse='", "'), '" were found in the coda files', sep=''), call.=FALSE)
+			vars <- vnames[readin]
+		
+			starts <- index[readin[1],1]
 			ends <- numeric(0)
 			if(length(readin) > 1){
 				for(i in 2:length(readin)){
@@ -663,7 +677,7 @@ read.coda.subset <- function (output.file, index.file, start, end, thin, quiet =
 			
 			temp <- as.data.frame(matrix(as.numeric(NA), nrow=iterations*length(vnames), ncol=2, dimnames=list(NULL, c('iter', 'val'))))
 			
-      ind.s <- 1
+			ind.s <- 1
 			for(f in 1:length(starts)){
 				ind.e <- ind.s + (ends[f]-starts[f])
 				temp[ind.s:ind.e,] <- as.data.frame(scan(output.file, what = list(iter = 0, val = 0), nmax=((ends[f]-starts[f])+1), skip=(starts[f]-1), quiet = TRUE))
@@ -684,6 +698,7 @@ read.coda.subset <- function (output.file, index.file, start, end, thin, quiet =
 		
     }
     else {
+		stop('Modified function is not S-compatible')
 		# NOT modified as I don't use S...
 		if(!identical(vars, NA)) warning("Argument 'vars' was ignored")
         temp <- scan(output.file, what = list(iter = 0, val = 0))

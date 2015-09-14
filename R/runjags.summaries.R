@@ -36,170 +36,222 @@ runjags.dic <- function(deviance.table, deviance.sum, mcmclist){
 
 runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opts, confidence, autocorr.lags, custom, silent=FALSE){
 	
-	n.chains <- nchain(mcmclist)
+	n.chains <- coda::nchain(mcmclist)
+	n.iter <- coda::niter(mcmclist)
+	n.var <- coda::nvar(mcmclist)
 	
+	# 1 iteration + 1 chain is handled by normalise.mcmcfun:
 	normalised <- normalise.mcmcfun(mcmclist, normalise = normalise.mcmc, warn=TRUE, remove.nonstochastic = TRUE)
+	
 	normalisedmcmc <- normalised$mcmc
 	truestochastic <- normalised$truestochastic
 	semistochastic <- normalised$semistochastic
-	nonstochastic <- normalised$nonstochastic	
+	nonstochastic <- normalised$nonstochastic			
 	
-	autocorrelation <- safe.autocorr.diag(normalisedmcmc, lags=autocorr.lags)
-	crosscorrelation <- crosscorr(normalisedmcmc)
-	class(crosscorrelation) <- "crosscorrstats"	
-	
-	success <- try({
-		
-		if(n.chains > 1){
-			if(!silent) swcat("Calculating the Gelman-Rubin statistic for ", nvar(mcmclist), " variables....\n", sep="")
-			convergence <- safe.gelman.diag(normalisedmcmc, transform=FALSE, autoburnin=FALSE)
-		
-			convergence <- c(convergence, psrf.target=psrf.target)
-			class(convergence) <- "gelmanwithtarget"
-		
-			#n.params <- nrow(convergence$psrf)
-			
-			if(nrow(convergence$psrf) != sum(truestochastic))
-				stop(paste(nrow(convergence$psrf), ' statistics were returned by gelman.diag but ', sum(truestochastic), ' were expected', sep=''))
-
-		}else{
-			if(runjags.getOption('summary.warning')) warning("Convergence cannot be assessed with only 1 chain", call.=FALSE)		
-			convergence <- "Convergence cannot be assessed using only 1 chain"
-			#param.conv <- 1
-			#n.params <- 1
-		}
-
-		if(n.chains > 1){
-			if(class(convergence$mpsrf)!="numeric"){
-				mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
-			}else{
-				mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
-			}
-		}
-		
-		##########################################################
-		#### REMOVED CODE
-		##########################################################		
-#		autocorrelated <- 0
-#		unconverged <- 0
-#		crosscorrelated <- 0
-#		
-#		for(j in 1:n.params){
-#			if(n.chains > 1){
-#				param.conv <- convergence$psrf[j, 1]
-#				if(!is.na(param.conv)){
-#					if(param.conv > psrf.target){
-#						unconverged <- unconverged + 1
-#					}
-#				}
-#			}
-#			param.autocorr <- autocorrelation[3,j]
-#			if(!is.na(param.autocorr)){
-#				if(param.autocorr > 0.1){
-#					autocorrelated <- autocorrelated + 1
-#				}
-#			}
-#			param.crosscorr <- crosscorrelation
-#			param.crosscorr[1:nrow(param.crosscorr), 1:ncol(param.crosscorr)] <- 0
-#			# print("0.3 is an arbitrary figure for crosscorr")
-#			# param.crosscorr is symmetrical - so divide by 2 to get number cross correlated:
-#			crosscorrelated <- sum(param.crosscorr > 0.3)/2
-#		}
-#
-#		updates <- niter(mcmclist)
-#
-#		if(!is.na(param.conv)){
-#			if(unconverged > 0){
-#				if(n.params==1 & !silent) swcat("Convergence may have failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else swcat("Convergence may have failed for this run for ", unconverged, " parameter", if(unconverged>1) "s", " after ", updates, " iterations", mpsrfstring, "\n", sep="")
-#			}else{
-#				if(n.chains > 1 & !silent) swcat("The Gelman-Rubin statistic is below ", psrf.target, " for all parameters\n", sep="")
-#				if(n.chains==1 & !silent) swcat("Calculating the Gelman-Rubin statistic requires two or more chains\n")
-#			}
-#		}else{
-#			if(!silent) swcat("There was an unexpected error calculating the Gelman-Rubin statistic\n")
-#		}
-#
-#		if(!is.na(param.autocorr)){
-#			if(autocorrelated > 0){
-##				if(!silent) swcat("IMPORTANT:  There was a high degree of autocorrelation for ", autocorrelated, " parameter", if(autocorrelated>1) "s", " (see the $autocorr element of the runjags object for more details)\n", sep="")
-#			}
-#		}else{
-#			if(!silent) swcat("There was an unexpected error calculating the autocorrelation dependence\n")
-#		}
-#		if(crosscorrelated > 0){
-##			if(!silent) swcat("IMPORTANT:  There was a high degree of cross-correlation for ", crosscorrelated, " parameter pair", if(crosscorrelated>1) "s", " (see the $crosscorr element of the runjags object for more details)\n", sep="")
-#		}
-	##########################################################
-	##########################################################
-	
-	
-	}, silent=FALSE)
-	
-	if(class(success)=="try-error"){
-		if(runjags.getOption('debug'))
-			stop("An unexpected error occured when assessing convergence")
-		if(!silent)
-			swcat("An unexpected error occured when assessing convergence\n")
-		convergence <- "An unexpected error occured when assessing convergence"
-	}
+	collapsed <- combine.mcmc(mcmclist, collapse.chains=TRUE)
 	
 	options(show.error.messages = FALSE)
 	success <- try({
-	suppressWarnings(tsummary <- summary(combine.mcmc(mcmclist, collapse.chains=FALSE)))
-	if(class(tsummary$statistics)=="numeric"){
-		tsummary$statistics <- t(as.matrix(tsummary$statistics))
-		dimnames(tsummary$statistics)[[1]] <- varnames(mcmclist)
-		tsummary$quantiles <- t(as.matrix(tsummary$quantiles))
-		dimnames(tsummary$quantiles)[[1]] <- varnames(mcmclist)
-	}
+	  suppressWarnings(tsummary <- summary(combine.mcmc(mcmclist, collapse.chains=FALSE)))
+	  if(class(tsummary$statistics)=="numeric"){
+	    tsummary$statistics <- t(as.matrix(tsummary$statistics))
+	    dimnames(tsummary$statistics)[[1]] <- varnames(mcmclist)
+	    tsummary$quantiles <- t(as.matrix(tsummary$quantiles))
+	    dimnames(tsummary$quantiles)[[1]] <- varnames(mcmclist)
+	  }
 	})
 	if(class(success)=="try-error") tsummary <- "An unexpected error occured while calculating summary statistics"
 	options(show.error.messages = TRUE)			
 	
-	sseff <- effectiveSize(mcmclist)
-	collapsed <- combine.mcmc(mcmclist, collapse.chains=TRUE)
+	# First lot of summaries require at least one stochastic variable:
+	if(!all(nonstochastic)){
 	
-	if(any(confidence>1 | confidence<0)){
-		warning('Invalid value for confidence was ignored (this must be in the range 0-1)')
-		confidence <- confidence[confidence<1 & confidence>0]
-		if(length(confidence)==0) confidence <- 0.95
-	}
-	confidence <- sort(confidence, decreasing=TRUE)
-	nc <- length(confidence)
-	
-	options(show.error.messages = FALSE)
-	success <- try({
-		thpd <- matrix(0, ncol=1+(length(confidence)*2), nrow=ncol(collapsed))
-		thpd[,nc+1] <- apply(collapsed,2,median)
-		for(i in 1:nc){
-			suppressWarnings(thpd[,c(i, (nc*2 +2)-i)] <- HPDinterval(collapsed, prob=confidence[i]))
+		autocorr.lags <- autocorr.lags[autocorr.lags < n.iter]
+		if(length(autocorr.lags)==0){
+			autocorr.lags <- 1
 		}
-		dimnames(thpd) <- list(varnames(collapsed), c(paste("Lower",round(confidence*100),sep=""), "Median", paste("Upper",round(confidence[nc:1]*100),sep="")))
-	})
-
-	if(class(success)=="try-error") thpd <- "An unexpected error occured while calculating summary statistics"
-	options(show.error.messages = TRUE)			
-
-	options(show.error.messages = FALSE)
-
-	success <- try({
-#		stochastic <- tsummary$statistics[,2] != 0
-#		sseff <- effectiveSize(collapsed)
-		se <- tsummary$statistics[,2]
-		mcse <- se / sqrt(sseff)
-		sseff <- sseff[!nonstochastic]
-		mcse <- mcse[!nonstochastic]
-		se <- se[!nonstochastic]
-		thmcse <- list(sseff=sseff, ssd=se, mcse=mcse)
-		})	
-	if(class(success)=="try-error") thmcse <- "An unexpected error occured while calculating Monte Carlo error"
-	options(show.error.messages = TRUE)			
 	
-	class(thmcse) <- 'mcsestats'
+		autocorrelation <- safe.autocorr.diag(normalisedmcmc, lags=autocorr.lags)
+		suppressWarnings(crosscorrelation <- crosscorr(normalisedmcmc))
+		class(crosscorrelation) <- "crosscorrstats"	
+	
+		success <- try({
+		
+			if(n.chains > 1 && n.iter > 1){
+				
+				if(!silent) swcat("Calculating the Gelman-Rubin statistic for ", nvar(mcmclist), " variables....\n", sep="")
+				convergence <- safe.gelman.diag(normalisedmcmc, transform=FALSE, autoburnin=FALSE)
+		
+				convergence <- c(convergence, psrf.target=psrf.target)
+				class(convergence) <- "gelmanwithtarget"
+		
+				#n.params <- nrow(convergence$psrf)
+				
+				if(nrow(convergence$psrf) != sum(!nonstochastic))
+					stop(paste(nrow(convergence$psrf), ' statistics were returned by gelman.diag but ', sum(!nonstochastic), ' were expected', sep=''))
+
+			}else{
+				if(n.iter==1){
+					if(runjags.getOption('summary.warning'))
+						warning("Convergence cannot be assessed with only 1 iteration", call.=FALSE)
+					
+					convergence <- "Convergence cannot be assessed using only 1 iteration"
+				}
+				if(n.chains==1){
+					if(runjags.getOption('summary.warning'))
+						warning("Convergence cannot be assessed with only 1 chain", call.=FALSE)
+					
+					convergence <- "Convergence cannot be assessed using only 1 chain"
+				}
+				
+				#param.conv <- 1
+				#n.params <- 1
+			}
+
+			if(n.chains > 1 && n.iter > 1){
+				if(class(convergence$mpsrf)!="numeric"){
+					mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
+				}else{
+					mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
+				}
+			}
+		
+			##########################################################
+			#### REMOVED CODE
+			##########################################################		
+	#		autocorrelated <- 0
+	#		unconverged <- 0
+	#		crosscorrelated <- 0
+	#		
+	#		for(j in 1:n.params){
+	#			if(n.chains > 1){
+	#				param.conv <- convergence$psrf[j, 1]
+	#				if(!is.na(param.conv)){
+	#					if(param.conv > psrf.target){
+	#						unconverged <- unconverged + 1
+	#					}
+	#				}
+	#			}
+	#			param.autocorr <- autocorrelation[3,j]
+	#			if(!is.na(param.autocorr)){
+	#				if(param.autocorr > 0.1){
+	#					autocorrelated <- autocorrelated + 1
+	#				}
+	#			}
+	#			param.crosscorr <- crosscorrelation
+	#			param.crosscorr[1:nrow(param.crosscorr), 1:ncol(param.crosscorr)] <- 0
+	#			# print("0.3 is an arbitrary figure for crosscorr")
+	#			# param.crosscorr is symmetrical - so divide by 2 to get number cross correlated:
+	#			crosscorrelated <- sum(param.crosscorr > 0.3)/2
+	#		}
+	#
+	#		updates <- niter(mcmclist)
+	#
+	#		if(!is.na(param.conv)){
+	#			if(unconverged > 0){
+	#				if(n.params==1 & !silent) swcat("Convergence may have failed for this run after ", updates, " iterations (psrf = ", round(convergence$psrf[1,1], digits=3), ")\n", sep="") else swcat("Convergence may have failed for this run for ", unconverged, " parameter", if(unconverged>1) "s", " after ", updates, " iterations", mpsrfstring, "\n", sep="")
+	#			}else{
+	#				if(n.chains > 1 & !silent) swcat("The Gelman-Rubin statistic is below ", psrf.target, " for all parameters\n", sep="")
+	#				if(n.chains==1 & !silent) swcat("Calculating the Gelman-Rubin statistic requires two or more chains\n")
+	#			}
+	#		}else{
+	#			if(!silent) swcat("There was an unexpected error calculating the Gelman-Rubin statistic\n")
+	#		}
+	#
+	#		if(!is.na(param.autocorr)){
+	#			if(autocorrelated > 0){
+	##				if(!silent) swcat("IMPORTANT:  There was a high degree of autocorrelation for ", autocorrelated, " parameter", if(autocorrelated>1) "s", " (see the $autocorr element of the runjags object for more details)\n", sep="")
+	#			}
+	#		}else{
+	#			if(!silent) swcat("There was an unexpected error calculating the autocorrelation dependence\n")
+	#		}
+	#		if(crosscorrelated > 0){
+	##			if(!silent) swcat("IMPORTANT:  There was a high degree of cross-correlation for ", crosscorrelated, " parameter pair", if(crosscorrelated>1) "s", " (see the $crosscorr element of the runjags object for more details)\n", sep="")
+	#		}
+		##########################################################
+		##########################################################
 	
 	
+		}, silent=FALSE)
+	
+		if(class(success)=="try-error"){
+			if(runjags.getOption('debug'))
+				stop("An unexpected error occured when assessing convergence")
+			if(!silent)
+				swcat("An unexpected error occured when assessing convergence\n")
+			convergence <- "An unexpected error occured when assessing convergence"
+		}
+	
+
+		s <- try(sseff <- effectiveSize(mcmclist), silent=TRUE)
+		if(class(s)=='try-error'){
+			if(runjags.getOption('summary.warning'))
+				warning('There was an error calculating the effective sample size [using coda::effectiveSize()] for one or more parameters', call.=FALSE)
+			
+			sseff <- apply(collapsed,2,function(x){
+				ess <- try(size <- effectiveSize(x))
+				if(class(ess)=='try-error')
+					return(NA)
+				else
+					return(size)
+			})
+		}
+	
+		if(any(confidence>1 | confidence<0)){
+			runjags.getOption('summary.warning')
+				warning('Invalid value for confidence was ignored (this must be in the range 0-1)')
+			confidence <- confidence[confidence<1 & confidence>0]
+			if(length(confidence)==0) confidence <- 0.95
+		}
+		confidence <- sort(confidence, decreasing=TRUE)
+		nc <- length(confidence)
+	
+		options(show.error.messages = FALSE)
+		success <- try({
+			thpd <- matrix(0, ncol=1+(length(confidence)*2), nrow=n.var)
+			thpd[,nc+1] <- apply(collapsed,2,median)
+			for(i in 1:nc){
+				suppressWarnings(thpd[,c(i, (nc*2 +2)-i)] <- HPDinterval(collapsed, prob=confidence[i]))
+			}
+			dimnames(thpd) <- list(varnames(collapsed), c(paste("Lower",round(confidence*100),sep=""), "Median", paste("Upper",round(confidence[nc:1]*100),sep="")))
+		})
+
+		if(class(success)=="try-error") thpd <- "An unexpected error occured while calculating summary statistics"
+		options(show.error.messages = TRUE)			
+
+		options(show.error.messages = FALSE)
+
+		success <- try({
+	#		stochastic <- tsummary$statistics[,2] != 0
+	#		sseff <- effectiveSize(collapsed)
+			se <- tsummary$statistics[,2]
+			mcse <- se / sqrt(sseff)
+			sseff <- sseff[!nonstochastic]
+			mcse <- mcse[!nonstochastic]
+			se <- se[!nonstochastic]
+			thmcse <- list(sseff=sseff, ssd=se, mcse=mcse)
+			})	
+		if(class(success)=="try-error") thmcse <- "An unexpected error occured while calculating Monte Carlo error"
+		options(show.error.messages = TRUE)			
+	
+		class(thmcse) <- 'mcsestats'
+		
+		
+	}else{
+		
+		autocorrelation <- matrix(NA, ncol=n.var, nrow=1, dimnames=list('Lag.10', NULL))
+		crosscorrelation <- NA
+		convergence <- list()
+		sseff <- NA
+		confidence <- NA
+		thpd <- matrix(rep(tsummary$statistics[,1], 2), ncol=2, nrow=n.var, dimnames=list(NULL, c('Lower95','Upper95')))
+		thmcse <- list(sseff=NA, ssd=NA, mcse=NA)
+		
+	}
+
+
 	# Calculate the mode:
-	modestats <- numeric(ncol(collapsed))
+	modestats <- numeric(n.var)
 	success <- try({
 	modestats <- apply(collapsed,2,function(x){
 	  if(all(abs(x - round(x, digits=0)) < .Machine$double.eps^0.5)){
@@ -212,7 +264,8 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 	discrete <- !is.na(modestats)
 	
 	if(any(is.na(modestats)) && runjags.getOption('mode.continuous')){
-		if(!suppressPackageStartupMessages(requireNamespace('modeest', quietly=TRUE))) stop('The "modeest" package is required to calculate the mode of continuous variables')
+		if(!suppressPackageStartupMessages(requireNamespace('modeest', quietly=TRUE)))
+			stop('The "modeest" package is required to calculate the mode of continuous variables', call.=FALSE)
 		if(is.null(modeest.opts)) modeest.opts <- list()
 		if(!is.list(modeest.opts)){
 			warning('Non list value provided for modeest.opts was ignored')
@@ -234,16 +287,16 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 	
 	
 	# Possible custom function:
-	customstats <- matrix(NA, ncol=1, nrow=ncol(collapsed))
+	customstats <- matrix(NA, ncol=1, nrow=n.var)
 	if(is.function(custom)){
 		success <- try({
 			customstats <- apply(collapsed,2,custom)
 			if(is.null(dim(customstats))){
 				customstats <- matrix(customstats,nrow=1,dimnames=list('Custom.Summary',names(customstats)))
 			}
-			if(length(dim(customstats)!=2) && dim(customstats)[2]!=ncol(collapsed)){
+			if(length(dim(customstats)!=2) && dim(customstats)[2]!=n.var){
 				warning('Custom summary produced an incompatible result - each variable must have the same number of summary statistics returned')
-				customstats <- matrix(NA, ncol=1, nrow=ncol(collapsed))
+				customstats <- matrix(NA, ncol=1, nrow=n.var)
 			}
 			if(is.null(dimnames(customstats)[[1]])) dimnames(customstats) <- list(paste('Custom.',1:nrow(customstats),sep=''), dimnames(customstats)[[2]])
 			customstats <- t(customstats)
@@ -268,15 +321,15 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 	pos[!nonstochastic] <- round((thmcse$mcse/tsummary$statistics[!nonstochastic,2])*100,1)
 	
 	autocorrs <- matrix(ncol=nrow(autocorrelation), nrow=length(!nonstochastic))
-	autocorrs[truestochastic,] <- t(autocorrelation)
+	autocorrs[!nonstochastic,] <- t(autocorrelation)
 	
-	# Catch if only 1 chain
-	if(n.chains==1){
+	# Catch if only 1 chain | iteration
+	if(n.chains==1 || n.iter==1){
 	  psrfs <- replicate(length(nonstochastic), NA)
 	  psrfs.upper <- replicate(length(nonstochastic), NA)  
 	} else {
-	  psrfs[truestochastic] <- convergence$psrf[,1]
-	  psrfs.upper[truestochastic] <- convergence$psrf[,2]
+	  psrfs[!nonstochastic] <- convergence$psrf[,1]
+	  psrfs.upper[!nonstochastic] <- convergence$psrf[,2]
 	}
 
 	tsummaries <- cbind(tsummaries, mcse, pos, sse, autocorrs, psrfs)#, psrfs.upper)
@@ -284,13 +337,15 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 	
 	dimnames(tsummaries) <- list(dimnames(tsummaries)[[1]], sumnames)
 	
-	
 	return(list(summaries=tsummaries, summary=tsummary, HPD=thpd, hpd=thpd, mcse=thmcse, psrf=convergence, autocorr=autocorrelation, crosscorr=crosscorrelation, truestochastic=truestochastic, semistochastic=semistochastic, nonstochastic=!(truestochastic | semistochastic), discrete=discrete))	
 	
 }
 
 
 runjagsplots <- function(mcmclist, psrfs, discrete, silent=FALSE, trace=TRUE, density=TRUE, histogram=TRUE, ecdf=TRUE, autocorr=TRUE, crosscorr=TRUE, key=TRUE, col=NA, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()){
+	
+	if(niter(mcmclist) < 2)
+		stop('Unable to produce plots from less than 2 iterations', call.=FALSE)
 	
 	# Implement separate.chains at some point.... as an element of trace/density/ecdf option lists
 	# separate.chains <- FALSE

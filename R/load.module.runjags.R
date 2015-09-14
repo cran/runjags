@@ -9,22 +9,28 @@ load.runjagsmodule <- function(fail=TRUE, silent=FALSE){
 		if(!requireNamespace("rjags")) 
 			return("The rjags package is required to use the internal runjags module - alternatively you can download a standalone version of the JAGS module from the sourceforge page at http://sourceforge.net/projects/runjags/")
 	
-		if(packageVersion('rjags')$major < runjagsprivate$requiredjagsmajor)
-			return(paste('JAGS version ',runjagsprivate$requiredjagsmajor, '.x.x is required for this version of the runjags module - please update JAGS and rjags',sep=''))
-		if(packageVersion('rjags')$major > runjagsprivate$requiredjagsmajor)
-			return(paste('This version of the runjags module was designed for JAGS version ', runjagsprivate$requiredjagsmajor, '.x.x - please update the runjags package', sep=''))
+		# Check the JAGS major version is as expected:	
+		if(packageVersion('rjags')$major < runjagsprivate$minjagsmajor)
+			return(paste('JAGS version ', runjagsprivate$minjagsmajor, '.x.x to ', runjagsprivate$maxjagsmajor, '.x.x is required for this version of the runjags module - please update JAGS and rjags',sep=''))
+		if(packageVersion('rjags')$major > runjagsprivate$maxjagsmajor)
+			return(paste('This version of the runjags module was designed for JAGS version ', runjagsprivate$minjagsmajor, '.x.x to ', runjagsprivate$maxjagsmajor, '.x.x - please update the runjags package', sep=''))
 	
 		success <- try(rjags::load.module('runjags',runjagsprivate$modulelocation))
 	
 		if(class(success)=="try-error"){
-		
+			
+			rvers <- paste('version ', R.version$major, sep='')
 			if(grepl('mac.binary', .Platform$pkgType, fixed=TRUE)){
-				# An error may be because of SL vs Mavericks version on OS X:
+				# A specific error may be because of SL vs Mavericks version on OS X for JAGS version 3.4:
 				mavericks <- grepl('mavericks', .Platform$pkgType)
-				return(paste('The internal runjags module could not be loaded - make sure that you have installed the ', if(mavericks) 'Mavericks' else 'Snow Leopard', ' build of JAGS from https://sourceforge.net/projects/mcmc-jags/files/JAGS/', runjagsprivate$requiredjagsmajor, '.x/Mac%20OS%20X/', sep=''))
+				if(mavericks)
+					rvers <- paste(rvers, ' - Mavericks', sep='')
+				else
+					rvers <- paste(rvers, ' - Snow Leopard', sep='')
 			}
 		
-			return("The internal runjags module could not be loaded - if you installed this package from CRAN, please file a bug report to the package author")
+			return(paste("The internal runjags module could not be loaded - perhaps the package was not built using the same versions of R [", rvers, "] and JAGS [version ", testjags(silent=TRUE)$JAGS.version, "] as available on this system?", sep=''))
+
 		}
 		return(TRUE)
 	}
@@ -66,9 +72,12 @@ unload.runJAGSmodule <- unload.runjagsmodule
 # Availability and/or operation of these functions may change without warning.
 
 dynloadmodule <- function(){
-	# Sets environmental variables we need for Windows, and is the easiest way of checking JAGS major version:
-	if(!requireNamespace('rjags'))
-		stop('The rjags package is required to load the internal dynlib')
+	
+	# Sets environmental variables we need for Windows:
+	if(.Platform$OS.type=='windows'){
+		if(!requireNamespace('rjags'))
+			stop('The rjags package is required to load the internal dynlib')
+	}
 	
 	if(runjagsprivate$modulelocation==''){
 		warning('The runjags module has not been installed with this version of the package - try again using the CRAN binary')
@@ -76,38 +85,51 @@ dynloadmodule <- function(){
 	}
 	
 	# Check the JAGS major version is as expected:
-	if(packageVersion('rjags')$major < runjagsprivate$requiredjagsmajor)
-		return(paste('JAGS version ',runjagsprivate$requiredjagsmajor, '.x.x is required for this version of the runjags module - please update JAGS and rjags',sep=''))
-	if(packageVersion('rjags')$major > runjagsprivate$requiredjagsmajor)
-		return(paste('This version of the runjags module was designed for JAGS version ', runjagsprivate$requiredjagsmajor, '.x.x - please update the runjags package', sep=''))
-	
+	if(testjags(silent=TRUE)$JAGS.major < runjagsprivate$minjagsmajor)
+		return(paste('JAGS version ', runjagsprivate$minjagsmajor, '.x.x to ', runjagsprivate$maxjagsmajor, '.x.x is required for this version of the runjags module - please update JAGS and rjags',sep=''))
+	if(testjags(silent=TRUE)$JAGS.major > runjagsprivate$maxjagsmajor)
+		return(paste('This version of the runjags module was designed for JAGS version ', runjagsprivate$minjagsmajor, '.x.x to ', runjagsprivate$maxjagsmajor, '.x.x - please update the runjags package', sep=''))
+
 	# Find and load the runjags shared library (only required for these tests and using the rjags call 'load.modue()' so NOT loaded at runtime):
 	slibpath <- file.path(runjagsprivate$modulelocation, paste('runjags', .Platform$dynlib.ext, sep=''))
 	swcat("Loading shared library from:  ", slibpath, "\n", sep="")
 	success <- try(dyn.load(slibpath))
 	
-	if(class(success)=='try-error'){		
-		warning("The internal dynlib could not be loaded - if you installed this package from CRAN, please file a bug report to the package author")
-		invisible(FALSE)
-	}else{
-		runjagsprivate$dynlibname <- success
-		invisible(TRUE)
+	if(class(success)=='try-error'){
+		
+		rvers <- paste('version ', R.version$major, sep='')
+		if(grepl('mac.binary', .Platform$pkgType, fixed=TRUE)){
+			# A specific error may be because of SL vs Mavericks version on OS X for JAGS version 3.4:
+			mavericks <- grepl('mavericks', .Platform$pkgType)
+			if(mavericks)
+				rvers <- paste(rvers, ' - Mavericks', sep='')
+			else
+				rvers <- paste(rvers, ' - Snow Leopard', sep='')
+		}
+	
+		return(paste("The runjags dynlib could not be loaded - perhaps the package was not built using the same versions of R [", rvers, "] and JAGS [version ", testjags(silent=TRUE)$JAGS.version, "] as available on this system?", sep=''))
+
 	}
+	
+	runjagsprivate$dynlibname <- success
+	invisible(TRUE)
+
 }
 
 dynunloadmodule <- function(){
-	if(is.null(runjagsprivate$dynlibname)) stop('Unable to load the dynlib as it has not been loaded')
+	if(is.null(runjagsprivate$dynlibname)){
+		warning('Unable to load the dynlib as it has not been loaded')
+		invisible(FALSE)
+	}
 	# Find and unload the runjags shared library (only required for these tests and using the rjags call 'load.modue()' so NOT loaded at runtime):
 	slibpath <- system.file("libs", paste(.Platform$r_arch, if(.Platform$r_arch!="") "/" else "", if(.Platform$OS.type=="unix") "runjags.so" else "runjags.dll", sep=""), package="runjags")
 	swcat("Unloading shared library from:  ", slibpath, "\n", sep="")
 	success <- try(dyn.unload(slibpath))
-	if(class(success)=='try-error'){		
-		warning("The internal dynlib could not be unloaded")
-		invisible(FALSE)
-	}else{
-		runjagsprivate$dynlibname <- NULL
-		invisible(TRUE)
-	}	
+	if(class(success)=='try-error')
+		stop("The internal dynlib could not be unloaded - if you installed this package from CRAN, please file a bug report to the package author")
+
+	runjagsprivate$dynlibname <- NULL
+	invisible(TRUE)
 }
 
 userunjagsmodule <- function(distribution, funtype, parameters, x, uselog=FALSE, lower=TRUE){

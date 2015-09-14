@@ -39,6 +39,10 @@ using std::pow;
 #define SIGMA(par) (*par[1])
 #define MU(par) (*par[2])
 
+#ifndef INCLUDERSCALARDIST
+namespace jags {
+#endif  /* INCLUDERSCALARDIST */
+
 namespace runjags {
 
 DPar2::DPar2()
@@ -154,4 +158,8 @@ double DPar2::u(vector<double const*> const &par) const
   return JAGS_POSINF;
 }
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */

@@ -95,7 +95,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	if(is.list(inits) && !any(sapply(inits, is.list)))
 		inits <- lapply(1:n.chains, function(x) return(inits))
 	if(!is.list(inits) || length(inits)!=n.chains || !all(sapply(inits, is.list)))
-		stop('If initial values are provided to the template.jags function this must be as a named list', call.=FALSE)
+		stop('If initial values are provided to the template.jags function this must be as a named list of length equal to the number of chains', call.=FALSE)
 	passedinits <- inits
 	
 	# May change this, but only for write.data:
@@ -460,7 +460,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	# Then random effects:
 	for(r in randoms){
 		respline <- paste(respline, r, '_randomeffect[', r, '[i]] + ', sep='')
-		priorline <- paste(priorline, 'for(r in 1:', length(levels(data[[r]])), '){\n\t', r, '_randomeffect[r] ~ dnorm(0, ', r, '_precision)\n}\n', r, '_precision ~ ', precision.prior, '\n', sep='') 
+		priorline <- paste(priorline, 'for(', r, '_iterator in 1:', length(levels(data[[r]])), '){\n\t', r, '_randomeffect[', r, '_iterator] ~ dnorm(0, ', r, '_precision)\n}\n', r, '_precision ~ ', precision.prior, '\n', sep='') 
 		
 		varnames <- c(varnames, paste(r, '_precision', sep=''))
 		signs <- sample(precision.inits, n.chains, replace=TRUE)

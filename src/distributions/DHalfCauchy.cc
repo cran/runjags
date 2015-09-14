@@ -36,6 +36,10 @@ using namespace std;
 #define MYPI 3.14159265358979323846
 #define SIGMA(par) (*par[0])
 
+#ifndef INCLUDERSCALARDIST
+namespace jags {
+#endif  /* INCLUDERSCALARDIST */
+
 namespace runjags {
 
 DHalfCauchy::DHalfCauchy()
@@ -114,4 +118,8 @@ double DHalfCauchy::r(vector<double const *> const &par, RNG *rng) const
     return q(rng->uniform(), par, false, false);
 }
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */

@@ -37,6 +37,10 @@ using std::pow;
 
 #define SIGMA(par) (*par[0])
 
+#ifndef INCLUDERSCALARDIST
+namespace jags {
+#endif  /* INCLUDERSCALARDIST */
+
 namespace runjags {
 
 DMouchel::DMouchel()
@@ -135,4 +139,8 @@ double DMouchel::r(vector<double const *> const &par, RNG *rng) const
     return q(rng->uniform(), par, false, false);
 }
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */

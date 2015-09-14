@@ -8,7 +8,7 @@
 ######################################################################################################
 
 
-AC_INIT([runjags], [1])
+AC_INIT([runjags], [2])
 
 if test -z "${R_HOME}"; then
    AC_MSG_ERROR("R_HOME is not defined")

@@ -179,7 +179,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		end.state <- sapply(rjags$state(internal=TRUE),dump.format)	
 			
 		# This is just a dummy call so that we can get the names of the variables:
-		suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
+		suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=2,progress.bar="none", thin=1)))
 		flush.console()
 	
 		mcmcout <- lapply(samples, function(x){
@@ -605,7 +605,7 @@ runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, o
 	
 		}
 		
-		output <- tailf('sim.1/jagsoutput.txt', refresh=jags.refresh, start=1, min.static=2, stop.text=runjagsprivate$stoptexts, print=!silent.jags, return=TRUE)
+		output <- tailf('sim.1/jagsoutput.txt', refresh=jags.refresh, start=1, min.static=2, stop.text=getstoptexts(), print=!silent.jags, return=TRUE)
 	
 		if(output$interrupt){
 			
@@ -714,7 +714,7 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 		s <- 1
 		repeat{
 			if(!silent.jags) swcat("Following the progress of chain ", s, " (the program will wait for all chains to finish before continuing):\n", sep="")			
-			output <- tailf(paste('sim.', s, '/jagsoutput.txt', sep=''), refresh=jags.refresh, start=1, min.static=2, stop.text=runjagsprivate$stoptexts, print=!silent.jags, return=TRUE)
+			output <- tailf(paste('sim.', s, '/jagsoutput.txt', sep=''), refresh=jags.refresh, start=1, min.static=2, stop.text=getstoptexts(), print=!silent.jags, return=TRUE)
 			if(!silent.jags) swcat("\n")
 			if(output$interrupt) break
 
@@ -723,7 +723,7 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 			repeat{
 				# Check to see which chains have (a) started, and (b) finished:
 				simsdone <- sapply(1:n.sims, function(x) return(file.exists(paste('sim.', x, '/jagsoutput.txt', sep='')) && 
-					any(sapply(runjagsprivate$stoptexts, grepl, x=paste(readLines(paste('sim.', x, '/jagsoutput.txt', sep=''),warn=FALSE),collapse="\n")))))
+					any(sapply(getstoptexts(), grepl, x=paste(readLines(paste('sim.', x, '/jagsoutput.txt', sep=''),warn=FALSE),collapse="\n")))))
 				
 				if(all(simsdone)) break
 				tries <- tries +1
@@ -842,12 +842,12 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 	if(!silent.jags) swcat("  Running the model for ", format(extra.options$sample,scientific=FALSE), " iterations", if(runjags.getOption('debug')>5) paste(" (updating by ", by, ")", sep=""), "...\n",sep="")
 	flush.console()	
 	samples <- rjags::jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin,by=by)
-
+	
 	# Do this BEFORE our dummy call of 1 iteration
 	end.state <- sapply(rjags$state(internal=TRUE),dump.format)	
 	
 	# This is just a dummy call so that we can get the names of the variables:
-	suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=1,progress.bar="none", thin=1)))
+	suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=2,progress.bar="none", thin=1)))
 	flush.console()
 	mcmcout <- lapply(samples[names(samples)!='pD'], as.mcmc.list)
 	
@@ -1287,12 +1287,12 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			stop("The rjags package was not found", call.=FALSE)
 		}
 	
-		if(jags.status$JAGS.version=="unknown" | is.na(jags.status$JAGS.version)){
+		if(jags.status$JAGS.major=="unknown" | is.na(jags.status$JAGS.major)){
 			warning('Unable to verify the version number of JAGS.  If any functions do not work as expected, you could try checking your JAGS installation for problems.')
-			jags.status$JAGS.version <- Inf
+			jags.status$JAGS.major <- Inf
 		}
 	
-		if(length(grep('base::Mersenne-Twister', inits)>0) & as.numeric(jags.status$JAGS.version) < 2) warning('Using the RNG "base::Mersenne-Twister" (used by default for chain 4) may cause problems with restarting subsequent simulations using the end state of previous simulations due to a bug in JAGS version 1.x.  If you encounter the error "Invalid .RNG.state", please update JAGS to version 2.x and try again.  Or, you can change the random number generator by changing the .RNG.name to (for example) "base::Super-Duper" and remove the .RNG.state element of the list.')
+		if(length(grep('base::Mersenne-Twister', inits)>0) & as.numeric(jags.status$JAGS.major) < 2) warning('Using the RNG "base::Mersenne-Twister" (used by default for chain 4) may cause problems with restarting subsequent simulations using the end state of previous simulations due to a bug in JAGS version 1.x.  If you encounter the error "Invalid .RNG.state", please update JAGS to version 2.x and try again.  Or, you can change the random number generator by changing the .RNG.name to (for example) "base::Super-Duper" and remove the .RNG.state element of the list.')
 		
 		if(tempdir){
 			if(is.na(dirname)) dirname <- "runjagsfiles"
@@ -1549,13 +1549,16 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 
 			scriptstring <- paste(scriptstring, "initialize\n", sep="")
 			
+			####  TODO adapt and adapt.incomplete option needs sorting for JAGS 3 vs 4 and batch.jags FALSE/TRUE
 			# To check adaptation I either do: 
 			# adapt 0 -> error if it needs adapting, not otherwise
-			# update 0 -> warning if adaptation incomplete			
+			# update 0 -> warning if adaptation incomplete
+			# adapt 1 will cause an error in JAGS 3 but not 4 - needs sorting out properly		
 			if(adapt.runs > 0){
 				scriptstring <- paste(scriptstring, "adapt ", adapt.runs, "\n", sep="")
 			}else{
-				if(runjags.getOption('adapt.incomplete')=='error' && ini.runs==0){    # If we have specified a burnin but adapt=0, allow the adapt to happen during burnin
+				# If we have specified a burnin but adapt==0, allow the adapt to happen during burnin
+				if(runjags.getOption('adapt.incomplete')=='error' && ini.runs==0){
 					scriptstring <- paste(scriptstring, "adapt 0\n", sep="")
 				}else{
 					if(ini.runs == 0)   # Don't want 2 lots of update 0!
@@ -1564,7 +1567,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			}			
 			if(ini.runs > 0)
 				scriptstring <- paste(scriptstring, "update ", ini.runs, "\n", sep="")
-			
+			####
 			
 			# trace monitor for deviance is just a standard monitor name (and not used to calculate DIC)
 			scriptstring <- paste(scriptstring, if(any(c("dic","ped")%in%monitor)) paste("monitor deviance, type(mean) thin(", thin, ")\n", "monitor pD, type(mean) thin(", thin, ")\n", "monitor popt, type(mean) thin(", thin, ")\n", sep=""), monitors, if(any(monitor=="full.pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), sep="")
@@ -1645,7 +1648,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		failedo <- as.character(result)
 		class(failedo) <- "rjagsoutput"
 		assign("output",failedo, envir=failedjags)
-
+		
 		stop(paste("The following error was encountered while attempting to run the JAGS model:  \n   ", gsub('Error : ','',as.character(result),fixed=TRUE), sep=""),call.=FALSE)
 	}
 		

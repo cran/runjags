@@ -1,11 +1,11 @@
 Package: runjags
-Version: 2.0.1-4
-Date: 2015-04-14
+Version: 2.0.2-8
+Date: 2015-09-13
 Title: Interface Utilities, Model Templates, Parallel Computing Methods
         and Additional Distributions for MCMC Models in JAGS
-Authors@R: c(person("Matthew", "Denwood", role=c("aut","cre"),
-                    email="md@sund.ku.dk"),
+Authors@R: c(person("Matthew", "Denwood", role=c("aut","cre"), email="md@sund.ku.dk"),
              person("Martyn", "Plummer", role="cph", comment="Copyright holder of the code in /src/distributions/jags, src/distributions/DPar1.*, configure.ac, and original copyright holder of some modified code where indicated"))
+Maintainer: Matthew Denwood <md@sund.ku.dk>
 Depends: R (>= 2.14.0)
 Imports: parallel, lattice (>= 0.20-10), coda (>= 0.17-1), stats, utils
 Suggests: rjags, modeest, knitr
@@ -23,13 +23,12 @@ Description: User-friendly interface utilities for MCMC models via
 	the half-Cauchy prior.
 License: GPL-2
 URL: http://runjags.sourceforge.net
-Packaged: 2015-04-14 22:23:57 UTC; matthewdenwood
+NeedsCompilation: yes
+Packaged: 2015-09-13 17:47:24 UTC; matthewdenwood
 Author: Matthew Denwood [aut, cre],
   Martyn Plummer [cph] (Copyright holder of the code in
     /src/distributions/jags, src/distributions/DPar1.*, configure.ac,
     and original copyright holder of some modified code where
     indicated)
-Maintainer: Matthew Denwood <md@sund.ku.dk>
-NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2015-04-15 01:16:58
+Date/Publication: 2015-09-14 09:12:55

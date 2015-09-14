@@ -109,7 +109,7 @@
 
 #' @param thin.sample option to thin the final MCMC chain(s) before calculating summary statistics and returning the chains.  Thinning very long chains reduces the size of the returned object.  If TRUE, the chain is thinned to as close to a minimum of startsample iterations as possible to ensure the chain length matches thin.sample.  A positive integer can also be specified as the desired chain length after thinning; the chains will be thinned to as close to this minimum value as possible. Default TRUE (thinned chains of length startsample returned).  This option does NOT carry out thinning in JAGS, therefore R must have enough available memory to hold the chains BEFORE thinning.  To avoid this problem use the 'thin' option instead.
 
-#' @param raftery.options a named list which is passed as additional arguments to \code{\link[coda]{raftery.diag}}.  Default none (default arguments to raftery.diag are used).
+#' @param raftery.options a named list which is passed as additional arguments to \code{\link[coda]{raftery.diag}}, or the logical FALSE to deactivate automatic run length calculation.  Default none (default arguments to raftery.diag are used).
 
 #' @param crash.retry the number of times to re-attempt a simulation if the model returns an error.  Default 1 retry (simulation will be aborted after the second crash).
 
@@ -119,7 +119,7 @@
 
 #' @param tempdir option to use the temporary directory as specified by the system rather than creating files in the working directory.  Any files created in the temporary directory are removed when the function exits for any reason.  Default TRUE.
 
-#' @param jags.refresh the refresh interval (in seconds) for monitoring JAGS output using the 'interactive' and 'parallel' methods (see the 'method' argument).  Longer refresh intervals will use less processor time.  Default 0.1 seconds.
+#' @param jags.refresh the refresh interval (in seconds) for monitoring JAGS output using the 'interactive' and 'parallel' methods (see the 'method' argument).  Longer refresh intervals will use slightly less processor time, but will make the simulation updates to be shown on the screen less frequently.  Reducing the refresh rate to every 10 or 30 seconds may be worthwhile for simulations taking several days to run.  Note that this will have no effect on the processor use of the simulations themselves.  Default 0.1 seconds.
 
 #' @param batch.jags option to call JAGS in batch mode, rather than using input redirection.  On JAGS >= 3.0.0, this suppresses output of the status which may be useful in some situations.  Default TRUE if silent.jags is TRUE, or FALSE otherwise.
 
@@ -241,49 +241,77 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	if(startsample!=0 && startsample < 4000)
 		stop("A startsample of 4000 or more iterations (after thinning) is required to complete the Raftery and Lewis's diagnostic", call.=FALSE)
 	
-	# reftery.diag options are passed as a list:
-	if(!is.list(raftery.options)) 
-		stop("Options to raftery.diag must be provided as a named list")
-	if(any(names(raftery.options)=="data")) 
-		warning("The 'data' argument specified in raftery.options was ignored")
-	raftery.args <- formals(raftery.diag)
-	raftery.names <- names(raftery.args)
-	if(length(raftery.options) > 0){
-		if(is.null(names(raftery.options))) stop("Options to raftery.diag must be provided as a named list")
-		raft.opt.names <- names(raftery.options)
-		for(i in 1:length(raftery.options)){
-			if(any(raft.opt.names[i]==raftery.names)){
-				raftery.args[raft.opt.names[i]] <- raftery.options[i]
-			}else{
-				if(raft.opt.names[i]=="") stop("All arguments to raftery.diag must be named") else stop(paste(raft.opt.names[i], " is not a recognised argument to raftery.diag", sep=""))	
+	# reftery.diag options are passed as a list or just FALSE:
+	if(identical(raftery.options, TRUE))
+		raftery.options <- list()
+	
+	doraftery <- FALSE
+	if(!identical(raftery.options, FALSE)){
+		doraftery <- TRUE
+		if(!is.list(raftery.options)) 
+			stop("Options to raftery.diag must be provided as a named list")
+		if(any(names(raftery.options)=="data")) 
+			warning("The 'data' argument specified in raftery.options was ignored")
+		raftery.args <- formals(raftery.diag)
+		raftery.names <- names(raftery.args)
+		if(length(raftery.options) > 0){
+			if(is.null(names(raftery.options))) stop("Options to raftery.diag must be provided as a named list")
+			raft.opt.names <- names(raftery.options)
+			for(i in 1:length(raftery.options)){
+				if(any(raft.opt.names[i]==raftery.names)){
+					raftery.args[raft.opt.names[i]] <- raftery.options[i]
+				}else{
+					if(raft.opt.names[i]=="") stop("All arguments to raftery.diag must be named") else stop(paste(raft.opt.names[i], " is not a recognised argument to raftery.diag", sep=""))	
+				}	
 			}	
-		}	
 
+		}
+		if(startsample!=0){	
+			success <- try({
+			raftery.args$data <- mcmc(1:startsample)
+			class(raftery.args) <- "list"
+			test <- do.call("raftery.diag", raftery.args)
+			})	
+			if(class(success)=="try-error") stop("The arguments specified for raftery.diag are not valid")	
+			if(test$resmatrix[1]=="Error") stop(paste("You need a startsample size of at least", test$resmatrix[2], "with the values of q, r and s specified for the raftery.options", sep=" "))
+		}
 	}
-	if(startsample!=0){	
-		success <- try({
-		raftery.args$data <- mcmc(1:startsample)
-		class(raftery.args) <- "list"
-		test <- do.call("raftery.diag", raftery.args)
-		})	
-		if(class(success)=="try-error") stop("The arguments specified for raftery.diag are not valid")	
-		if(test$resmatrix[1]=="Error") stop(paste("You need a startsample size of at least", test$resmatrix[2], "with the values of q, r and s specified for the raftery.options", sep=" "))
-	}
+	
 	
 	# Get the maximum timeout:
 	if(class(max.time)=="numeric" | class(max.time)=="integer"){
 		max.time <- max.time #DEFAULT NOW SECONDS * 60
 	}else{
-		if(class(max.time)!="character") stop("max.time must be either a numeric or character value")
-		str.time <- strsplit(max.time, "")[[1]]
-
-		time.unit <- suppressWarnings(str.time[is.na(as.numeric(str.time)!=str.time)])
-		time.unit <- tolower(time.unit[time.unit!=" "][1])
-		max.time <- suppressWarnings(as.numeric(paste(na.omit(str.time[as.numeric(str.time)==str.time]) ,collapse="")))
+		if(class(max.time)!="character")
+			stop("max.time must be either a numeric or character value")
 		
-		max.time <- max.time * switch(time.unit, d=24*60*60, w=24*60*60*7, h=60*60, m=60, s=1, NA)
-		if(is.na(max.time)) stop("Unrecognised unit of maximum time -'", time.unit, "'")
+		time.unit <- tolower(gsub('[^[:alpha:]]', '', max.time))
+		if(time.unit=='secs')
+			time.unit <- 'seconds'
+		if(time.unit=='mins')
+			time.unit <- 'minutes'		
+		if(time.unit%in%c('hrs','hr'))
+			time.unit <- 'hours'		
+		possunits <- c('seconds','minutes','hours','days','weeks')
+		matched.unit <- possunits[pmatch(time.unit, possunits)]
+		if(is.na(matched.unit))
+			stop(paste("Unrecognised unit of maximum time: '", time.unit, "'", sep=''))
+		
+		multiplier <- c(seconds=1, minutes=60, hours=60*60, days=24*60*60, weeks=24*60*60*7)[matched.unit]
+		
+		num.time <- suppressWarnings(as.numeric(gsub('[^[:digit:][:punct:]]', ' ', max.time)))
+		if(is.na(num.time))
+			stop(paste('Unable to extract a number from the value of "', max.time, '" specified to max.time', sep=''))
+		
+		max.time <- num.time * multiplier
+		names(max.time) <- NULL
 	}
+	
+	if(runjags.getOption('debug')){
+		if(runjags.getOption('debug')>=10)
+			print(max.time)
+	}
+	
 	
 	newlines <- if(silent.jags) "\n" else "\n\n"
 	
@@ -397,7 +425,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				
 			swcat("Calculating autocorrelation and summary statistics...\n")
 			
-			timetaken <- (difftime(Sys.time(), starttime) + initialtimetaken)
+			timetaken <- (difftime(Sys.time(), starttime, units='secs') + initialtimetaken)
 	
 			if(niter(additional$mcmc)>thin.sample){
 				additional$mcmc <- combine.mcmc(additional$mcmc, collapse.chains=FALSE, return.samples=thin.sample)
@@ -418,7 +446,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 			# Run for some more iterations:
 			extended <- extend.jags(additional, combine=FALSE, burnin=0, sample=startsample, adapt=adapt, jags = jags, silent.jags = silent.jags, summarise = FALSE, thin = thin, keep.jags.files = keep.jags.files, tempdir=tempdir, jags.refresh=jags.refresh, batch.jags=batch.jags)
 					
-			if(niter(extended$mcmc) < initialsample){
+			if(niter(extended$mcmc) < startsample){
 				repeat{
 					time.taken <- timestring(starttime, Sys.time(), units="secs", show.units=FALSE)
 					if(time.taken > max.time | crash.retry==0){
@@ -469,7 +497,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 			if(unconverged > 0){
 				swcat("The Gelman-Rubin statistic was still above ", psrf.target, " for ", unconverged, " parameter", if(unconverged>1) "s", " after ", additional$burnin+additional$sample, " iterations taking ", timestring(additional$timetaken), " ", mpsrfstring, ".\n", sep="")
 				
-				stop <- difftime(Sys.time(), starttime) > max.time
+				stop <- difftime(Sys.time(), starttime, units='secs') > max.time
+				
 				if(interactive){
 					stop <- !ask("Extend the simulation to attempt to improve convergence?")
 					starttime <- Sys.time()
@@ -481,7 +510,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 					
 					swcat("Calculating autocorrelation and summary statistics...\n")
 		
-					timetaken <- (difftime(Sys.time(), starttime) + initialtimetaken)
+					timetaken <- (difftime(Sys.time(), starttime, units='secs') + initialtimetaken)
 
 					if(niter(additional$mcmc)>thin.sample){
 						additional$mcmc <- combine.mcmc(additional$mcmc, collapse.chains=FALSE, return.samples=thin.sample)
@@ -508,47 +537,51 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}	
 	
 	
-	swcat("\nCalculating the necessary sample length based on the Raftery and Lewis's diagnostic...\n")
+	moreupdates <- 0
+	if(doraftery){
+		swcat("\nCalculating the necessary sample length based on the Raftery and Lewis's diagnostic...\n")
 			
-	success <- try({
-	raftery.args$data <- normalise.mcmcfun(additional$mcmc, normalise=FALSE, warn=FALSE, remove.nonstochastic = TRUE)$mcmc
-	class(raftery.args) <- "list"
-	raftery <- do.call("raftery.diag", raftery.args)
-	})
+		success <- try({
+		raftery.args$data <- normalise.mcmcfun(additional$mcmc, normalise=FALSE, warn=FALSE, remove.nonstochastic = TRUE)$mcmc
+		class(raftery.args) <- "list"
+		raftery <- do.call("raftery.diag", raftery.args)
+		})
 	
-	if(class(success)=="try-error") stop("An error occured while calculating the Raftery and Lewis's diagnostic",call.=FALSE)
-	if(raftery[[1]]$resmatrix[1]=="error") stop("Error", "An error occured while calculating the Raftery and Lewis diagnostic",call.=FALSE)
+		if(class(success)=="try-error") stop("An error occured while calculating the Raftery and Lewis's diagnostic",call.=FALSE)
+		if(raftery[[1]]$resmatrix[1]=="error") stop("Error", "An error occured while calculating the Raftery and Lewis diagnostic",call.=FALSE)
 	
-	# to correct for monitoring arrays and non-stochastic nodes:
-	newmonitor <- dimnames(raftery[[1]]$resmatrix)[[1]]
-	n.chains <- length(additional$end.state)
+		# to correct for monitoring arrays and non-stochastic nodes:
+		newmonitor <- dimnames(raftery[[1]]$resmatrix)[[1]]
+		n.chains <- length(additional$end.state)
 	
-	dependance = burnin = sample <- matrix(ncol=n.chains, nrow=length(newmonitor), dimnames=list(dimnames(raftery[[1]]$resmatrix)[[1]], 1:n.chains))
+		dependance = burnin = sample <- matrix(ncol=n.chains, nrow=length(newmonitor), dimnames=list(dimnames(raftery[[1]]$resmatrix)[[1]], 1:n.chains))
 	
-	for(i in 1:n.chains){	
-		dependance[,i] <- raftery[[i]]$resmatrix[,"I"]
-		burnin[,i] <- raftery[[i]]$resmatrix[,"M"]
-		sample[,i] <- raftery[[i]]$resmatrix[,"N"]
-	}
+		for(i in 1:n.chains){	
+			dependance[,i] <- raftery[[i]]$resmatrix[,"I"]
+			burnin[,i] <- raftery[[i]]$resmatrix[,"M"]
+			sample[,i] <- raftery[[i]]$resmatrix[,"N"]
+		}
 	
-	dependancethreshold <- 3
+		dependancethreshold <- 3
 	
-#	if(any(dependance > dependancethreshold) & killautocorr==FALSE){
-#		swcat("IMPORTANT:  The sample size of monitored node(s) '", paste(dimnames(dependance)[[1]][apply(dependance, 1, function(x) if(any(x>dependancethreshold)) return(TRUE) else return(FALSE))], collapse="' & '"), "' have a high autocorrelation dependance in chain(s) ", paste(seq(1, n.chains)[apply(dependance, 2, function(x) if(any(x>dependancethreshold)) return(TRUE) else return(FALSE))], collapse= " & "), ".  Re-running the model with a different formulation or better initial values may help to reduce autocorrelation.\n", sep="")
-#	}
+	#	if(any(dependance > dependancethreshold) & killautocorr==FALSE){
+	#		swcat("IMPORTANT:  The sample size of monitored node(s) '", paste(dimnames(dependance)[[1]][apply(dependance, 1, function(x) if(any(x>dependancethreshold)) return(TRUE) else return(FALSE))], collapse="' & '"), "' have a high autocorrelation dependance in chain(s) ", paste(seq(1, n.chains)[apply(dependance, 2, function(x) if(any(x>dependancethreshold)) return(TRUE) else return(FALSE))], collapse= " & "), ".  Re-running the model with a different formulation or better initial values may help to reduce autocorrelation.\n", sep="")
+	#	}
 	
-	#### raftery.diag takes account of the chain thinning already, so we need to multiply the number of iterations done by the thinning to work out what we have left:
-	totalunthinnedperchain <- max(sample)/n.chains
-	moreupdates <- max(totalunthinnedperchain - (thin*niter(additional$mcmc)), 0) / thin
-	moreupdates <- ceiling(moreupdates)
+		#### raftery.diag takes account of the chain thinning already, so we need to multiply the number of iterations done by the thinning to work out what we have left:
+		totalunthinnedperchain <- max(sample)/n.chains
+		moreupdates <- max(totalunthinnedperchain - (thin*niter(additional$mcmc)), 0) / thin
+		moreupdates <- ceiling(moreupdates)
 	
-	if(runjags.getOption('debug')){
-		if(runjags.getOption('debug')>=10)
-			print(raftery)
+		if(runjags.getOption('debug')){
+			if(runjags.getOption('debug')>=10)
+				print(raftery)
 		
-		swcat('Raftery diag:  maxsample=', max(sample), '/', thin, '=', max(sample)/thin, ', current=', niter(additional$mcmc), '*', n.chains, '=', niter(additional$mcmc)*n.chains, ', more=', moreupdates, '*', n.chains, '\n', sep='')
+			swcat('Raftery diag:  maxsample=', max(sample), '/', thin, '=', max(sample)/thin, ', current=', niter(additional$mcmc), '*', n.chains, '=', niter(additional$mcmc)*n.chains, ', more=', moreupdates, '*', n.chains, '\n', sep='')
 
+		}
 	}
+	
 	if(moreupdates > 0){
 		
 		# There must be a better way to do this...
@@ -567,7 +600,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 					
 				swcat("Calculating autocorrelation and summary statistics...\n")
 	
-				timetaken <- (difftime(Sys.time(), starttime) + initialtimetaken)
+				timetaken <- (difftime(Sys.time(), starttime, units='secs') + initialtimetaken)
 
 				if(niter(additional$mcmc)>thin.sample){
 					additional$mcmc <- combine.mcmc(additional$mcmc, collapse.chains=FALSE, return.samples=thin.sample)
@@ -604,7 +637,8 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		
 		additional <- extended
 	}
-	swcat("Necessary sample length achieved\n")
+	if(doraftery)
+		swcat("Indicated sample length achieved\n")
 	
 	# Account for thin.sample:
 	if(niter(additional$mcmc)>thin.sample){

@@ -38,6 +38,10 @@ using std::pow;
 #define ALPHA(par) (*par[0])
 #define SIGMA(par) (*par[1])
 
+#ifndef INCLUDERSCALARDIST
+namespace jags {
+#endif  /* INCLUDERSCALARDIST */
+
 namespace runjags {
 
 DLomax::DLomax()
@@ -138,4 +142,8 @@ double DLomax::r(vector<double const *> const &par, RNG *rng) const
     return q(rng->uniform(), par, false, false);
 }
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */

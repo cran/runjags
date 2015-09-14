@@ -2,7 +2,8 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	
 	if(method %in% runjagsprivate$rjagsmethod) rjagsmethod <- TRUE else rjagsmethod <- FALSE
 	
-	if(rjagsmethod && !requireNamespace("rjags")) stop("The rjags package is not installed")
+	if(rjagsmethod && !requireNamespace("rjags"))
+		stop("The rjags package is not installed (or failed to load)")
 	
 	# Reset failedjags stuff:
 	failedjags$model <- NA
@@ -143,10 +144,10 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	
 	
 	
-	if(length(grep('base::Mersenne-Twister', inits)>0) & as.numeric(jags.status$JAGS.version) < 2) warning('Using the RNG "base::Mersenne-Twister" (used by default for chain 4) may cause problems with restarting subsequent simulations using the end state of previous simulations due to a bug in JAGS version 1.x.  If you encounter the error "Invalid .RNG.state", please update JAGS to version 2.x and try again.  Or, you can change the random number generator by changing the .RNG.name to (for example) "base::Super-Duper" and remove the .RNG.state element of the list.', call.=FALSE)
+	if(length(grep('base::Mersenne-Twister', inits)>0) & as.numeric(jags.status$JAGS.major) < 2) warning('Using the RNG "base::Mersenne-Twister" (used by default for chain 4) may cause problems with restarting subsequent simulations using the end state of previous simulations due to a bug in JAGS version 1.x.  If you encounter the error "Invalid .RNG.state", please update JAGS to version 2.x and try again.  Or, you can change the random number generator by changing the .RNG.name to (for example) "base::Super-Duper" and remove the .RNG.state element of the list.', call.=FALSE)
 	
 	if(any(c("pd","full.pd","popt") %in% monitor) & (n.chains < 2 )) stop("The DIC, pD, full.pD and pOpt cannot be assessed with only 1 chain")
-	if(any(c("pd","full.pd","popt","deviance") %in% monitor) & jags.status$JAGS.version < 2) stop('Support for the deviance, pD and popt monitors is no longer available for JAGS version 1.x.  Please update to JAGS version 3.x')
+	if(any(c("pd","full.pd","popt","deviance") %in% monitor) & jags.status$JAGS.major < 2) stop('Support for the deviance, pD and popt monitors is no longer available for JAGS version 1.x.  Please update to JAGS version 3.x')
 	
 	
 	# Combine model blocks, change \r to \n and get rid of double spacing:
@@ -452,6 +453,9 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 	arg <- eval(arg)
 	block <- eval(block)
 	auto <- eval(auto)
+	
+	if(any(is.na(auto)))
+		auto <- na.omit(auto)
 	
 	if(data.type) string <- 'data' else string <- 'inits'
 	

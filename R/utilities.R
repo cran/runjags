@@ -398,7 +398,11 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
     		num.version <- NA
     	}else{
     		version <- strsplit(returnval[rightstring], split=" ", fixed=TRUE)[[1]][4]
-			versioncom <- sub('.',';',version,fixed=TRUE)
+			versioncom <- version
+			if(grepl('(', versioncom, fixed=TRUE)){
+				versioncom <- strsplit(versioncom, split='(', fixed=TRUE)[[1]][1]
+			}
+			versioncom <- sub('.',';',versioncom,fixed=TRUE)
 			versioncom <- gsub('.','',versioncom,fixed=TRUE)
 			num.version <- as.numeric(gsub(';','.',versioncom,fixed=TRUE))
 			if(is.na(version)) version <- 'unknown'
@@ -448,7 +452,7 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 		jagsfound <- FALSE
 	}
 		
-	invisible(list("os"=os, "JAGS.available"=jags.avail, "JAGS.found"=jagsfound, "rjags.found"=rjags.avail, "JAGS.path"=jags, "JAGS.version"=num.version, "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username, libpaths=libpaths))
+invisible(list("os"=os, "JAGS.available"=jags.avail, "JAGS.found"=jagsfound, "rjags.found"=rjags.avail, "JAGS.path"=jags, "JAGS.version"=version, "JAGS.major"=floor(num.version), "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username, libpaths=libpaths))
 }
 
 findJAGS <- findjags
@@ -458,7 +462,7 @@ testJAGS <- testjags
 
 runjagsprivate <- new.env()
 # Use 'expression' for functions to avoid having to evaluate before the package is fully loaded:
-assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages(TRUE)){'rjags'}else{if(Sys.info()['user']=='nobody') 'simple' else 'interruptible'}), tempdir=TRUE, plot.layout=c(2,2), new.windows=TRUE, modules="", factories="", bg.alert='beep', linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE, blockignore.warning=TRUE, tempdir.warning=FALSE, nodata.warning=TRUE, adapt.incomplete='warning', repeatable.methods=FALSE, silent.jags=FALSE, silent.runjags=FALSE, predraw.plots=FALSE, force.summary=FALSE, mode.continuous='modeest' %in% .packages(TRUE), timeout.import=30, partial.import=FALSE, keep.crashed.files=TRUE, full.cleanup=FALSE, debug=FALSE), envir=runjagsprivate)
+assign("defaultoptions",list(jagspath=expression(findjags()),method=expression(if('rjags' %in% .packages(TRUE)){'rjags'}else{if(Sys.info()['user']=='nobody') 'simple' else 'interruptible'}), tempdir=TRUE, plot.layout=c(2,2), new.windows=TRUE, modules="", factories="", bg.alert='beep', linenumbers=TRUE, inits.warning=TRUE, rng.warning=TRUE, summary.warning=TRUE, blockcombine.warning=TRUE, blockignore.warning=TRUE, tempdir.warning=FALSE, nodata.warning=TRUE, adapt.incomplete='warning', repeatable.methods=FALSE, silent.jags=FALSE, silent.runjags=FALSE, predraw.plots=FALSE, force.summary=FALSE, mode.continuous=expression('modeest' %in% .packages(TRUE)), timeout.import=30, partial.import=FALSE, keep.crashed.files=TRUE, full.cleanup=FALSE, debug=FALSE), envir=runjagsprivate)
 assign("options",runjagsprivate$defaultoptions,envir=runjagsprivate)
 assign("rjagsmethod",c('rjags','rjparallel'),envir=runjagsprivate)
 assign("bgmethod",c('background','bgparallel'),envir=runjagsprivate)
@@ -466,9 +470,9 @@ assign("parallelmethod",c('parallel','bgparallel','snow','rjparallel','xgrid'),e
 assign("runjagsversion", "notset", envir=runjagsprivate)
 assign("simfolders", character(0), envir=runjagsprivate)
 assign("failedsimfolders", character(0), envir=runjagsprivate)
-assign("stoptexts", c('Deleting model','Adaptation incomplete','syntax error'), envir=runjagsprivate)
-assign("defaultsummarypars", list(vars=NA, mutate=NULL, psrf.target = 1.05, normalise.mcmc = TRUE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(10), custom=NULL, silent.jags=expression(runjags.getOption('silent.jags')), plots=FALSE, plot.type=c('trace','ecdf','histogram','key','crosscorr'), col=NA, summary.iters=10000, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()), envir=runjagsprivate)
-assign("requiredjagsmajor", 3, envir=runjagsprivate)
+assign("defaultsummarypars", list(vars=NA, mutate=NULL, psrf.target = 1.05, normalise.mcmc = TRUE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(10), custom=NULL, silent.jags=expression(runjags.getOption('silent.jags')), plots=FALSE, plot.type=c('trace','ecdf','histogram','autocorr','key','crosscorr'), col=NA, summary.iters=10000, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()), envir=runjagsprivate)
+assign("minjagsmajor", 3, envir=runjagsprivate)
+assign("maxjagsmajor", 4, envir=runjagsprivate)
 
 	# runjags.getOption is not available at compile time so has to be expression, but it's OK as it is eval()ed when getting defaultsumpars
 getdefaultsummarypars <- function(){

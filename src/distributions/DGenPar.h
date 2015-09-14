@@ -26,7 +26,13 @@
 #ifndef DGENPAR_H_
 #define DGENPAR_H_
 
+#ifndef INCLUDERSCALARDIST
+#include <distribution/RScalarDist.h>
+namespace jags {
+#else
 #include "jags/RScalarDist.h"
+#endif  /* INCLUDERSCALARDIST */
+
 
 namespace runjags {
 
@@ -57,6 +63,10 @@ class DGenPar : public RScalarDist {
   bool isSupportFixed(std::vector<bool> const &fixmask) const;
 };
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */
 
 #endif /* DGENPAR_H_ */

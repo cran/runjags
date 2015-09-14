@@ -414,7 +414,7 @@ $^3$  The Generalised Pareto distribution has an upper bound of $x \le \mu - \fr
 
 There are a number of different methods for calling \proglang{JAGS} from within \proglang{R} using \pkg{runjags}, which can be controlled using the `method' argument or by changing the global option using the `runjags.options' function.  The main difference between these is that some allow multiple chains to be run in parallel using separate \proglang{JAGS} models, with automatic pseudo-random number generation handled by \pkg{runjags} where necessary.  The `interruptible', `rjags', `parallel' or `bgparallel' methods are recommended for most situations, but all possible methods and their advantages \& disadvantages are summarised in Table~\ref{tab:methods}.  Note that a pre-existing cluster created using the \pkg{parallel} package can be used by specifying a `cl' argument, and a maximum number of parallel simulations for these methods can optionally be specified using a `n.sims' argument to the main function call (the default will use a separate simulation per chain, but it is possible to specify fewer simulations than chains).  The model fit statistics are not available with parallel methods because multiple chains within the same model are required for calculation of DIC and PED, but these can be obtained using the `extract' method which will extend the simulation using a single simulation.  The adaptation phase is always explicitly controlled to allow MCMC simulations with the same pseudo-random number seed to be reproducible regardless of the method used to call \proglang{JAGS}.
 
-\begin{table}[htbl]
+\begin{table}[htb]
 \centering
 \caption{Methods provided by the \pkg{runjags} package to run simulations in \proglang{JAGS}}
 

@@ -26,7 +26,12 @@
 #ifndef DLOMAX_H_
 #define DLOMAX_H_
 
+#ifndef INCLUDERSCALARDIST
+#include <distribution/RScalarDist.h>
+namespace jags {
+#else
 #include "jags/RScalarDist.h"
+#endif  /* INCLUDERSCALARDIST */
 
 namespace runjags {
 
@@ -54,6 +59,10 @@ class DLomax : public RScalarDist {
   bool checkParameterValue(std::vector<double const *> const &parameters) const;
 };
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */
 
 #endif /* DLOMAX_H_ */

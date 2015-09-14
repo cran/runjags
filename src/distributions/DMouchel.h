@@ -26,7 +26,12 @@
 #ifndef DMOUCH_H_
 #define DMOUCH_H_
 
+#ifndef INCLUDERSCALARDIST
+#include <distribution/RScalarDist.h>
+namespace jags {
+#else
 #include "jags/RScalarDist.h"
+#endif  /* INCLUDERSCALARDIST */
 
 namespace runjags {
 
@@ -53,6 +58,10 @@ class DMouchel : public RScalarDist {
   bool checkParameterValue(std::vector<double const *> const &parameters) const;
 };
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */
 
 #endif /* DMOUCH_H_ */

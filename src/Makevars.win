@@ -1,15 +1,68 @@
 ######################################################################################################
 ###
-###  This file is based on that in the rjags package (version 3-10) with minor modifications
-###  [objects to be compiled]
-###  Matthew Denwood, 5th August 2013
+###  This file is based on that in the rjags package (version 3-10)
 ###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
+###
+###  This windows makefile requires the JAGS_ROOT variable to be set
+###
+###  This file contains a temporary hack to allow compilation between JAGS 3 and 4 without modifying runjags
+###  Once JAGS version 3 becomes obsolete, the redundant code will be removed
+###  Matthew Denwood, 4th September 2015
 ###
 ######################################################################################################
 
-# This requires the JAGS_ROOT variable to be set:
-PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include" 
+
+###############
+###  GNU make version - permitted by CRAN for Windows only, capable of handling spaces in the JAGS include path
+###############
+
+# First construct the path to the RScalarDist.h file which we are using as a proxy for JAGS 3 vs 4
+# We need to escape any spaces in $(JAGS_ROOT) so that we can use wildcard with the path
+space :=
+space +=
+RSDH_PATH = $(subst $(space),\$(space),$(JAGS_ROOT)/include/distribution/RScalarDist.h)
+
+ifneq ("$(wildcard $(RSDH_PATH))", "")
+PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include"
+PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-4
+else
+PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include" -D INCLUDERSCALARDIST
 PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-3
+endif
 
-OBJECTS= distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+### Verify that at least ScalarDist.h is found:
+SDH_PATH = $(subst $(space),\$(space),$(JAGS_ROOT)/include/distribution/ScalarDist.h)
+ifeq ("$(wildcard $(SDH_PATH))", "")
+$(error distribution/ScalarDist.h not found - Makevars needs to be manually configured for JAGS version 3 vs 4)
+endif
 
+###############
+
+
+
+###############
+### Objects to be compiled
+### NB: the objects in distributions/jags are only necessary for JAGS <=3, and are excluded by the sources if INCLUDERSCALARDIST is undefined
+###############
+
+OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+
+###############
+
+
+
+###############
+#### If you have compilation problems induced by these hacks then you can use the following code instead:
+###############
+
+### For JAGS major version <= 3:
+# PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include" -D INCLUDERSCALARDIST
+# PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-3
+# OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+
+### For JAGS major version >=4:
+# PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include"
+# PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-4
+# OBJECTS = distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+
+###############

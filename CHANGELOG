@@ -1,4 +1,4 @@
-This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Carsten Dormann, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Höhle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Torrin Liddell, Jan Gläscher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for continued development of the excellent JAGS software.
+This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Carsten Dormann, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Hohle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Jonathan Bartlett, Miriam Casey, Bob O'Hara, Kristin Broms, Bryan Matthias, Torrin Liddell, Jan Glascher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for continued development of the excellent JAGS software.
 
 
 OPEN ISSUES
@@ -6,15 +6,52 @@ OPEN ISSUES
 
 BUGS
 
-None known.
+The adapt.incomplete option may not function correctly depending on the version of JAGS and the batch.jags argument
 
 
 FEATURES TO BE IMPLEMENTED
 
 A predict method for runjags objects
 
+Capability to have no valid monitored variables
+
 
 VERSION HISTORY
+
+
+Version 2.0.2
+
+NEW FEATURES
+
+The runjags package should now compile using either JAGS version 3 or JAGS version 4 (beta)
+
+New capability to specify raftery.options=FALSE to deactivate extending chains for sample size
+
+The autocorrelation plot is now among the default plots produced
+
+Attempts to specify a lag of > 60 seconds for jags.refresh now get a warning (and the help fle has been clarified)
+
+It is now possible to get summary statistics for less than 100 iterations if runjags.options(force.summary=TRUE)
+
+If is now possible to have only non-stochastic monitored variables
+
+
+BUG FIXES
+
+A bug fixed that caused incorrect indexing for variables read in using the read.monitor argument for results.jags
+
+A bug fixed that resulted in errors for modules and factories with names containing '-'
+
+Issues with reading results from models with too-short adaptive phases should now be resolved
+
+Errors in calculating the effective sample size are now caught (with a warning) and will not prevent calculation of other summary statistics
+
+Bug fixed which could cause errors in max.time of autorun.jags
+
+Bug fixed giving strange errors if the modeest package was not installed
+
+Problems with LaTeX code in vignette fixed
+
 
 
 Version 2.0.1

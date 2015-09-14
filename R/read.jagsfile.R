@@ -159,8 +159,9 @@ write.JAGSfile <- write.jagsfile
 
 read.jagsfile <- function(file){
   
-  if(is.runjags(file))
-    stop('Invalid specification of a runjags object as a file to a model file', call.=FALSE)
+#	if(!is.character(file) || any(class(zz)=='connection'))
+	if(is.runjags(file))
+    	stop('Invalid model file - this argument must be specified as a character string or a character string giving a path to a file', call.=FALSE)
   
 	st <- Sys.time()
 	

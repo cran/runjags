@@ -2,35 +2,16 @@ library("runjags")
 runjags.options(nodata.warning=FALSE)
 
 # Checks that the runjags module distributions are correct:
-
-# Require the rjags library to run these checks - it sets the required environmental variables under windows:
-dotests <- TRUE
-if(!require("rjags")){
-	cat("The module checks were not performed as rjags is not installed\n")
-	dotests <- FALSE
-}
-if(dotests){
 	
-	# Try to load the dynlib:
+# Try to load the dynlib - requires rjags for Windows only:
+if(.Platform$OS.type != 'windows' || requireNamespace('rjags')){
+
 	loaded <- runjags:::dynloadmodule()	
-	if(loaded==FALSE){
-		warning("The module checks were not performed as the internal JAGS dynlib could not be loaded - if you installed this package from CRAN, please file a bug report to the package author")
-		dotests <- FALSE
-	}
-	
-	# Try to load the module:
-	loaded <- load.runjagsmodule(fail=FALSE)
-	if(!loaded){		
-		warning("The module checks were not performed as the internal JAGS module could not be loaded")
-		dotests <- FALSE
-	}
+	if(!loaded)
+		stop("The internal JAGS dynlib could not be loaded - if you installed this package from CRAN, please file a bug report to the package author")
 
-}
-
-if(dotests){
-	
 	cat('Running module tests\n')
-	
+
 	# Required for nchain etc:
 	library("coda")
 
@@ -41,7 +22,7 @@ if(dotests){
 		success <- try({
 		obs <- runjags:::userunjagsmodule(tests[[i]]$distribution, tests[[i]]$funtype, tests[[i]]$parameters, tests[[i]]$x, tests[[i]]$uselog, tests[[i]]$lower)
 		expect <- results[[i]]
-	
+
 		# Allow a bit of a larger tolerance than usual as we have saved the results from a different machine:
 		problem <- abs(expect-obs) > max(10^-5, .Machine$double.eps^0.5)
 
@@ -59,14 +40,14 @@ if(dotests){
 	}
 
 	if(!all(checksok)) stop(paste("The runjags module checks failed for test number(s) ", paste(which(!checksok),collapse=","), sep=""))
-		
+	
 	# From:  Gelman, A. (2006). Prior distributions for variance parameters in hierarchical models. Bayesian Analysis, (3), 515–533.
 	# ... the half cauchy should be the same as a ratio of two gammas:
 	scale <- seq(1,100,length.out=10)
 	quantiles <- seq(0.05,0.95,length.out=10)
 	checksok <- rep(TRUE, 10)
 	set.seed(1)
-	
+
 	for(i in 1:10){
 		success <- try({
 
@@ -91,8 +72,26 @@ if(dotests){
 		}		
 	}
 	if(!all(checksok)) stop(paste("The runjags module Half Cauchy checks failed for test number(s) ", paste(which(!checksok),collapse=","), sep=""))
+
+}
+
+
+# Require the rjags library to run the rest of the checks:
+dotests <- TRUE
+if(!require("rjags")){
+	cat("The module checks were not performed as rjags is not installed\n")
+	dotests <- FALSE
+}
+
+if(dotests){
 	
-	
+	# Try to load the module:
+	loaded <- load.runjagsmodule(fail=FALSE)
+	if(!loaded){		
+		warning("The module checks were not performed as the internal JAGS module could not be loaded")
+		dotests <- FALSE
+	}
+
 	# Now check the JAGS implementations just to make sure the functions are found OK:
 
 	m <- "model{
@@ -232,6 +231,7 @@ if(dotests){
 		if(any(problem)) stop(paste("Error with ps/sp check (which expected observed):  ", paste(paste(names(ps)[which(problem)], " ", sp[problem], " ", ps[problem], ";  ", sep=""), collapse=""), sep=""))
 	}
 
-	cat("All module checks passed\n")
-
 }
+
+cat("All module checks passed\n")
+

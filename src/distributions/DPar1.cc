@@ -23,6 +23,10 @@ using std::log;
 #define ALPHA(par) (*par[0])
 #define C(par) (*par[1])
 
+#ifndef INCLUDERSCALARDIST
+namespace jags {
+#endif  /* INCLUDERSCALARDIST */
+
 namespace runjags {
 
 DPar1::DPar1()
@@ -115,4 +119,8 @@ bool DPar1::isSupportFixed(vector<bool> const &fixmask) const
     return fixmask[1]; //Fixed if C is fixed
 }
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */

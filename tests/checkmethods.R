@@ -41,9 +41,10 @@ if(jagspath!="JAGS not found" && testjags(jagspath)$JAGS.available){
 	})
 	if(class(success)=="try-error"){
 		cat("JAGS was found but the simple method failed; it is possible that there were permissions issues or similar.  Details as follows:\n")
-		temp <- testjags()
+		t <- testjags(silent=FALSE)
+		cat(failed.jags('output')[[1]])
 		print(file.info(jagspath))
-		print(file.info(getwd()))
+		print(file.info(getwd())[,1:3])
 		cat("All test methods (except possibly rjags) were skipped\n")
 	}else{
 		cat('Running method test number', testnum, '\n'); testnum <- testnum+1

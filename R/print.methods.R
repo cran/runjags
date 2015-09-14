@@ -216,7 +216,7 @@ print.gelmanwithtarget <- function(x, vars=NA, digits = 3, ...){
 	  selected <- matchvars(checkvalidmonitorname(vars),  dimnames(x$psrf)[[1]])
 	
     cat("Potential scale reduction factors:\n\n")
-    print.default(x$psrf[selected,drop=FALSE], digits = digits, ...)
+    print.default(x$psrf[selected,,drop=FALSE], digits = digits, ...)
     if (!is.null(x$mpsrf)) {
         cat("\nMultivariate psrf (for all monitored variables):\n\n")
         cat(format(x$mpsrf, digits = digits))

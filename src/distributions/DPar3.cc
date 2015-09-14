@@ -39,6 +39,10 @@ using std::pow;
 #define MU(par) (*par[1])
 #define GAMMA(par) (*par[2])
 
+#ifndef INCLUDERSCALARDIST
+namespace jags {
+#endif  /* INCLUDERSCALARDIST */
+
 namespace runjags {
 
 DPar3::DPar3()
@@ -160,4 +164,8 @@ bool DPar3::isSupportFixed(vector<bool> const &fixmask) const
     return fixmask[1]; //Fixed if MU is fixed
 }
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */

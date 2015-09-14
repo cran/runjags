@@ -1,10 +1,16 @@
 import(
-
 	parallel,
 	lattice,
 	coda
-	
 )
+
+# As advised by R-devel 3.3:
+importFrom("grDevices", "dev.new", "dev.off", "pdf", "rainbow",
+           "topo.colors")
+importFrom("stats", "acf", "as.formula", "median", "na.omit",
+           "quantile", "start", "update", "var", "window")
+importFrom("utils", "capture.output", "compareVersion", "data", "find",
+           "flush.console", "packageVersion", "read.csv", "read.table")
 
 export(
 

@@ -96,8 +96,9 @@ add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, 
 		mutate <- runjags.object$summary.pars$mutate
 	
 	runjags.object <- checkvalidrunjagsobject(runjags.object)
-	if(niter(runjags.object$mcmc)<100) stop("Cannot produce meaningful summary statistics with less than 100 samples")
-	
+	if(niter(runjags.object$mcmc)<100 && !runjags.getOption('force.summary'))
+		stop("Cannot produce meaningful summary statistics with less than 100 samples")
+		
 	# Preserve original silent.jags:
 	sj <- runjags.object$summary.pars$silent.jags
 	if(is.null(sj))
@@ -127,6 +128,17 @@ add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, 
 	
 	thinnedmcmc <- combine.mcmc(mcmc, collapse.chains=FALSE, return.samples=min(niter(mcmc),summary.iters))
 	summariesout <- runjags.summaries(mcmclist=thinnedmcmc, psrf.target = psrf.target, normalise.mcmc = normalise.mcmc, modeest.opts=modeest.opts, confidence=confidence, autocorr.lags=autocorr.lags, custom=custom, silent=silent.jags)
+	
+	if(plots && all(summariesout$nonstochastic)){
+		plots <- FALSE
+		if(runjags.getOption('summary.warning'))
+			warning('Unable to pre-draw plots - all variables are non-stochastic', call.=FALSE)
+	}
+	if(plots && niter(mcmc)<2){
+		plots <- FALSE
+		if(runjags.getOption('summary.warning'))
+			warning('Unable to pre-draw plots with less than 2 iterations', call.=FALSE)
+	}
 	
 	if(plots){
 		# Don't do thin before sending to plots, otherwise the autocorr will be wrong			
@@ -182,7 +194,7 @@ summary.runjags <- function(object, ...){
 
 
 #' @rdname add.summary
-plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","key","crosscorr"), vars=NA, layout=runjags.getOption('plot.layout'), new.windows=runjags.getOption('new.windows'), file="", mutate=NULL, col=NA, trace.iters=NA, separate.chains=NA, trace.options=NA, density.options=NA, histogram.options=NA, ecdfplot.options=NA, acplot.options=NA, ...){
+plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","key","crosscorr"), vars=NA, layout=runjags.getOption('plot.layout'), new.windows=runjags.getOption('new.windows'), file="", mutate=NULL, col=NA, trace.iters=NA, separate.chains=NA, trace.options=NA, density.options=NA, histogram.options=NA, ecdfplot.options=NA, acplot.options=NA, ...){
 	
 	passed <- list(...)
   	if(length(passed)>0){
@@ -228,9 +240,17 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","key","crossc
 		}else{
 			# Otherwise just get plots:
 
+			if(all(x$nonstochastic))
+				stop('Unable to produce plots - all variables are non-stochastic', call.=FALSE)
+			if(niter(x$mcmc)==1)
+				stop('Unable to produce plots with less than 2 iterations', call.=FALSE)
+			
 			selected <- matchvars(checkvalidmonitorname(vars),  names(x$nonstochastic))
 			toselect <- logical(length(x$nonstochastic))
 			toselect[selected] <- TRUE
+			
+			if(sum(toselect & !x$nonstochastic)==0)
+				stop('Unable to produce plots - all selected variables are non-stochastic', call.=FALSE)
 			
 			# We need to re-add the mutated variables to the mcmc list - this will match the summary stats but isn't saved:
 			mcmc <- addmutated(x$mcmc, x$summary.pars$mutate)
@@ -374,25 +394,25 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 				selected <- matchvars(checkvalidmonitorname(vars),  dimnames(x$summaries)[[1]])
 				numbers <- x$summaries[selected,,drop=FALSE]
 			
-				m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="--", psrfcoldollar=x$semistochastic)
-				
+				m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="--", psrfcoldollar= (x$semistochastic & niter(x$mcmc)>1))
+
 				print.noquote(m)
 				cat("\n")
 				
-				if(any(x$semistochastic))
+				if(any(x$semistochastic) && niter(x$mcmc)>1)
 					cat("Note: parameters marked with '$' were non-stochastic in some chains - these parameters can not be assumed to have converged!\n")				
 				
 				if(class(x$dic)!="character"){
           if(is.na(x$dic$dic)){
 					  cat("[DIC not available from the stored object]\n", sep="")
 	        }else{
-            cat("Model fit assessment:\nDIC = ", format(round(x$dic$dic, digits=digits), scientific=FALSE), if(!any(is.na(x$dic$dic.chains))) paste("  (range between chains: ", format(round(min(x$dic$dic.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$dic.chains), digits=digits), scientific=FALSE), ")", sep=""), "\n", sep="")
+            	cat("Model fit assessment:\nDIC = ", format(round(x$dic$dic, digits=digits), scientific=FALSE), if(!any(is.na(x$dic$dic.chains))) paste("  (range between chains: ", format(round(min(x$dic$dic.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$dic.chains), digits=digits), scientific=FALSE), ")", sep=""), "\n", sep="")
 	        }
-					if(is.na(x$dic$ped)){
-            cat("[PED not available from the stored object]\n", sep="")
-					}else{
-					  cat("PED = ", format(round(x$dic$ped, digits=digits), scientific=FALSE), if(!any(is.na(x$dic$ped.chains))) paste("  (range between chains: ", format(round(min(x$dic$ped.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$ped.chains), digits=digits), scientific=FALSE), ")", sep=""), "\n", sep="")
-					}
+			if(is.na(x$dic$ped)){
+            	cat("[PED not available from the stored object]\n", sep="")
+			}else{
+				cat("PED = ", format(round(x$dic$ped, digits=digits), scientific=FALSE), if(!any(is.na(x$dic$ped.chains))) paste("  (range between chains: ", format(round(min(x$dic$ped.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$ped.chains), digits=digits), scientific=FALSE), ")", sep=""), "\n", sep="")
+			}
 					
           if(is.na(x$dic$meanpd))
             pdstring <- ''

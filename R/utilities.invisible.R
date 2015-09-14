@@ -771,67 +771,112 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, remove.n
 	if(class(mcmc.list)=="mcmc") mcmc <- mcmc.list(mcmc.list) else mcmc <- mcmc.list
 
 	if(class(mcmc)!="mcmc.list") stop("Object to be normalised must be an mcmc list or mcmc object")
-
-	vnames <- lapply(mcmc, dimnames)
-
-	# ALWAYS cehck stochastic, but sometimes don't remove them
-	variances <- sapply(mcmc.list, function(x){			
-		return(apply(x,2,function(y){
-			
-			usey <- y[y!=Inf & y!=-Inf & !is.na(y)]
-			if(length(usey)==0) v <- 0 else v <- var(usey)
-			return(v)
-			
-		}))}, simplify='array')
-	
-	dim(variances) <- c(nvar(mcmc.list),nchain(mcmc.list))
-	dimnames(variances) <- list(vnames[[1]][[2]], NULL)
-	anyvariancezero <- variances==0
-
-	nontruestochastic <- apply(anyvariancezero,1,any)
-	if(any(nontruestochastic)){
 		
-		nonstochastic <- apply(anyvariancezero,1,all)		
+	vnames <- lapply(mcmc, dimnames)
+	
+	# Special case of 0 iterations:
+	if(niter(mcmc)==0){
+		truestochastic <- rep(TRUE, nvar(mcmc))
+		names(truestochastic) <- vnames[[1]][[2]]
+		nonstochastic=semistochastic <- !truestochastic
+		
+	}else{
+	
+		# ALWAYS cehck stochastic, but sometimes don't remove them
+		variances <- sapply(mcmc, function(x){			
+			return(apply(x,2,function(y){
+			
+				usey <- y[y!=Inf & y!=-Inf & !is.na(y)]
+				if(length(usey)<=1) v <- 0 else v <- var(usey)
+				return(v)
+			
+			}))}, simplify='array')
+	
+		dim(variances) <- c(nvar(mcmc),nchain(mcmc))
+		dimnames(variances) <- list(vnames[[1]][[2]], NULL)
+		anyvariancezero <- variances==0
+	
+		means <- sapply(mcmc, function(x){			
+			return(apply(x,2,function(y){
+			
+				usey <- y[y!=Inf & y!=-Inf & !is.na(y)]
+				if(length(usey)==0) v <- NA else v <- mean(usey)
+				return(v)
+			
+			}))}, simplify='array')
+	
+		dim(means) <- c(nvar(mcmc),nchain(mcmc))
+		dimnames(means) <- list(vnames[[1]][[2]], NULL)
+	
+		# If there is only one chain then meansdiffer is just taken from variance within the chain i.e. ignored:
+		meansdiffer <- apply(means,1,var)>0
+		if(nchain(mcmc)==1)
+			meansdiffer[] <- !apply(anyvariancezero,1,any)
+	
+		# There are 3 options:
+		# variances > 0 between chains but == 0 within chains ->  semi-stochastic
+		# variance == 0 in some but not all chains -> semi-stochastic
+		# variances == 0 in all chains but means differ between -> semi-stochastic
+		# variances == 0 in all chains and means identical -> non-stochastic
+		# all variances > 0 -> stochastic
+		# 1 iteration variance will be 0 so counted as semi-stochastic
+	
+		# 1 iteration and chain -> everything non-stochastic
+		if(nchain(mcmc)==1 && niter(mcmc)==1){
+			anyvariancezero[] <- TRUE
+			meansdiffer[] <- FALSE
+		}
+	
+		nonstochastic <- apply(anyvariancezero,1,all) & !meansdiffer
 		removed <- names(nonstochastic)[nonstochastic]
-		if(length(removed)>0){
+		if(length(removed)>0 && niter(mcmc)>1){
 			warnmessage <- paste("Note: The monitored variable", if(sum(nonstochastic)>1) "s", " '", if(sum(nonstochastic)>1) paste(removed[1:(length(removed)-1)], collapse="', '"), if(sum(nonstochastic)>1) "' and '", removed[length(removed)], "' appear", if(sum(nonstochastic)==1) "s", " to be non-stochastic; ", if(sum(nonstochastic)>1) "they" else "it", " will not be included in the convergence diagnostic", sep="")	
 			if(warn==TRUE)
 				swcat(warnmessage,"\n")
 			if(warn=="warning")
 				warning(warnmessage, call.=FALSE)
 		}
+	
+		truestochastic <- apply(!anyvariancezero,1,all)  # NOT necessary for the means to be different - they might be the same by chance
 		
-		semistochastic <- apply(anyvariancezero,1,any)!=apply(anyvariancezero,1,all)
+		#incomplete?:
+		#semistochastic <- (apply(anyvariancezero,1,any) != apply(anyvariancezero,1,all)) | (apply(anyvariancezero,1,all) & meansdiffer)
+		semistochastic <- !(nonstochastic | truestochastic)
+		
 		removed <- sort(names(semistochastic)[semistochastic])
-		if(length(removed)>0){
+		if(length(removed)>0 && niter(mcmc)>1){
 			warnmessage <- paste("Note: The monitored variable", if(sum(semistochastic)>1) "s", " '", if(sum(semistochastic)>1) paste(removed[1:(length(removed)-1)], collapse="', '"), if(sum(semistochastic)>1) "' and '", removed[length(removed)], "' appear", if(sum(semistochastic)==1) "s", " to be stochastic in one chain but non-stochastic in another chain; ", if(sum(semistochastic)>1) "they" else "it", " will not be included in the convergence diagnostic", sep="")	
 			if(warn==TRUE)
 				swcat(warnmessage,"\n")
 			if(warn=="warning")
 				warning(warnmessage, call.=FALSE)
 		}
-
-		truestochastic <- apply(!anyvariancezero,1,all)		
-		
-		if(sum(semistochastic)+sum(truestochastic)+sum(nonstochastic) != length(vnames[[1]][[2]]))
-			stop('An unexpected error occured determining which variables were and were not stochasic - please file an error report to the package maintainer', call.=FALSE)
-
-		if(all(nontruestochastic))
-			stop("All monitored variables appear to be non-stochastic; try adding monitored variables either using #monitor# in the model code or by specifying a monitor argument to run.jags", call.=FALSE)
-
-		# remove.nonstcohastic is STRICT stochastic
-		if(remove.nonstochastic)
-			mcmc <- mcmc[,-which(nontruestochastic),drop=FALSE]
+	
+		if(sum(semistochastic)+sum(truestochastic)+sum(nonstochastic) != length(vnames[[1]][[2]])){
+			swcat('True stochastic:\n')
+			print(truestochastic)
+			swcat('Semi stochastic:\n')
+			print(semistochastic)
+			swcat('Non stochastic:\n')
+			print(nonstochastic)
+			swcat('Variable names:\n')
+			print(vnames[[1]][[2]])
+			if(runjags.getOption('debug'))
+				browser()
 			
-	}else{
-		truestochastic <- rep(TRUE, length(vnames[[1]][[2]]))
-		names(truestochastic) <- vnames[[1]][[2]]
-		semistochastic <- truestochastic
-		semistochastic[] <- FALSE
-		nonstochastic <- semistochastic
+			stop('An unexpected error occured determining which variables were and were not stochasic - please file an error report to the package maintainer', call.=FALSE)			
+		}
 	}
 	
-	if(normalise){
+#		if(all(nontruestochastic))
+#			stop("All monitored variables appear to be non-stochastic; try adding monitored variables either using #monitor# in the model code or by specifying a monitor argument to run.jags", call.=FALSE)
+
+	# remove.nonstochastic is STRICT nonstochastic only (i.e. semistochastic and stochastic both left alone)
+	if(remove.nonstochastic && any(nonstochastic))
+		mcmc <- mcmc[,-which(nonstochastic),drop=FALSE]
+		
+	
+	if(normalise && !all(nonstochastic)){
 		if(niter(mcmc)>1000) use <- sample(1:niter(mcmc), size=1000, replace=FALSE) else use <- 1:niter(mcmc)
 
 		shap.res <- apply(combine.mcmc(mcmc, collapse.chains=TRUE, add.mutate=FALSE), 2, function(x){
@@ -860,19 +905,22 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, remove.n
 			}
 		}
 	}
-
 	for(i in 1:length(mcmc))
 		dimnames(mcmc[[i]])[[1]] <- vnames[[i]][[1]]
-	
+
 	if(class(mcmc.list)=="mcmc"){
 		return(list(mcmc=mcmc[[1]], truestochastic=truestochastic, semistochastic=semistochastic, nonstochastic=nonstochastic))
 	}else{
 		return(list(mcmc=mcmc, truestochastic=truestochastic, semistochastic=semistochastic, nonstochastic=nonstochastic))
 	}
-
 }
 
 safe.autocorr.diag <- function(x, ...){
+	if(niter(x)==1){
+		y <- matrix(NA, nrow=1, ncol=nvar(x), dimnames=list('Lag 1', dimnames(x[[1]])[[2]]))
+		return(y)
+	}
+		
 	y <- autocorr.diag(x[,1],...)
 	if(nvar(x)>1) for(i in 2:nvar(x)) y <- cbind(y, autocorr.diag(x[,i],...))
 	dimnames(y)[[2]] <- dimnames(x[[1]])[[2]]
@@ -880,7 +928,7 @@ safe.autocorr.diag <- function(x, ...){
 }
 
 safe.gelman.diag <- function(x, warn=TRUE,...){
-
+	
 	success <- try(gelman <- gelman.diag(x, ...), silent=TRUE)
 	if(class(success)=="try-error"){
 		
@@ -1057,7 +1105,8 @@ prettifytable <- function(x, digits=5, colsequal=FALSE, nastring="", psrfcoldoll
 	formatted <- gsub("NaN",nastring,formatted)
 	if(any(psrfcoldollar)){
 		stopifnot(length(psrfcoldollar)==nrow(formatted))		
-		formatted[psrfcoldollar,'psrf'] <- '$'
+#		formatted[psrfcoldollar,'psrf'] <- '$'
+		formatted[psrfcoldollar,'psrf'] <- paste(formatted[psrfcoldollar,'psrf'], ' $', sep='')
 	}
 	
 	# Put column names on as well:
@@ -1088,7 +1137,7 @@ checkmodfact <- function(tocheck, type){
   	if(is.character(tocheck)){
 		if(length(tocheck)>0 && any(grepl(',', tocheck, fixed=TRUE)))
 			stop('Use of commas in module or factory specifications is not allowed - separate name type and status with a space', call.=FALSE)
-		tocheck <- gsub('[-\\(\\)]',' ',tocheck)
+		tocheck <- gsub('[\\(\\)]',' ',tocheck)
 	  	tocheck <- strsplit(gsub('[[:space:]]+', ' ', tocheck),' ')
   	}
   	
@@ -1100,10 +1149,16 @@ checkmodfact <- function(tocheck, type){
 	if(identical(list(), tocheck)) return('')
 	
   	validated <- lapply(tocheck, function(x){
-	  	# If not specified, assume it wants to be on:
-	  	if(length(x)!=nl)
-			x <- c(x, "TRUE")
 		origx <- x
+
+	  	# If not specified, assume it wants to be on:
+	  	if(length(x) < nl)
+			x <- c(x, "TRUE")
+		
+		# Check length is correct:
+		if(length(x)!=nl)
+			stop(paste('Incorrect number of elements for ', type, ' specification "', paste(origx,collapse=' '), '": ', length(origx), ' found but ', nl, ' expected', sep=''), call.=FALSE)
+		
 	  	# Replace on with TRUE and off with FALSE:
 	  	x[nl] <- gsub('on','TRUE',x[nl])
 	  	x[nl] <- gsub('ON','TRUE',x[nl])
@@ -1111,13 +1166,13 @@ checkmodfact <- function(tocheck, type){
 	  	x[nl] <- gsub('OFF','FALSE',x[nl])
 	  	x[nl] <- as.character(as.logical(x[nl]))
 		
-	  	# Check they are all logicable:
-	  	if(is.na(x[nl]))
-	  		stop(paste('The status of ', type, ' specification "', paste(origx, collapse=' '), '" was not interpretable as logical', sep=''), call.=FALSE)
-	
 		# Check factory type is valid:
 	  	if(type=='factory' && !x[2]%in%c('sampler','monitor','rng'))
 			stop(paste('The type of ', type, ' specification "', paste(origx,collapse=' '), '" must be one of sampler, monitor or rng', sep=''), call.=FALSE)
+	
+	  	# Check they are all logicable:
+	  	if(is.na(x[nl]))
+	  		stop(paste('The status "', origx[nl], '" of ', type, ' specification "', paste(origx, collapse=' '), '" is not interpretable as logical', sep=''), call.=FALSE)
 	
 		return(x)
 	})
@@ -1255,7 +1310,21 @@ checkvalidmonitorname <- function(monitor){
 	problem <- grepl('"', monitor, fixed=TRUE) | grepl("'", monitor, fixed=TRUE)
 	if(any(problem))
 		stop(paste('Invalid monitor name(s): ', paste(monitor[problem],collapse=', '), ' - quotation marks are not allowed', sep=''), call.=FALSE)
+	
+	# Look for unmatched brackets:
+	problem <- (grepl('[', monitor, fixed=TRUE) & !grepl("]", monitor, fixed=TRUE)) | (!grepl('[', monitor, fixed=TRUE) & grepl("]", monitor, fixed=TRUE))
+	if(any(problem))
+		stop(paste('Invalid monitor name(s): ', paste(monitor[problem],collapse=', '), ' - unmatched square bracket', sep=''), call.=FALSE)
 
+	# Look for , without [:
+	problem <- grepl(',', monitor, fixed=TRUE) & !grepl("[", monitor, fixed=TRUE)
+	if(any(problem))
+		stop(paste('Invalid monitor name(s): ', paste(monitor[problem],collapse=', '), ' - commas are only allowed within square brackets', sep=''), call.=FALSE)
+	
+	# The word 'to' is going to give a problem:
+	if(any(grepl('to', monitor)))
+		warning('Use of the monitor name "to" may cause problems with some JAGS methods', call.=FALSE)
+	
 	monitor <- expandindexnames(monitor)
 	return(monitor)
 }
@@ -1447,8 +1516,10 @@ getrunjagsmethod <- function(method){
 		method <- c('rjags', 'simple', 'interruptible', 'parallel', 'snow', 'rjparallel', 'background', 'bgparallel', 'xgrid')[methodmatch]
 	}
 	if(method%in%runjagsprivate$rjagsmethod){
-		if(!requireNamespace('rjags')) stop("The rjags package is not installed - please install this package to use the 'rjags' method for runjags", call.=FALSE)
-		if(packageVersion('rjags') < 3.9) stop("Please update the rjags package to version 3-9 or later", call.=FALSE)				
+		if(!requireNamespace('rjags'))
+			stop("The rjags package is not installed (or failed to load) - please (re-)install this package to use the 'rjags' method for runjags", call.=FALSE)
+		if(packageVersion('rjags') < 3.9)
+			stop("Please update the rjags package to version 3-9 or later", call.=FALSE)				
 	}
 	if(.Platform$OS.type=='unix' && (.Platform$GUI!="AQUA" & Sys.info()['user']=='nobody' && !(method %in% c('rjags','simple')))){
 		warning("You may be trying to use a runjags method on Xgrid which won't work - choose either rjags or simple methods for using run.jags functions on Xgrid (or see the xgrid.jags functions for an alternative)")
@@ -1602,4 +1673,17 @@ checkadaptrequired <- function(rjags){
 		adaptcomplete <- FALSE
 	
 	return(!adaptcomplete)
+}
+
+getstoptexts <- function(adaptfail=runjags.getOption('adapt.incomplete')%in%c('error')){
+	
+	st <- c('Deleting model','Adaptation incomplete','syntax error')
+	
+	# JAGS version 3 will stop at Adaptation incomplete with batch.jags TRUE or FALSE
+	if(adaptfail || testjags(silent=TRUE)$JAGS.major==3)
+		return(st)
+	else
+	# JAGS version 4 will not stop at Adaptation incomplete ??with batch.jags TRUE or FALSE??
+		return(st[!st %in% c('Adaptation incomplete')])
+	
 }

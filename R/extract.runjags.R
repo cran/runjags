@@ -10,23 +10,23 @@
 #' @details 
 #' The supported options for the 'what' argument are as follows:
 #' \itemize{
-#' \item{crosscorr}{the cross-correlation matrix}
-#' \item{summary}{the same as the summary method for runjags object}
-#' \item{model}{the model}
-#' \item{data}{the data}
-#' \item{end.state}{the model state at the last iteration (or initial values for non-updated models) which will be used to start an extended simulation}
-#' \item{samplers}{a matrix giving the sampler used for stochastic nodes (not available for all models)}
-#' \item{stochastic}{a logical vector of length equal to the number of variables indicating which variables are stochastic, with NA values for variables that are stochastic in one chain but not others - the return value of this can be passed to the 'vars' argument for combine.mcmc etc functions}
-#' \item{dic}{the DIC, as returned by \code{\link[rjags]{dic.samples}}}
-#' \item{dic}{the PED, as returned by \code{\link[rjags]{dic.samples}} with type="popt"}
-#' \item{sum.deviance}{the sum of the mean estimated deviance for each stochastic variable}
-#' \item{sum.pd}{the sum of the mean estimated pD for each stochastic variable}
-#' \item{sum.popt}{the sum of the mean estimated pOpt for each stochastic variable}
-#' \item{mean.deviance}{the mean estimated pD for each stochastic variable}
-#' \item{mean.pd}{the mean estimated pD for each stochastic variable}
-#' \item{mean.popt}{the mean estimated pOpt for each stochastic variable}
-#' \item{full.deviance}{the sum of the model deviance at each iteration (for each chain)}
-#' \item{full.pd}{the sum of the estimated pD at each iteration}
+#' \item{crosscorr}{ - the cross-correlation matrix}
+#' \item{summary}{ - the same as the summary method for runjags object}
+#' \item{model}{ - the model}
+#' \item{data}{ - the data}
+#' \item{end.state}{ - the model state at the last iteration (or initial values for non-updated models) which will be used to start an extended simulation}
+#' \item{samplers}{ - a matrix giving the sampler used for stochastic nodes (not available for all models)}
+#' \item{stochastic}{ - a logical vector of length equal to the number of variables indicating which variables are stochastic, with NA values for variables that are stochastic in one chain but not others - the return value of this can be passed to the 'vars' argument for combine.mcmc etc functions}
+#' \item{dic}{ - the DIC, as returned by \code{\link[rjags]{dic.samples}}}
+#' \item{dic}{ - the PED, as returned by \code{\link[rjags]{dic.samples}} with type="popt"}
+#' \item{sum.deviance}{ - the sum of the mean estimated deviance for each stochastic variable}
+#' \item{sum.pd}{ - the sum of the mean estimated pD for each stochastic variable}
+#' \item{sum.popt}{ - the sum of the mean estimated pOpt for each stochastic variable}
+#' \item{mean.deviance}{ - the mean estimated pD for each stochastic variable}
+#' \item{mean.pd}{ - the mean estimated pD for each stochastic variable}
+#' \item{mean.popt}{ - the mean estimated pOpt for each stochastic variable}
+#' \item{full.deviance}{ - the sum of the model deviance at each iteration (for each chain)}
+#' \item{full.pd}{ - the sum of the estimated pD at each iteration}
 #' }
 #' Note that for the deviance/DIC related parameters, these will be extracted from the available information if possible, or otherwise re-sampled. 
 

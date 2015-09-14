@@ -3,9 +3,13 @@
 	This file is Copyright (C) 2002-10 Martyn Plummer, 
 	from the source for JAGS version 3.3, licensed under GPL-2
 	
-	The only modification is the change in namespace to prevent clashes
+	The namespace has been modified to prevent clashes
+	This file is not required for JAGS version >= 4 and will be removed
+	from runjags once JAGS version 3 becomes obsolete
 
 */
+
+#ifdef INCLUDERSCALARDIST
 
 #ifndef Q_FUNCTION_H_
 #define Q_FUNCTION_H_
@@ -25,3 +29,5 @@ namespace runjags {
 }
 
 #endif /* Q_FUNCTION_H_ */
+
+#endif  /* INCLUDERSCALARDIST */

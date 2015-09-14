@@ -26,7 +26,12 @@
 #ifndef DPAR4_H_
 #define DPAR4_H_
 
+#ifndef INCLUDERSCALARDIST
+#include <distribution/RScalarDist.h>
+namespace jags {
+#else
 #include "jags/RScalarDist.h"
+#endif  /* INCLUDERSCALARDIST */
 
 namespace runjags {
 
@@ -55,6 +60,10 @@ class DPar4 : public RScalarDist {
   bool isSupportFixed(std::vector<bool> const &fixmask) const;
 };
 
-}
+}  // namespace runjags
+
+#ifndef INCLUDERSCALARDIST
+}  // namespace jags
+#endif  /* INCLUDERSCALARDIST */
 
 #endif /* DPAR4_H_ */

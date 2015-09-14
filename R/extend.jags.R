@@ -195,7 +195,7 @@
 
 #' @param tempdir option to use the temporary directory as specified by the system rather than creating files in the working directory.  If keep.jags.files=TRUE then the folder is copied to the working directory after the job has finished (with a unique folder name based on 'runjagsfiles').  Any files created in the temporary directory are removed when the function exits for any reason.  It is not possible to use a temporary directory with the background methods, so tempdir will be set to FALSE if not done so by the user (possibly with a warning  depending on the settings in \code{\link{runjags.options}}).  Default TRUE.
 
-#' @param jags.refresh the refresh interval (in seconds) for monitoring JAGS output using the 'interactive' and 'parallel' methods (see the 'method' argument).  Longer refresh intervals will use slightly less processor time, but will make the simulation updates to be shown on the screen less frequently.  Note that this will have no effect on the processor use of the simulations themselves.  Default 0.1 seconds.
+#' @param jags.refresh the refresh interval (in seconds) for monitoring JAGS output using the 'interactive' and 'parallel' methods (see the 'method' argument).  Longer refresh intervals will use slightly less processor time, but will make the simulation updates to be shown on the screen less frequently.  Reducing the refresh rate to every 10 or 30 seconds may be worthwhile for simulations taking several days to run.  Note that this will have no effect on the processor use of the simulations themselves.  Default 0.1 seconds.
 
 #' @param batch.jags option to call JAGS in batch mode, rather than using input redirection.  On JAGS >= 3.0.0, this suppresses output of the status which may be useful in some situations.  Default TRUE if silent.jags is TRUE, or FALSE otherwise.
 
@@ -282,6 +282,8 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	if(identical(NA, batch.jags))
 		batch.jags <- runjags.object$method.options$batch.jags
 	
+	if(jags.refresh > 60)
+		warning('You have set jags.refresh to a very low frequency - this will not appreciably reduce the computational effort required and may unnecessarily delay loading the results')
 		
 	# We may be passed some unevaluated function arguments from parent functions using getargs so evaluate everything here:
 	argnames <- names(formals(extend.jags))
@@ -389,8 +391,9 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	}
 		
 	if(sample < 0) stop("A positive integer must be supplied for 'sample'")
-	if(summarise && ((sample + combine*runjags.object$sample) < 100)){
-		if(runjags.getOption('summary.warning')) warning("Cannot produce meaningful summary statistics with less than 100 samples", call.=FALSE)
+	if(summarise && ((sample + combine*runjags.object$sample) < 100) && !runjags.getOption('force.summary')){
+		if(runjags.getOption('summary.warning'))
+			warning("Cannot produce meaningful summary statistics with less than 100 samples", call.=FALSE)
 		summarise <- FALSE
 	} 
 
@@ -836,7 +839,8 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	
 	combinedoutput <- makerunjagsobject(combinedoutput, summarise=summarise, summaryargs=summaryargs, burnin=burnin, sample=niter(combinedoutput$mcmc), thin=thin, model=runjags.object$model, data=runjags.object$data, monitor=monitor, noread.monitor=noread.monitor, modules=modules, factories=runjags.object$factories, response=runjags.object$response, residual=runjags.object$residual, fitted=runjags.object$fitted, method=method, method.options=method.options, timetaken=timetaken)
 	
-	swcat("Finished running the simulation\n")
+	if(sample > 0)
+		swcat("Finished running the simulation\n")
 	
 	stopifnot(class(combinedoutput$end.state)=='runjagsinits')
 	

@@ -1,14 +1,76 @@
 ######################################################################################################
 ###
-###  This file is based on that in the rjags package (version 3-10) with minor modifications
-###  [objects to be compiled]
-###  Matthew Denwood, 5th August 2013
+###  This file is based on that in the rjags package (version 3-10)
 ###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
+###
+###  This file contains a temporary hack to allow compilation between JAGS 3 and 4 without modifying runjags
+###  Once JAGS version 3 becomes obsolete, the redundant code will be removed
+###  Matthew Denwood, 4th September 2015
 ###
 ######################################################################################################
 
-PKG_CPPFLAGS=-I@JAGS_INCLUDE@
+
+###############
+###  GNU make version - permitted by CRAN for Windows only, capable of handling spaces in the JAGS include path
+###############
+
+# First construct the path to the RScalarDist.h file which we are using as a proxy for JAGS 3 vs 4
+# We need to escape any spaces in @JAGS_INCLUDE@ so that we can use wildcard with the path
+# space :=
+# space +=
+# RSDH_PATH = $(subst $(space),\$(space),@JAGS_INCLUDE@/distribution/RScalarDist.h)
+
+# To verify that wildcard finds the file for testing:
+# $(error $(wildcard $(RSDH_PATH)))
+
+# ifneq ("$(wildcard $(RSDH_PATH))", "")
+# PKG_CPPFLAGS=-I"@JAGS_INCLUDE@"
+# else
+# PKG_CPPFLAGS=-I"@JAGS_INCLUDE@" -D INCLUDERSCALARDIST
+# endif
+
+# This is unchanged between JAGS 3 and 4:
+# PKG_LIBS=-L@JAGS_LIB@ -ljags @JAGS_RPATH@
+
+### Verify that at least ScalarDist.h is found:
+# SDH_PATH = $(subst $(space),\$(space),@JAGS_INCLUDE@/distribution/ScalarDist.h)
+# ifeq ("$(wildcard $(SDH_PATH))", "")
+# $(error distribution/ScalarDist.h not found - Makevars needs to be manually configured for JAGS version 3 vs 4)
+# endif
+
+###############
+
+
+###############
+###  POSIX make version - spaces in the JAGS include path will prevent compilation for JAGS 4
+###############
+
+PKG_CPPFLAGS = `if test -s @JAGS_INCLUDE@/distribution/RScalarDist.h; then echo -I"@JAGS_INCLUDE@"; else echo -I"@JAGS_INCLUDE@" -D INCLUDERSCALARDIST; fi`
 PKG_LIBS=-L@JAGS_LIB@ -ljags @JAGS_RPATH@
 
-OBJECTS= distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+###############
 
+
+###############
+### LIBS and objects to be compiled
+### NB: the objects in distributions/jags are only necessary for JAGS <=3, and are excluded by the sources if INCLUDERSCALARDIST is undefined
+###############
+
+OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+
+###############
+
+
+###############
+#### If you have compilation problems induced by these hacks then you can use the following code instead:
+###############
+
+### For JAGS major version <= 3:
+# PKG_CPPFLAGS=-I@JAGS_INCLUDE@ -D INCLUDERSCALARDIST
+# OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+
+### For JAGS major version >=4:
+# PKG_CPPFLAGS=-I@JAGS_INCLUDE@
+# OBJECTS = distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+
+###############

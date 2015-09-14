@@ -183,7 +183,7 @@ combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collaps
 
 	currentthin <- thin(newobjects)
 	thin <- floor(thin)*currentthin
-	endat <- (start(newobjects)+(thin*return.samples))-1
+	endat <- (stats::start(newobjects)+(thin*return.samples))-1
 
 	suppressWarnings(newobjects <- window(newobjects, thin=thin, end=endat))
 
