@@ -58,7 +58,7 @@ extend.jags(runjags.object, add.monitor = character(0),
 
 \item{factories}{a character vector of factory modules to be loaded into JAGS.  Factories should be provided in the format '<facname> <factype> <status>' (where status is optional), for example: factories='mix::TemperedMix sampler on'.  You must also ensure that any required modules are also specified (in this case 'mix').}
 
-\item{summarise}{should summary statistics be automatically calculated for the output chains?  Default TRUE.}
+\item{summarise}{should summary statistics be automatically calculated for the output chains?  Default TRUE (but see also ?runjags.options -> force.summary).}
 
 \item{mutate}{either a function or a list with first element a function and remaining elements arguments to this function.  This can be used to add new variables to the posterior chains that are derived from the directly monitored variables in JAGS. This allows the variables to be summarised or extracted as part of the MCMC objects as if they had been calculated in JAGS, but without the computational or storage overheads associated with calculating them in JAGS directly.  The plot, summary and as.mcmc methods for runjags objects will automatically extract the mutated variables along with the directly monitored variables.  For an application to pairwise comparisons of different levels within fixed effects see \code{\link{contrasts.mcmc}}.}
 

@@ -101,7 +101,7 @@
 
 #' @param factories a character vector of factory modules to be loaded into JAGS.  Factories should be provided in the format '<facname> <factype> <status>' (where status is optional), for example: factories='mix::TemperedMix sampler on'.  You must also ensure that any required modules are also specified (in this case 'mix').
 
-#' @param summarise should summary statistics be automatically calculated for the output chains?  Default TRUE.
+#' @param summarise should summary statistics be automatically calculated for the output chains?  Default TRUE (but see also ?runjags.options -> force.summary).
 
 #' @param mutate either a function or a list with first element a function and remaining elements arguments to this function.  This can be used to add new variables to the posterior chains that are derived from the directly monitored variables in JAGS. This allows the variables to be summarised or extracted as part of the MCMC objects as if they had been calculated in JAGS, but without the computational or storage overheads associated with calculating them in JAGS directly.  The plot, summary and as.mcmc methods for runjags objects will automatically extract the mutated variables along with the directly monitored variables.  For an application to pairwise comparisons of different levels within fixed effects see \code{\link{contrasts.mcmc}}.
 
@@ -152,7 +152,7 @@ autorun.jags <- function(model, monitor = NA, data=NA, n.chains=NA, inits = NA, 
 	# If data and inits are NA then grab the parent frame for first identification of variables:
 	if(identical(data, NA))
 		data <- parent.frame()
-	if(identical(inits, NA))
+	if(is.null(inits) || identical(inits, NA))
 		inits <- parent.frame()
 
 	if(!identical(method.options, list()))
@@ -209,7 +209,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	argnames <- argnames[argnames!='...']
 	for(i in 1:length(argnames)){
 		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)		
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			stop(paste("object '", strsplit(as.character(success),split="'",fixed=TRUE)[[1]][2], "' not found", sep=""), call.=FALSE)
 		}
 	}
@@ -241,9 +241,12 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	if(startsample!=0 && startsample < 4000)
 		stop("A startsample of 4000 or more iterations (after thinning) is required to complete the Raftery and Lewis's diagnostic", call.=FALSE)
 	
-	# reftery.diag options are passed as a list or just FALSE:
+	# reftery.diag options are passed as a list or just FALSE (or list(FALSE)):
 	if(identical(raftery.options, TRUE))
 		raftery.options <- list()
+	if(inherits(raftery.options,'list') && length(raftery.options)==1 && length(raftery.options[[1]])==1 && raftery.options[[1]]==FALSE){
+		raftery.options <- FALSE
+	}
 	
 	doraftery <- FALSE
 	if(!identical(raftery.options, FALSE)){
@@ -272,17 +275,17 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 			class(raftery.args) <- "list"
 			test <- do.call("raftery.diag", raftery.args)
 			})	
-			if(class(success)=="try-error") stop("The arguments specified for raftery.diag are not valid")	
+			if(inherits(success, 'try-error')) stop("The arguments specified for raftery.diag are not valid")	
 			if(test$resmatrix[1]=="Error") stop(paste("You need a startsample size of at least", test$resmatrix[2], "with the values of q, r and s specified for the raftery.options", sep=" "))
 		}
 	}
 	
 	
 	# Get the maximum timeout:
-	if(class(max.time)=="numeric" | class(max.time)=="integer"){
+	if(is.numeric(max.time)){
 		max.time <- max.time #DEFAULT NOW SECONDS * 60
 	}else{
-		if(class(max.time)!="character")
+		if(!is.character(max.time))
 			stop("max.time must be either a numeric or character value")
 		
 		time.unit <- tolower(gsub('[^[:alpha:]]', '', max.time))
@@ -378,7 +381,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	swcat("Calculating the Gelman-Rubin statistic for ", nvar(additional$mcmc), " variables....\n", sep="")
 	
 	suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmcfun(additional$mcmc, normalise=summaryargs$normalise.mcmc, warn=FALSE, remove.nonstochastic = TRUE)$mcmc, transform=FALSE, autoburnin=FALSE), silent=TRUE))
-	if(class(success)=="try-error"){
+	if(inherits(success, 'try-error')){
 		stop("An error occured while calculating the Gelman-Rubin statistic.  Check that different chains have not been given the same starting values and random seeds, and that there is at least one monitored stochastic variable.",call.=FALSE)
 	}
 	
@@ -403,7 +406,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 	}
 
 	if(unconverged > 0){
-		if(class(convergence$mpsrf)!="numeric"){
+		if(!is.numeric(convergence$mpsrf)){
 			mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
 		}else{
 			mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
@@ -465,7 +468,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 
 			swcat("Calculating the Gelman-Rubin statistic for ", nvar(additional$mcmc), " variables....\n", sep="")
 			suppressWarnings(success <- try(convergence <- safe.gelman.diag(normalise.mcmcfun(additional$mcmc, normalise=summaryargs$normalise.mcmc, warn=FALSE, remove.nonstochastic = TRUE)$mcmc, transform=FALSE, autoburnin=FALSE), silent=TRUE))
-			if(class(success)=="try-error"){
+			if(inherits(success, 'try-error')){
 				stop("An error occured while calculating the Gelman-Rubin statistic.  Check that different chains have not been given the same starting values and random seeds, and that there is at least one stochastic monitored variable.", call.=FALSE)
 			}
 				
@@ -488,7 +491,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				}	
 			}
 									
-			if(class(convergence$mpsrf)!="numeric"){
+			if(is.numeric(convergence$mpsrf)){
 				mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
 			}else{
 				mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")
@@ -547,7 +550,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 		raftery <- do.call("raftery.diag", raftery.args)
 		})
 	
-		if(class(success)=="try-error") stop("An error occured while calculating the Raftery and Lewis's diagnostic",call.=FALSE)
+		if(inherits(success, 'try-error')) stop("An error occured while calculating the Raftery and Lewis's diagnostic",call.=FALSE)
 		if(raftery[[1]]$resmatrix[1]=="error") stop("Error", "An error occured while calculating the Raftery and Lewis diagnostic",call.=FALSE)
 	
 		# to correct for monitoring arrays and non-stochastic nodes:
@@ -589,7 +592,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 			testmatrix <- matrix(nrow=(max(sample)/thin)*n.chains, ncol=length(varnames(additional$mcmc)))
 			rm(testmatrix)
 		})
-		if(class(success)=="try-error"){
+		if(inherits(success, 'try-error')){
 			stop(paste("The model needs to be run for a further ", moreupdates, " iterations.  This would create a vector too large to be read into R.  Try re-parameterising the model to reduce autocorrelation, using the thin option to reduce autocorrelation, or monitoring less variables.  The simulation can be extended using the return value provided.", sep=""), call.=FALSE)
 		}
 		

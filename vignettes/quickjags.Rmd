@@ -88,11 +88,11 @@ results
 This method displays relevant summary statistics - the effective sample size (SSeff) and convergence diagnostic (psrf) is shown for each stochastic variable.  It is also advisable to plot the results using the default plot method to assess convergence graphically:
 
 ```{r, results='hide', include=FALSE}
-plot(results, layout=c(4,3), file='plots.pdf', height=10, width=8)
+plot(results, layout=c(3,4), file='plots.pdf', height=10, width=8)
 ```
 
 ```{r, results='hide'}
-plot(results, layout=c(4,3))
+plot(results, layout=c(3,4))
 ```
 
 ![](plots.pdf)

@@ -9,10 +9,9 @@
 
 */
 
-#ifdef INCLUDERSCALARDIST
-
 #include "PFunction.h"
-#include "RScalarDist.h"
+
+#ifdef INCLUDERSCALARDIST
 
 using std::vector;
 using std::string;

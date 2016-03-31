@@ -411,14 +411,17 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
     
 	if(any(.packages(TRUE)=="rjags")){
 		rjags.avail <- TRUE
+		rjags.major <- packageVersion('rjags')$major
+		rjags.version <- packageDescription('rjags', fields='Version')
 	}else{
 		rjags.avail <- FALSE
+		rjags.major <- 0
+		rjags.version <- ""
 	}
 	
-	if(!silent){
+	if(!silent)
 		swcat("You are using ", rversion, " on a ", os, " machine, with the ", gui, " GUI\n", sep="")
-		swcat("The rjags package is ", if(!rjags.avail) "not ", "installed\n",sep="")
-	}
+
 	
 	if(jags=="JAGS not found") jags <- "findjags()"
 		
@@ -451,8 +454,36 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 		
 		jagsfound <- FALSE
 	}
+	
+	if(rjags.avail && num.version < Inf){  # If rjags and JAGS are both findable independently
+		if(success!=0 && rjags.major!=floor(num.version)){   # If JAGS is installed and rjags major != JAGS major
+			if(!silent)
+				swcat("The rjags package version ", rjags.major, ".x is installed, but this is not compatible with your installed version of JAGS (version ", floor(num.version), ".x)\n",sep="")
+
+			if(rjags.major > num.version){
+				msg <- paste("You should update to JAGS version ", rjags.major, ".x from https://sourceforge.net/projects/mcmc-jags/files/JAGS/", sep="")
+				
+			}else{
+				msg <- paste("You should update the rjags package to version ", floor(num.version), ".x - if the version on CRAN is not currently up to date, try downloading from https://sourceforge.net/projects/mcmc-jags/files/rjags/ instead", sep="")
+			}
+			if(!silent)
+				swcat(msg,"\n")
+
+			if(!runjagsprivate$warned_version_mismatch){
+				warning(paste(msg, "\n(This warning is given once per R session)"), call. =FALSE)
+				runjagsprivate$warned_version_mismatch <- TRUE
+			}
+			
+		}else if(!silent){
+			swcat("The rjags package is installed\n",sep="")
+		}
+	}else if(rjags.avail && num.version == Inf && !silent){
+		swcat("The rjags package version ", rjags.major, ".x is installed (compatibility with the major version of JAGS cannot be verified)\n",sep="")
+	}else if(!rjags.avail && !silent){
+		swcat("The rjags package is not installed\n",sep="")
+	}
 		
-invisible(list("os"=os, "JAGS.available"=jags.avail, "JAGS.found"=jagsfound, "rjags.found"=rjags.avail, "JAGS.path"=jags, "JAGS.version"=version, "JAGS.major"=floor(num.version), "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username, libpaths=libpaths))
+	invisible(list("os"=os, "JAGS.available"=jags.avail, "JAGS.found"=jagsfound, "rjags.found"=rjags.avail, "rjags.version"=rjags.version, "rjags.major"=rjags.major, "JAGS.path"=jags, "JAGS.version"=version, "JAGS.major"=floor(num.version), "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username, libpaths=libpaths))
 }
 
 findJAGS <- findjags
@@ -473,6 +504,7 @@ assign("failedsimfolders", character(0), envir=runjagsprivate)
 assign("defaultsummarypars", list(vars=NA, mutate=NULL, psrf.target = 1.05, normalise.mcmc = TRUE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(10), custom=NULL, silent.jags=expression(runjags.getOption('silent.jags')), plots=FALSE, plot.type=c('trace','ecdf','histogram','autocorr','key','crosscorr'), col=NA, summary.iters=10000, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()), envir=runjagsprivate)
 assign("minjagsmajor", 3, envir=runjagsprivate)
 assign("maxjagsmajor", 4, envir=runjagsprivate)
+assign("warned_version_mismatch", FALSE, envir=runjagsprivate)
 
 	# runjags.getOption is not available at compile time so has to be expression, but it's OK as it is eval()ed when getting defaultsumpars
 getdefaultsummarypars <- function(){

@@ -6,7 +6,7 @@ load.runjagsmodule <- function(fail=TRUE, silent=FALSE){
 			return('The internal runjags module is not installed - please reinstall the full version of the package from CRAN, or alternatively you can download a standalone version of the JAGS module from the sourceforge page at http://sourceforge.net/projects/runjags/')
 	
 		# Also makes sure JAGS is installed:
-		if(!requireNamespace("rjags")) 
+		if(!loadandcheckrjags(FALSE)) 
 			return("The rjags package is required to use the internal runjags module - alternatively you can download a standalone version of the JAGS module from the sourceforge page at http://sourceforge.net/projects/runjags/")
 	
 		# Check the JAGS major version is as expected:	
@@ -17,7 +17,7 @@ load.runjagsmodule <- function(fail=TRUE, silent=FALSE){
 	
 		success <- try(rjags::load.module('runjags',runjagsprivate$modulelocation))
 	
-		if(class(success)=="try-error"){
+		if(inherits(success, 'try-error')){
 			
 			rvers <- paste('version ', R.version$major, sep='')
 			if(grepl('mac.binary', .Platform$pkgType, fixed=TRUE)){
@@ -52,11 +52,12 @@ load.runjagsmodule <- function(fail=TRUE, silent=FALSE){
 
 unload.runjagsmodule <- function(){
 	
-	if(!requireNamespace("rjags")) stop("The rjags package is required to use the internal runjags module - alternatively you can download a standalone version of the JAGS module from the sourceforge page at http://sourceforge.net/projects/runjags/")
+	if(!loadandcheckrjags(FALSE))
+		stop("The rjags package is required to use the internal runjags module - alternatively you can download a standalone version of the JAGS module from the sourceforge page at http://sourceforge.net/projects/runjags/")
 		
 	suppressWarnings(success <- try(rjags::unload.module('runjags')))
 	
-	if(class(success)=="try-error"){
+	if(inherits(success, 'try-error')){
 		warning("There was a problem unloading the internal runjags module - if you installed this package from CRAN, please file a bug report to the package author")
 		invisible(FALSE)
 	}else{
@@ -75,7 +76,7 @@ dynloadmodule <- function(){
 	
 	# Sets environmental variables we need for Windows:
 	if(.Platform$OS.type=='windows'){
-		if(!requireNamespace('rjags'))
+		if(!loadandcheckrjags(FALSE))
 			stop('The rjags package is required to load the internal dynlib')
 	}
 	
@@ -95,7 +96,7 @@ dynloadmodule <- function(){
 	swcat("Loading shared library from:  ", slibpath, "\n", sep="")
 	success <- try(dyn.load(slibpath))
 	
-	if(class(success)=='try-error'){
+	if(inherits(success, 'try-error')){
 		
 		rvers <- paste('version ', R.version$major, sep='')
 		if(grepl('mac.binary', .Platform$pkgType, fixed=TRUE)){
@@ -117,6 +118,7 @@ dynloadmodule <- function(){
 }
 
 dynunloadmodule <- function(){
+	
 	if(is.null(runjagsprivate$dynlibname)){
 		warning('Unable to load the dynlib as it has not been loaded')
 		invisible(FALSE)
@@ -125,7 +127,7 @@ dynunloadmodule <- function(){
 	slibpath <- system.file("libs", paste(.Platform$r_arch, if(.Platform$r_arch!="") "/" else "", if(.Platform$OS.type=="unix") "runjags.so" else "runjags.dll", sep=""), package="runjags")
 	swcat("Unloading shared library from:  ", slibpath, "\n", sep="")
 	success <- try(dyn.unload(slibpath))
-	if(class(success)=='try-error')
+	if(inherits(success, 'try-error'))
 		stop("The internal dynlib could not be unloaded - if you installed this package from CRAN, please file a bug report to the package author")
 
 	runjagsprivate$dynlibname <- NULL

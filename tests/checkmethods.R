@@ -39,7 +39,7 @@ if(jagspath!="JAGS not found" && testjags(jagspath)$JAGS.available){
 	success <- try({
 		results <- run.jags(model, n.chains=2, sample=1000, burnin=1000, inits=initfunction, method='simple',temp=FALSE)
 	})
-	if(class(success)=="try-error"){
+	if(inherits(success, 'try-error')){
 		cat("JAGS was found but the simple method failed; it is possible that there were permissions issues or similar.  Details as follows:\n")
 		t <- testjags(silent=FALSE)
 		cat(failed.jags('output')[[1]])

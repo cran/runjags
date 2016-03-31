@@ -10,7 +10,8 @@ importFrom("grDevices", "dev.new", "dev.off", "pdf", "rainbow",
 importFrom("stats", "acf", "as.formula", "median", "na.omit",
            "quantile", "start", "update", "var", "window")
 importFrom("utils", "capture.output", "compareVersion", "data", "find",
-           "flush.console", "packageVersion", "read.csv", "read.table")
+           "flush.console", "packageVersion", "packageDescription", 
+		   "read.csv", "read.table")
 
 export(
 

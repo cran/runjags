@@ -1,28 +1,26 @@
 ######################################################################################################
 ###
 ###  runjags package
-###  Matthew Denwood, 5th August 2013
+###  Matthew Denwood, 2nd October 2015
 ###
 ###  Installation from source - help and tips
 ###
+###  The instructions below are modified from the rjags package
+###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
+###
 ######################################################################################################
+
 
 The runjags package itself is entirely written in R, but it does contain
 a JAGS module that provides additional distributions that must be
-compiled for your system.  If you have a functional JAGS installation,
-this *should* be done automatically in Unix when using R CMD INSTALL from
-the source package.  If not, or for installing from source in windows,
-see the notes below.
+compiled for your system against a functional JAGS installation.  See
+the platform specific instructions below for how to do this.
 
-Note that if you want to install runjags without the additional JAGS
-module you can simply remove the configure file and entire src directory
-(alternatively there is a version of runjags with the JAGS module removed
-hosted on the sourceforge page for runjags at:
-http://sourceforge.net/projects/runjags/).
+If you are unable to compile the C++ code and don't require the distributions
+provided in the JAGS extension module, see the 'Compile-free' instructions 
+at the end of this document.
 
 
-###  The instructions below are taken from the rjags package
-###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
 
 Windows
 -------
@@ -34,8 +32,24 @@ like so:
 
 JAGS_ROOT=c:\Program Files\JAGS\JAGS-3.3.0
 
-Unix
-----
+The configure script also needs to know the version of JAGS being used,
+and will attempt to guess this from the JAGS_ROOT path.  If a non-
+standard install path has been used you will need to provide the correct
+JAGS major-version number like so:
+
+JAGS_MAJOR_VERSION=3
+
+The header files for the module itself should be able to detect the
+version of JAGS installed on your system, but if you encounter compiler
+errors it may help to specify JAGS_MAJOR_VERSION even if JAGS is 
+installed in a standard directory - e.g. JAGS 4-beta requires:
+
+JAGS_MAJOR_VERSION=4
+
+
+
+Unix (including Mac OS X)
+-------------------------
 
 The configure script will try to guess the location of the JAGS
 library installation. It will look in /<prefix>/<lib>, where
@@ -59,14 +73,30 @@ If the configure script fails to find the JAGS headers or library,
 you can set the environment variables JAGS_INCLUDE and JAGS_LIB
 to point to the correct directory.
 
-Alternatively, you can use the configure options
+The header files for the module itself should be able to detect the
+version of JAGS installed on your system, but a JAGS_MAJOR_VERSION
+environmental variable can be set in case of problems which may be
+encountered with some versions of JAGS - e.g. JAGS 4-beta requires:
 
---with-jags-include=/path/to/jags/headers 
-                    (default /usr/local/include/JAGS)
+export JAGS_MAJOR_VERSION=4
+R CMD install runjags...
 
---with-jags-lib=/path/to/jags/library
-                (default /usr/local/[lib|lib64])
 
-These options are onto the rjags configure script with:
-"R CMD INSTALL --configure-args='--with-jags...'
+
+Compile-free
+------------
+
+The standard version of the runjags package includes a JAGS
+extension module providing additional distributions in the Pareto
+family (amongst others).  
+
+If you want to install runjags without the additional JAGS module,
+then you can simply remove the configure(.ac) files and entire src
+directory before running R CMD install runjags...  This does not
+require any C++ compilers, or even for JAGS to be installed on
+your system.
+
+Alternatively there is a version of runjags with the JAGS module 
+removed hosted on the sourceforge page for runjags at:
+http://sourceforge.net/projects/runjags/).
 

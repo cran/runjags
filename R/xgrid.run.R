@@ -322,7 +322,7 @@ exit 0
 xgrid.read <- function(threads, niters, iterations){
 	
 	success <- try(results <- vector('list', length=length(unlist(iterations))), silent=TRUE)
-	if(class(success)=='try-error') stop('The results were not in the expected format - if this job was started using xgrid.submit.jags then use the xgrid.results.jags function to retrieve the results')
+	if(inherits(success, 'try-error')) stop('The results were not in the expected format - if this job was started using xgrid.submit.jags then use the xgrid.results.jags function to retrieve the results')
 	names(results) <- paste('iteration.', 1:length(results), sep='')
 	failed <- logical(length(unlist(iterations)))
 	for(t in 1:length(iterations)){
@@ -333,7 +333,7 @@ xgrid.read <- function(threads, niters, iterations){
 		})
 		options(show.error.messages = TRUE)
 		
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			for(i in iterations[[t]]){
 				results[[paste('iteration.', i, sep='')]] <- 'Job or task incomplete'
 				failed[i] <- TRUE

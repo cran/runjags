@@ -9,9 +9,10 @@
 
 */
 
+#include "RScalarDist.h"
+
 #ifdef INCLUDERSCALARDIST
 
-#include "RScalarDist.h"
 #include <rng/RNG.h>
 #include <util/nainf.h>
 #include <util/dim.h>

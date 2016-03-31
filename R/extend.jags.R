@@ -185,7 +185,7 @@
 
 #' @param factories a character vector of factory modules to be loaded into JAGS.  Factories should be provided in the format '<facname> <factype> <status>' (where status is optional), for example: factories='mix::TemperedMix sampler on'.  You must also ensure that any required modules are also specified (in this case 'mix'). 
 
-#' @param summarise should summary statistics be automatically calculated for the output chains?  Default TRUE.
+#' @param summarise should summary statistics be automatically calculated for the output chains?  Default TRUE (but see also ?runjags.options -> force.summary).
 
 #' @param mutate either a function or a list with first element a function and remaining elements arguments to this function.  This can be used to add new variables to the posterior chains that are derived from the directly monitored variables in JAGS. This allows the variables to be summarised or extracted as part of the MCMC objects as if they had been calculated in JAGS, but without the computational or storage overheads associated with calculating them in JAGS directly.  The plot, summary and as.mcmc methods for runjags objects will automatically extract the mutated variables along with the directly monitored variables.  For an application to pairwise comparisons of different levels within fixed effects see \code{\link{contrasts.mcmc}}.
 
@@ -229,7 +229,7 @@ run.jags <- function(model, monitor = NA, data=NA, n.chains=NA, inits = NA, burn
 	# If data and inits are NA then grab the parent frame for first identification of variables:
 	if(identical(data, NA))
 		data <- parent.frame()
-	if(identical(inits, NA))
+	if(is.null(inits) || identical(inits, NA))
 		inits <- parent.frame()
 	
 	if(!identical(method.options, list()))
@@ -290,7 +290,7 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 	argnames <- argnames[argnames!='...']
 	for(i in 1:length(argnames)){
 		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)		
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			stop(paste("object '", strsplit(as.character(success),split="'",fixed=TRUE)[[1]][2], "' not found", sep=""), call.=FALSE)
 		}
 	}
@@ -597,9 +597,11 @@ extend.jags <- function(runjags.object, add.monitor=character(0), drop.monitor=c
 					rngname <- paste('\".RNG.name\" <- \"', rep(c('base::Wichmann-Hill', 'base::Marsaglia-Multicarry', 'base::Super-Duper', 'base::Mersenne-Twister'), ceiling(n.chains/4)), '\"\n',sep='')
 				}else{
 					rjagsloaded <- 'rjags' %in% .packages()
-					if(!requireNamespace("rjags")) stop("The rjags package is required to generate initial values for more than 4 parallel chains")
+					if(!loadandcheckrjags(FALSE))
+						stop("The rjags package is required to generate initial values for more than 4 parallel chains")
+					
 					success <- try(rjags::load.module("lecuyer"))
-					if(class(success)=="try-error") stop("Failed to load the lecuyer module - ensure that the latest version of JAGS and rjags is installed")
+					if(inherits(success, 'try-error')) stop("Failed to load the lecuyer module - ensure that the latest version of JAGS and rjags is installed")
 				
 					rngname <- sapply(rjags::parallel.seeds("lecuyer::RngStream", n.chains), dump.format)		
 					if(!any(sapply(modules,function(x) return(x[1]))=='lecuyer'))

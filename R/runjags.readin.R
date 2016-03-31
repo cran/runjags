@@ -52,7 +52,7 @@ runjags.readin <- function(directory, silent.jags, target.adapt, target.burnin, 
 	# dummy variable to get rid of binding warnings - actually loaded from simchainsinfo:
 	sim.chains <- list()
 	success <- try(load("simchainsinfo.Rsave"))
-	if(class(success)=="try-error") stop("The required 'simchainsinfo.Rsave' file was not found in the root simulation directory, please file a bug report to the package developer!")
+	if(inherits(success, 'try-error')) stop("The required 'simchainsinfo.Rsave' file was not found in the root simulation directory, please file a bug report to the package developer!")
 	orig.n.sims=n.sims <- length(sim.chains)
 	orig.sim.chains <- sim.chains
 	
@@ -359,7 +359,7 @@ runjags.readin <- function(directory, silent.jags, target.adapt, target.burnin, 
 					success <- file.rename(from='samplers.csv', to='../samplers.csv')
 					close(file("../samplers.csv"))
         		}, silent=TRUE))
-        		if(class(success)=='try-error')
+        		if(inherits(success, 'try-error'))
           		  fs <- NA
 			}
 			
@@ -475,7 +475,7 @@ runjags.readin <- function(directory, silent.jags, target.adapt, target.burnin, 
 		dimnames(samplers)[[2]] <- c('Index.No', 'Sampler', 'Node')
 		samplers$Index.No <- as.numeric(samplers$Index.No)
 	}, silent=TRUE))
-	if(class(success)=='try-error')
+	if(inherits(success, 'try-error'))
 	  samplers <- NA
 
 	if(!is.na(sub.samples) && abs(achieved-target.iters)>0.1){

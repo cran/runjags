@@ -1,10 +1,5 @@
 setup.jags <- function(model, monitor = stop("No monitored variables supplied"), data=NA,  n.chains=2, inits = replicate(n.chains, NA), modules=c(""), factories=c(""), response=NA, fitted =NA, residual=NA, jags = runjags.getOption('jagspath'), method="simple", mutate=NA){
 	
-	if(method %in% runjagsprivate$rjagsmethod) rjagsmethod <- TRUE else rjagsmethod <- FALSE
-	
-	if(rjagsmethod && !requireNamespace("rjags"))
-		stop("The rjags package is not installed (or failed to load)")
-	
 	# Reset failedjags stuff:
 	failedjags$model <- NA
 	failedjags$data <- NA
@@ -16,7 +11,7 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	argnames <- names(formals(setup.jags))
 	for(i in 1:length(argnames)){
 		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)		
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			stop(paste("object '", strsplit(as.character(success),split="'",fixed=TRUE)[[1]][2], "' not found", sep=""), call.=FALSE)
 		}
 	}
@@ -25,9 +20,9 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 	factories <- checkmodfact(factories, 'factory')
 	modules <- checkmodfact(modules, 'module')
 	
-	if(class(model)=="runjagsmodel") class(model) <- "character"
-	if(class(data)=="runjagsdata") class(data) <- "character"
-	if(class(inits)=="runjagsinits") class(inits) <- "character"
+	if(inherits(model, "runjagsmodel")) class(model) <- "character"
+	if(inherits(data, "runjagsdata")) class(data) <- "character"
+	if(inherits(inits, "runjagsinits")) class(inits) <- "character"
 	
 	if(identical(inits, list()) || is.null(inits))
 		inits <- NA
@@ -52,11 +47,12 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument, or using the rjags method.  Use the testjags() function for more detailed diagnostics.\n", sep="")
 		stop("Unable to call JAGS", call.=FALSE)
 	}
-	if(method%in%runjagsprivate$rjagsmethod && !requireNamespace("rjags")){
-		swcat("The rjags package was not found, either install the rjags package or use another method\n", sep="")
-		stop("The rjags package was not found", call.=FALSE)
-	}
-		
+
+	if(method %in% runjagsprivate$rjagsmethod)
+		rjagsmethod <- TRUE else rjagsmethod <- FALSE
+	if(rjagsmethod)
+		loadandcheckrjags()
+	
 	if(class(monitor)!="character" | all(is.na(monitor))){
 		stop("Monitored variable(s) must be provided in the form of a character vector")
 	}
@@ -101,7 +97,7 @@ setup.jags <- function(model, monitor = stop("No monitored variables supplied"),
 		# Find any matching functions used (not in comments, and definitely used as a function not a variable):
 		fs <- c("par1","par2","par3","par4","lomax","mouch","genpar","halfcauchy")
 
-		fs <- apply(expand.grid(c("~","<-"),c("d","p","q"),fs,"("),1,paste,collapse="")
+		fs <- apply(expand.grid(c("~","<-"),c("d","p","q","logdensity."),fs,"("),1,paste,collapse="")
 		# Get rid of commented lines and remove all spaces:
 		nohashstring <- paste(lapply(strsplit(model, "[\n\r]")[[1]], function(x) gsub("#.*", "", x)), collapse="\n")
 		nohashstring <- gsub('[[:space:]]','',nohashstring)
@@ -283,7 +279,7 @@ setup.jagsfile <- function(model, n.chains=NA, data=NA, inits=NA, monitor=NA, mo
 	argnames <- names(formals(setup.jagsfile))
 	for(i in 1:length(argnames)){
 		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)		
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			stop(paste("object '", strsplit(as.character(success),split="'",fixed=TRUE)[[1]][2], "' not found", sep=""), call.=FALSE)
 		}
 	}
@@ -371,7 +367,7 @@ setup.jagsfile <- function(model, n.chains=NA, data=NA, inits=NA, monitor=NA, mo
 	outmodel <- params$model
 	
 	##  Get the data
-	if(class(data)%in%c('runjagsdata','character')){
+	if(inherits(data, c('runjagsdata','character'))){
 		if((!identical(maindata, NA) || !identical(autodata, NA)) && runjags.getOption('blockignore.warning'))
 			warning('Data specified in the model file or using #data# are ignored when a character string is given as the argument to data', call.=FALSE)
 		maindata <- NA
@@ -486,7 +482,7 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 			if(!length(block)==0){
 				n.chain.block <- max(length(block),1)
 			}					
-			if(class(arg)%in%c('character', 'runjagsinits', 'list') && length(arg)>0 && all(sapply(arg, class)%in%c('character','list','data.frame','runjagsinits','environment'))){
+			if(inherits(arg, c('character', 'runjagsinits', 'list')) && length(arg)>0 && all(sapply(arg, inherits, what=c('character','list','data.frame','runjagsinits','environment')))){
 				n.chain.list <- max(length(arg),1)
 			}
 			# If they are both specified and don't match lengths:
@@ -508,7 +504,7 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
   	stopifnot(length(n.chains)==1 && n.chains>0)
   	
 	# First deal with a funcion - may need to assign the evalscope if it is inits:
-	if(class(arg)=='function'){
+	if(inherits(arg, 'function')){
 		if(data.type){
 			if(!is.null(formals(arg)))
 				stop(paste("The function provided for ", string, " must take exactly zero arguments", sep=""), call.=FALSE)
@@ -552,13 +548,13 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 	}
   
 	# Now convert single specified arguments into a list:
-	if(class(arg) %in% c('runjagsdata', 'runjagsinits', 'character'))
+	if(inherits(arg, c('runjagsdata', 'runjagsinits', 'character')))
 		arg <- as.list(arg)
-	if(class(arg) %in% c('data.frame', 'environment'))
+	if(inherits(arg, c('data.frame', 'environment')))
 		arg <- list(arg)
   
   	# Now catch a single named list rather than a list of lists:
-	if(class(arg)=='list' && !is.null(names(arg)) && all(sapply(arg, class)%in%permitted.formats))
+	if(inherits(arg,'list') && !is.null(names(arg)) && all(sapply(arg, class)%in%permitted.formats))
 		arg <- list(arg)
 	
 	# If arg doesn't match n.chains recycle it:
@@ -591,14 +587,14 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 	# Now we are guaranteed to have a list of things to work with for arg (list may be of length 0)
 	# But we need to make sure each component of the list is viable (length arg should be length chains):
 	for(i in 1:length(arg)){
-		if(class(arg[[i]])=='data.frame')
+		if(inherits(arg[[i]], 'data.frame'))
 			arg[[i]] <- as.list(arg[[i]])
-		if(class(arg[[i]])%in%c("runjagsdata","runjagsinits"))
+		if(inherits(arg[[i]], c("runjagsdata","runjagsinits")))
 			class(arg[[i]]) <- "character"
-		if(!is.null(arg[[i]]) && !(class(arg[[i]]) %in% c('character','list','environment')))
+		if(!is.null(arg[[i]]) && !(inherits(arg[[i]], c('character','list','environment'))))
 			stop(paste('Unrecognised format for the argument specified as ', string, if(!data.type) paste(' (chain ', i, ')', sep=''), ' - it must either be in R dump format (see dump.format(), or a named list, data frame or environment, or a function returning one of these types', sep=''), call.=FALSE)
 
-		if(class(arg[[i]])=='list' && (is.null(names(arg[[i]])) || any(names(arg[[i]])=='') || length(unique(names(arg[[i]])))!=length(arg[[i]])))
+		if(inherits(arg[[i]], 'list') && (is.null(names(arg[[i]])) || any(names(arg[[i]])=='') || length(unique(names(arg[[i]])))!=length(arg[[i]])))
 			stop(paste('The list specified as the argument for ', string, if(!data.type) paste(' (chain ', i, ')', sep=''), ' was not a fully named list', sep=''), call.=FALSE)		
 	}
 	stopifnot(length(arg)==n.chains)
@@ -609,7 +605,7 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 	for(c in 1:n.chains){
 		
 		# If the function has evalauted to a character, remove the auto founds:
-		if(class(arg[[c]])=='character')
+		if(is.character(arg[[c]]))
 			auto <- character(0)
 
 		# If we have any auto find the auto grabbed variables:
@@ -617,7 +613,7 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 		autonames <- character(0)
 		if(length(auto)>0){
 			env <- arg[[c]]
-			if(class(env)%in%c('list', 'data.frame'))
+			if(inherits(env, c('list', 'data.frame')))
 				env <- as.environment(as.list(env))
 			if(class(env)!='environment')
 				env <- .GlobalEnv
@@ -642,13 +638,13 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 				
 				if(class(temp)=="function"){
 					success <- suppressWarnings(try(temp <- temp(c), silent=TRUE))
-					if(class(success)=="try-error" && !data.type){
+					if(inherits(success, 'try-error') && !data.type){
 					  success <- suppressWarnings(try(temp <- temp(), silent=TRUE))
 					}
-					if(class(success)=="try-error")					
+					if(inherits(success, 'try-error'))					
             			stop(paste('A function matching the variable name "', auto[i], '" was found in the ', feedtxt, ' but cannot be executed with 0', if(!data.type) ' or 1', ' arguments', sep=''), call.=FALSE)
 					
-					if(class(temp)%in%c('data.frame','environment'))
+					if(inherits(temp, c('data.frame','environment')))
 						temp <- as.list(temp)
 					
 					if(data.type && class(temp)=='list')
@@ -697,7 +693,7 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 		}else{
 			
       	  	# Otherwise if there aren't any auto then just take the whole list or data frame, but ignore an env or character:
-			if(class(arg[[c]])%in%c('list','data.frame')){
+			if(inherits(arg[[c]], c('list','data.frame'))){
 				autofound <- dump.format(arg[[c]], checkvalid=TRUE)
 				autonames <- names(arg[[c]])
 			}else{
@@ -712,7 +708,7 @@ checkdataformat <- function(arg, block, auto, n.chains=NA, data.type=TRUE, evals
 			blockfound <- ''
 		
 		argfound <- ''
-		if(class(arg[[c]])=='character'){
+		if(is.character(arg[[c]])){
 			argfound <- arg[[c]]
 		}
 		

@@ -26,6 +26,9 @@
 #ifndef DLOMAX_H_
 #define DLOMAX_H_
 
+// Checks the JAGS version and sets necessary macros:
+#include "../jagsversions.h"
+
 #ifndef INCLUDERSCALARDIST
 #include <distribution/RScalarDist.h>
 namespace jags {

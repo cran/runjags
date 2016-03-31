@@ -183,7 +183,8 @@ dic.runjags <- function(x, type='pD', force.resample=FALSE, adapt=1000, n.iter=x
 
 	runjags.object <- checkvalidrunjagsobject(x)
 	
-	if(!requireNamespace("rjags")) stop('Returning DIC objects requires the rjags package')
+	if(!loadandcheckrjags(FALSE))
+		stop('Returning DIC objects requires the rjags package')
 	
 	type <- tolower(type)
 	if(!type%in%c('pd','popt')) stop('The type argument must be either pD or popt')
@@ -194,15 +195,16 @@ dic.runjags <- function(x, type='pD', force.resample=FALSE, adapt=1000, n.iter=x
 		redo <- TRUE
 	}else{
 		redo <- FALSE
-		if(type=='pd' && any(is.na(runjags.object$deviance.table[,1:2])))
+		if(tolower(type)=='pd' && any(is.na(runjags.object$deviance.table[,1:2])))
 			redo <- TRUE
-		if(type=='popt' && any(is.na(runjags.object$deviance.table[,c(1,3)])))
+		if(tolower(type)=='popt' && any(is.na(runjags.object$deviance.table[,c(1,3)])))
 			redo <- TRUE
 		if(nrow(runjags.object$deviance.table)==1 && dimnames(runjags.object$deviance.table)[[1]]=='mean')
 			redo <- TRUE
 	
 	}
-	if(redo){
+
+  if(redo){
 		if(!quiet) swcat('Obtaining DIC samples...\n')
 		newobj <- as.jags(runjags.object, adapt=adapt, quiet=quiet)
 		dics <- rjags::dic.samples(newobj, type=type, n.iter=n.iter, ...)

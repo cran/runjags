@@ -11,10 +11,10 @@ dump.format <- function(namedlist=list(), checkvalid=TRUE, convertfactors=TRUE){
 		names(data) <- names[[1]]
 	}
 	
-	if(class(data)=='data.frame')
+	if(inherits(data, 'data.frame'))
 		data <- as.list(data)
-	if(class(data)!="list" | length(data)==0) stop("Data must be provided as a named list or data frame", call.=FALSE)
-	if(any(names(data)=="") | is.null(names(data))) stop("Data must be provided as a named list or data frame", call.=FALSE)
+	if(!inherits(data,"list") || length(data)==0) stop("Data must be provided as a named list or data frame", call.=FALSE)
+	if(any(names(data)=="") || is.null(names(data))) stop("Data must be provided as a named list or data frame", call.=FALSE)
 	if(length(unique(names(data)))!=length(data)) stop('All elements in the data list must have unique names', call.=FALSE)
 	
 	if(convertfactors){
@@ -65,7 +65,7 @@ dump.format <- function(namedlist=list(), checkvalid=TRUE, convertfactors=TRUE){
 
 list.format <- function(data=character(), checkvalid=TRUE){
 	
-	if(! class(data)%in%c("character","runjagsdata","runjagsinits") || length(data)==0) stop("Data must be provided as a character string in the R dump format")
+	if(! inherits(data, c("character","runjagsdata","runjagsinits")) || length(data)==0) stop("Data must be provided as a character string in the R dump format")
 	
 	if(all(data=='' | data=='\n'))
 		return(list())

@@ -32,6 +32,10 @@
 	
  */
 
+// Checks the JAGS version and sets necessary macros:
+#include "jagsversions.h"
+
+
 #ifndef INCLUDERSCALARDIST
 	// For JAGS version >=4
 

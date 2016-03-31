@@ -31,11 +31,33 @@
 #include <R.h>
 #include <Rmath.h>
 
+// Checks the JAGS version and sets necessary macros:
+#include "jagsversions.h"
+
+// Trivial function to check which version of JAGS the binary was compiled against:
+extern "C" {
+void getjagsversions(int *forced, int *assumed, int *detected, int *used) // All pointers as everything from R is a vector
+{
+	forced[0] = (int) JAGS_MAJOR_FORCED;
+	assumed[0] = (int) JAGS_MAJOR_ASSUMED;
+	detected[0] = (int) JAGS_MAJOR;
+	used[0] = (int) JAGS_MAJOR_USED;
+}
+}
+// library(runjags); runjags:::dynloadmodule(); .C('getjagsversions', PACKAGE='runjags', forced=integer(1), assumed=integer(1), detected=integer(1), used=integer(1))
+	
+
 #ifndef INCLUDERSCALARDIST
+
+//#if JAGS_MAJOR < 4
+//#error "JAGS version 4 required"
+//#endif
 
 	// For JAGS version >= 4
 
 #include <module/Module.h>
+
+#include <version.h>
 
 #include <function/DFunction.h>
 #include <function/PFunction.h>

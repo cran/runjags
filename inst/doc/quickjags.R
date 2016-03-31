@@ -53,10 +53,10 @@ results <- run.jags(filestring, monitor=c('alpha','beta','gamma'))
 results
 
 ## ---- results='hide', include=FALSE--------------------------------------
-plot(results, layout=c(4,3), file='plots.pdf', height=10, width=8)
+plot(results, layout=c(3,4), file='plots.pdf', height=10, width=8)
 
 ## ---- results='hide'-----------------------------------------------------
-plot(results, layout=c(4,3))
+plot(results, layout=c(3,4))
 
 ## ---- results='hide'-----------------------------------------------------
 resultswithglm <- run.jags(filestring, monitor=c('alpha','beta','gamma'), modules='glm')

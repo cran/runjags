@@ -9,12 +9,16 @@
 
 */
 
+// Checks the JAGS version and sets necessary macros:
+#include "../../jagsversions.h"
+
 #ifdef INCLUDERSCALARDIST
 
 #ifndef DPQ_FUNCTION_H_
 #define DPQ_FUNCTION_H_
 
 #include <function/ScalarFunction.h>
+#include "RScalarDist.h"
 
 namespace runjags {
 

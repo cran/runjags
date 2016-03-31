@@ -9,6 +9,9 @@
 
 */
 
+// Checks the JAGS version and sets necessary macros:
+#include "../../jagsversions.h"
+
 #ifdef INCLUDERSCALARDIST
 
 #ifndef R_SCALAR_DIST_H_

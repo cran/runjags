@@ -15,7 +15,7 @@ add.summary(runjags.object, vars = NA, mutate = NA, psrf.target = 1.05,
   silent.jags = runjags.getOption("silent.jags"),
   plots = runjags.getOption("predraw.plots"), plot.type = c("trace", "ecdf",
   "histogram", "autocorr", "key", "crosscorr"), col = NA,
-  summary.iters = 10000, trace.iters = 1000, separate.chains = FALSE,
+  summary.iters = 20000, trace.iters = 1000, separate.chains = FALSE,
   trace.options = list(), density.options = list(),
   histogram.options = list(), ecdfplot.options = list(),
   acplot.options = list())
@@ -23,7 +23,7 @@ add.summary(runjags.object, vars = NA, mutate = NA, psrf.target = 1.05,
 \method{summary}{runjags}(object, ...)
 
 \method{plot}{runjags}(x, plot.type = c("trace", "ecdf", "histogram",
-  "autocorr", "key", "crosscorr"), vars = NA,
+  "autocorr", "crosscorr"), vars = NA,
   layout = runjags.getOption("plot.layout"),
   new.windows = runjags.getOption("new.windows"), file = "",
   mutate = NULL, col = NA, trace.iters = NA, separate.chains = NA,

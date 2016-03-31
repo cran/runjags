@@ -90,12 +90,13 @@ with a background method.
 \item \bold{nodata.warning} - display a warning message if the model has been run
 without any data.
 
-\item \bold{adapt.incomplete} - all models are checked to make sure that the adaptive phase
-has completed - this option controls the behaviour of runjags if this 
-adaptation is not complete before MCMC sampling.  If adapt.incomplete='silent'
-no action is taken, if 'warning' a warning is given, and if 'error' an 
-error will be returned. Note that for most methods the error is returned 
-immediately following the adapt/burnin phases, but for the simple
+\item \bold{adapt.incomplete} - all models are checked to make sure that the 
+adaptive phase has completed - this option controls the behaviour of runjags if 
+this adaptation is not complete before MCMC sampling. If adapt.incomplete='silent' 
+no action is taken, if 'warning' then the model run is continued but a warning is 
+given after the simulation is finished, and if 'error' an error will be returned. 
+Note that for most methods the error is returned immediately following the 
+adapt/burnin phases (so the sample iterations are not run), but for the simple 
 and snow methods the full model will be run before the error is given.
 
 \item \bold{repeatable.methods} - option to ensure that the MCMC object produced by
@@ -116,7 +117,7 @@ between methods on some platforms.
 storage requirement for the runjags object).
 
 \item \bold{force.summary} - override the default behaviour to omit calculation of
-summary statistics for a large number of variables, and attempt to
+summary statistics for greater than 50 variables, and attempt to
 calculate summary statistics anyway (this may cause long delays in
 the processing of results).
 

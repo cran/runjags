@@ -81,13 +81,13 @@ NULL
 
 
 #' @rdname add.summary
-add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, normalise.mcmc = TRUE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(10), custom=NULL, silent.jags=runjags.getOption('silent.jags'), plots=runjags.getOption('predraw.plots'), plot.type=c('trace','ecdf','histogram','autocorr','key','crosscorr'), col=NA, summary.iters=10000, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()){
+add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, normalise.mcmc = TRUE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(10), custom=NULL, silent.jags=runjags.getOption('silent.jags'), plots=runjags.getOption('predraw.plots'), plot.type=c('trace','ecdf','histogram','autocorr','key','crosscorr'), col=NA, summary.iters=20000, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()){
 	
 	# We may be passed some unevaluated function arguments from parent functions using getargs so evaluate everything here:
 	argnames <- names(formals(add.summary))
 	for(i in 1:length(argnames)){
 		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)		
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			stop(paste("object '", strsplit(as.character(success),split="'",fixed=TRUE)[[1]][2], "' not found", sep=""), call.=FALSE)
 		}
 	}
@@ -127,7 +127,7 @@ add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, 
 		swcat('Calculating summary statistics...\n')
 	
 	thinnedmcmc <- combine.mcmc(mcmc, collapse.chains=FALSE, return.samples=min(niter(mcmc),summary.iters))
-	summariesout <- runjags.summaries(mcmclist=thinnedmcmc, psrf.target = psrf.target, normalise.mcmc = normalise.mcmc, modeest.opts=modeest.opts, confidence=confidence, autocorr.lags=autocorr.lags, custom=custom, silent=silent.jags)
+	summariesout <- runjags.summaries(fullmcmclist=mcmc, thinnedmcmclist=thinnedmcmc, psrf.target = psrf.target, normalise.mcmc = normalise.mcmc, modeest.opts=modeest.opts, confidence=confidence, autocorr.lags=autocorr.lags, custom=custom, silent=silent.jags)
 	
 	if(plots && all(summariesout$nonstochastic)){
 		plots <- FALSE
@@ -194,7 +194,7 @@ summary.runjags <- function(object, ...){
 
 
 #' @rdname add.summary
-plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","key","crosscorr"), vars=NA, layout=runjags.getOption('plot.layout'), new.windows=runjags.getOption('new.windows'), file="", mutate=NULL, col=NA, trace.iters=NA, separate.chains=NA, trace.options=NA, density.options=NA, histogram.options=NA, ecdfplot.options=NA, acplot.options=NA, ...){
+plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","crosscorr"), vars=NA, layout=runjags.getOption('plot.layout'), new.windows=runjags.getOption('new.windows'), file="", mutate=NULL, col=NA, trace.iters=NA, separate.chains=NA, trace.options=NA, density.options=NA, histogram.options=NA, ecdfplot.options=NA, acplot.options=NA, ...){
 	
 	passed <- list(...)
   	if(length(passed)>0){
@@ -217,7 +217,18 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","k
 	
 	if(identical(separate.chains, NA)) separate.chains <- x$summary.pars$separate.chains
  	nchains <- nchain(x$mcmc)
-
+	
+	# Need to convert logical vars to the quoted varnames here to avoid problems with un-matched lengths:
+	if(is.logical(vars) && !all(is.na(vars))){
+		using <- vars
+		allvars <- varnames(x$mcmc)
+		if(length(allvars)!=length(using)){
+			stop(paste("The length of the logical vector specified to 'vars' (", length(using), ") does not match the number of monitored variables (", length(allvars), ")", sep=""), call.=FALSE)
+		}
+		vars <- paste("'", allvars, "'", sep="")[using]		
+	}
+	
+	
   if(x$summary.pars$plots && all(plot.type %in% x$summary.pars$plot.type) && is.null(mutate) && identical(col, NA) && identical(trace.iters, NA) && identical(separate.chains, x$summary.pars$separate.chains) && identical(trace.options, NA) && identical(density.options, NA) && identical(histogram.options, NA) && identical(ecdfplot.options, NA) && identical(acplot.options, NA) && (identical(vars, NA) || !'crosscorr'%in%plot.type)){
 		# If vars != type then we have to redo crosscorr
 		nvars <- sum(!x$nonstochastic)
@@ -431,7 +442,7 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 			}
 		}
 		})
-	if(class(success)=="try-error") stop("An unexpected error occured in the print method for runjags class")
+	if(inherits(success, 'try-error')) stop("An unexpected error occured in the print method for runjags class")
 	invisible(numbers)
 }
 
@@ -511,6 +522,11 @@ print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.win
 	}
 
 	N <- length(toplot)
+	if(N==1)
+		layout <- c(1,1)
+	if(N==2)
+		layout <- c(1,2)
+	
 	numperpage <- layout[1] * layout[2]
 	numpages <- ceiling(N/numperpage)
 	

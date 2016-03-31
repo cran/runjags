@@ -1,9 +1,9 @@
 library("runjags")
 runjags.options(nodata.warning=FALSE)
 
-# Checks that the runjags module distributions are correct:
+# Checks that the runjags module distributions are correct.
 	
-# Try to load the dynlib - requires rjags for Windows only:
+# Loading the dynlib requires rjags for Windows:
 if(.Platform$OS.type != 'windows' || requireNamespace('rjags')){
 
 	loaded <- runjags:::dynloadmodule()	
@@ -33,7 +33,7 @@ if(.Platform$OS.type != 'windows' || requireNamespace('rjags')){
 			checksok[i] <- FALSE
 		}
 		})
-		if(class(success)=="try-error"){
+		if(inherits(success, 'try-error')){
 			checksok[i] <- FALSE
 			cat("Uncaught crash error with check number", i, "\n")
 		}
@@ -66,13 +66,16 @@ if(.Platform$OS.type != 'windows' || requireNamespace('rjags')){
 			checksok[i] <- FALSE
 		}
 		})
-		if(class(success)=="try-error"){
+		if(inherits(success, 'try-error')){
 			checksok[i] <- FALSE
 			cat("Uncaught crash error with Half Cauchy check number", i, "\n")
 		}		
 	}
 	if(!all(checksok)) stop(paste("The runjags module Half Cauchy checks failed for test number(s) ", paste(which(!checksok),collapse=","), sep=""))
-
+	
+	cat("The internal module tests were passed\n")
+}else{
+	cat("The internal module tests were skipped (not available on Windows)\n")
 }
 
 
@@ -230,7 +233,11 @@ if(dotests){
 		problem <- abs(sp-ps) > max(10^-4, .Machine$double.eps^0.5)
 		if(any(problem)) stop(paste("Error with ps/sp check (which expected observed):  ", paste(paste(names(ps)[which(problem)], " ", sp[problem], " ", ps[problem], ";  ", sep=""), collapse=""), sep=""))
 	}
-
+	
+	cat("The runjags module tests were passed\n")
+	
+}else{
+	cat("The runjags module tests were skipped (rjags not installed)\n")
 }
 
 cat("All module checks passed\n")

@@ -12,6 +12,20 @@
 
 #' The 'failed.jags' function allows the user to interrogate the details of JAGS models that failed to compile or produce MCMC output.  By default, any simulation folders for models that failed to import are kept until the R session is ended - in some circumstances it may be possible to partially recover the results using \code{\link{results.jags}}.  The cleanup.jags function can be used to remove simulation folders created in the current R session, and is called when the runjags package is unloaded.
 
+#' @examples
+#' if(require('rjags')){
+#' # Coercion between jags and runjags objects (requires loading the rjags package):
+#' data(LINE)
+#' jags.model <- LINE
+#' runjags.model <- as.runjags(jags.model, monitor=c('alpha','beta'))
+#' runjags.model <- extend.jags(runjags.model, method='interruptible')
+#' jags.model <- as.jags(runjags.model)
+#' # Coercion to MCMC (requires loading the coda package):
+#' library('coda')
+#' mcmc <- as.mcmc.list(runjags.model)
+#' summary(mcmc)
+#' }
+
 #' @keywords models
 
 #' @seealso
@@ -129,7 +143,8 @@ as.jags.runjags <- function(x, adapt=1000, quiet=FALSE, ...){
   if(length(passed)>0)
     stop(paste('unused argument(s) ', paste(names(passed),collapse=', '), sep=' '))
   
-	if(!requireNamespace('rjags')) stop('The rjags package is required for jags/runjags conversion tools')
+	if(!loadandcheckrjags(FALSE))
+		stop('The rjags package is required for jags/runjags conversion tools')
 	runjags.object <- x
 	
 	runjags.object$factories <- checkmodfact(runjags.object$factories, 'factory')
@@ -156,7 +171,7 @@ as.jags.runjags <- function(x, adapt=1000, quiet=FALSE, ...){
 				if(is.null(success)) success <- TRUE
 			}
 		}
-		if(class(success)=="try-error") stop(paste("Failed to ", if(runjags.object$modules[[i]][2]=='FALSE') "un", "load the module '", runjags.object$modules[[i]][1], "'", sep=""))			
+		if(inherits(success, 'try-error')) stop(paste("Failed to ", if(runjags.object$modules[[i]][2]=='FALSE') "un", "load the module '", runjags.object$modules[[i]][1], "'", sep=""))			
 	}		
 	if(!identical(runjags.object$factories,"")) for(i in 1:length(runjags.object$factories)){
 		fa <- ""
@@ -166,7 +181,7 @@ as.jags.runjags <- function(x, adapt=1000, quiet=FALSE, ...){
 		success <- try(rjags::set.factory(runjags.object$factories[[i]][1], runjags.object$factories[[i]][2], as.logical(runjags.object$factories[[i]][3])))
 		if(is.null(success)) success <- TRUE
 
-		if(class(success)=="try-error") stop(paste("Failed to ", if(runjags.object$factories[[i]][3]=='FALSE') "un", "set the factory '", runjags.object$factories[[i]][1], "' of type '", runjags.object$factories[[i]][2], "'", sep=""))			
+		if(inherits(success, 'try-error')) stop(paste("Failed to ", if(runjags.object$factories[[i]][3]=='FALSE') "un", "set the factory '", runjags.object$factories[[i]][1], "' of type '", runjags.object$factories[[i]][2], "'", sep=""))			
 	}
 
 
@@ -218,7 +233,7 @@ as.jags.runjags <- function(x, adapt=1000, quiet=FALSE, ...){
 	checkcompiled <- try(stats::coef(jags.object),silent=TRUE)
 	
 	if(class(checkcompiled)=="try-error"){
-		if(!quiet) swcat("Re-compiling rjags model and adapting...\n")
+		if(!quiet) swcat("Re-compiling rjags model", if(adapt > 0) " and adapting", "...\n", sep="")
 		o <- capture.output(s <- try(jags.object$recompile(),silent=TRUE))
 		if(class(s)=="try-error"){
 			jagsout <- as.character(s)
@@ -249,7 +264,8 @@ as.jags.runjags <- function(x, adapt=1000, quiet=FALSE, ...){
 #' @method as.runjags jags
 as.runjags.jags <- function(jags.model, monitor = stop("No monitored variables supplied"), modules=runjags.getOption('modules'), factories=runjags.getOption('factories'), jags = runjags.getOption('jagspath'),  mutate=NA, check = TRUE, ...){
 	
-	if(!requireNamespace('rjags')) stop('The rjags package is required for jags/runjags conversion tools')
+	if(!loadandcheckrjags(FALSE))
+		stop('The rjags package is required for jags/runjags conversion tools')
 
 	jags.object <- jags.model
 	model <- paste(jags.object$model(),collapse="\n")

@@ -34,33 +34,33 @@ runjags.dic <- function(deviance.table, deviance.sum, mcmclist){
 
 
 
-runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opts, confidence, autocorr.lags, custom, silent=FALSE){
+runjags.summaries <- function(fullmcmclist, thinnedmcmclist, psrf.target, normalise.mcmc, modeest.opts, confidence, autocorr.lags, custom, silent=FALSE){
 	
-	n.chains <- coda::nchain(mcmclist)
-	n.iter <- coda::niter(mcmclist)
-	n.var <- coda::nvar(mcmclist)
+	n.chains <- coda::nchain(thinnedmcmclist)
+	n.iter <- coda::niter(thinnedmcmclist)
+	n.var <- coda::nvar(thinnedmcmclist)
 	
 	# 1 iteration + 1 chain is handled by normalise.mcmcfun:
-	normalised <- normalise.mcmcfun(mcmclist, normalise = normalise.mcmc, warn=TRUE, remove.nonstochastic = TRUE)
+	normalised <- normalise.mcmcfun(thinnedmcmclist, normalise = normalise.mcmc, warn=TRUE, remove.nonstochastic = TRUE)
 	
 	normalisedmcmc <- normalised$mcmc
 	truestochastic <- normalised$truestochastic
 	semistochastic <- normalised$semistochastic
 	nonstochastic <- normalised$nonstochastic			
 	
-	collapsed <- combine.mcmc(mcmclist, collapse.chains=TRUE)
+	collapsed <- combine.mcmc(thinnedmcmclist, collapse.chains=TRUE)
 	
 	options(show.error.messages = FALSE)
 	success <- try({
-	  suppressWarnings(tsummary <- summary(combine.mcmc(mcmclist, collapse.chains=FALSE)))
+	  suppressWarnings(tsummary <- summary(combine.mcmc(thinnedmcmclist, collapse.chains=FALSE)))
 	  if(class(tsummary$statistics)=="numeric"){
 	    tsummary$statistics <- t(as.matrix(tsummary$statistics))
-	    dimnames(tsummary$statistics)[[1]] <- varnames(mcmclist)
+	    dimnames(tsummary$statistics)[[1]] <- varnames(thinnedmcmclist)
 	    tsummary$quantiles <- t(as.matrix(tsummary$quantiles))
-	    dimnames(tsummary$quantiles)[[1]] <- varnames(mcmclist)
+	    dimnames(tsummary$quantiles)[[1]] <- varnames(thinnedmcmclist)
 	  }
 	})
-	if(class(success)=="try-error") tsummary <- "An unexpected error occured while calculating summary statistics"
+	if(inherits(success, 'try-error')) tsummary <- "An unexpected error occured while calculating summary statistics"
 	options(show.error.messages = TRUE)			
 	
 	# First lot of summaries require at least one stochastic variable:
@@ -71,15 +71,15 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 			autocorr.lags <- 1
 		}
 	
-		autocorrelation <- safe.autocorr.diag(normalisedmcmc, lags=autocorr.lags)
-		suppressWarnings(crosscorrelation <- crosscorr(normalisedmcmc))
+		autocorrelation <- safe.autocorr.diag(fullmcmclist[,!nonstochastic,drop=FALSE], lags=autocorr.lags)
+		suppressWarnings(crosscorrelation <- crosscorr(fullmcmclist[,!nonstochastic,drop=FALSE]))
 		class(crosscorrelation) <- "crosscorrstats"	
 	
 		success <- try({
 		
 			if(n.chains > 1 && n.iter > 1){
 				
-				if(!silent) swcat("Calculating the Gelman-Rubin statistic for ", nvar(mcmclist), " variables....\n", sep="")
+				if(!silent) swcat("Calculating the Gelman-Rubin statistic for ", nvar(thinnedmcmclist), " variables....\n", sep="")
 				convergence <- safe.gelman.diag(normalisedmcmc, transform=FALSE, autoburnin=FALSE)
 		
 				convergence <- c(convergence, psrf.target=psrf.target)
@@ -174,7 +174,7 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 	
 		}, silent=FALSE)
 	
-		if(class(success)=="try-error"){
+		if(inherits(success, 'try-error')){
 			if(runjags.getOption('debug'))
 				stop("An unexpected error occured when assessing convergence")
 			if(!silent)
@@ -183,7 +183,7 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 		}
 	
 
-		s <- try(sseff <- effectiveSize(mcmclist), silent=TRUE)
+		s <- try(sseff <- effectiveSize(thinnedmcmclist), silent=TRUE)
 		if(class(s)=='try-error'){
 			if(runjags.getOption('summary.warning'))
 				warning('There was an error calculating the effective sample size [using coda::effectiveSize()] for one or more parameters', call.=FALSE)
@@ -216,7 +216,7 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 			dimnames(thpd) <- list(varnames(collapsed), c(paste("Lower",round(confidence*100),sep=""), "Median", paste("Upper",round(confidence[nc:1]*100),sep="")))
 		})
 
-		if(class(success)=="try-error") thpd <- "An unexpected error occured while calculating summary statistics"
+		if(inherits(success, 'try-error')) thpd <- "An unexpected error occured while calculating summary statistics"
 		options(show.error.messages = TRUE)			
 
 		options(show.error.messages = FALSE)
@@ -231,7 +231,7 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 			se <- se[!nonstochastic]
 			thmcse <- list(sseff=sseff, ssd=se, mcse=mcse)
 			})	
-		if(class(success)=="try-error") thmcse <- "An unexpected error occured while calculating Monte Carlo error"
+		if(inherits(success, 'try-error')) thmcse <- "An unexpected error occured while calculating Monte Carlo error"
 		options(show.error.messages = TRUE)			
 	
 		class(thmcse) <- 'mcsestats'
@@ -283,7 +283,7 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 		modestats[is.na(modestats)&!nonstochastic] <- do.call('apply', args=modeest.opts)
 	}
 	})
-	if(class(success)=='try-error') warning('An unexpected error occured while calculating the mode')
+	if(inherits(success, 'try-error')) warning('An unexpected error occured while calculating the mode')
 	
 	
 	# Possible custom function:
@@ -302,7 +302,7 @@ runjags.summaries <- function(mcmclist, psrf.target, normalise.mcmc, modeest.opt
 			customstats <- t(customstats)
 		})
 		
-		if(class(success)=='try-error') warning('An unexpected error occured while calculating the custom summary function')
+		if(inherits(success, 'try-error')) warning('An unexpected error occured while calculating the custom summary function')
 	}	
 	
 	# Pre-create summary table:
@@ -625,7 +625,7 @@ runjagsplots <- function(mcmclist, psrfs, discrete, silent=FALSE, trace=TRUE, de
 	}		
 
 	})
-	if(class(success)=="try-error"){
+	if(inherits(success, 'try-error')){
 		trace=density=autocorr=crosscorr=key=histogram=ecdf <- FALSE
 		warning("An unexpected error occured while attempting to plot graphs")
 	}

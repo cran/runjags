@@ -359,7 +359,7 @@ if(!failed){
 	sink()
 	close(zz)
 	unlink(zz)
-	if(class(success)=='try-error'){
+	if(inherits(success, 'try-error')){
 		writeLines('0')
 	}else{
 		artfun()

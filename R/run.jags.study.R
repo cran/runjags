@@ -308,7 +308,7 @@ run.jags.study <- function(simulations, model, datafunction, targets=list(), con
 	runjags.args$batch.jags <- TRUE
 	
 	if(!any(names(runjags.args)=="method")){
-		runjags.args$method <- expression(if(requireNamespace('rjags')) 'rjags' else 'interruptible')
+		runjags.args$method <- expression(if(loadandcheckrjags(FALSE, silent=TRUE)) 'rjags' else 'interruptible')
 	}else{
 		runjags.args$method <- getrunjagsmethod(runjags.args$method)
 		if(runjags.args$method%in%runjagsprivate$parallelmethod)
@@ -486,7 +486,7 @@ run.jags.study <- function(simulations, model, datafunction, targets=list(), con
 						if(is.null(success)) success <- TRUE
 					}
 				}
-				if(class(success)=="try-error") stop(paste("Failed to ", if(runjags.args$modules[[i]][2]=='FALSE') "un", "load the module '", runjags.args$modules[[i]][1], "'", sep=""))
+				if(inherits(success, 'try-error')) stop(paste("Failed to ", if(runjags.args$modules[[i]][2]=='FALSE') "un", "load the module '", runjags.args$modules[[i]][1], "'", sep=""))
 			}		
 			if(!identical(runjags.args$factories,"")) for(i in 1:length(runjags.args$factories)){
 				fa <- ""
@@ -496,7 +496,7 @@ run.jags.study <- function(simulations, model, datafunction, targets=list(), con
 				success <- try(rjags::set.factory(runjags.args$factories[[i]][1], runjags.args$factories[[i]][2], as.logical(runjags.args$factories[[i]][3])))
 				if(is.null(success)) success <- TRUE
 
-				if(class(success)=="try-error") stop(paste("Failed to ", if(runjags.args$factories[[i]][3]=='FALSE') "un", "set the factory '", runjags.args$factories[[i]][1], "' of type '", runjags.args$factories[[i]][2], "'", sep=""))			
+				if(inherits(success, 'try-error')) stop(paste("Failed to ", if(runjags.args$factories[[i]][3]=='FALSE') "un", "set the factory '", runjags.args$factories[[i]][1], "' of type '", runjags.args$factories[[i]][2], "'", sep=""))			
 			}
 
 		}else{
@@ -576,7 +576,7 @@ run.jags.study <- function(simulations, model, datafunction, targets=list(), con
 	})
 	flush.console()
 	
-	if(class(success)=="try-error"){
+	if(inherits(success, 'try-error')){
 		stop("An unexpected error occured - ensure that the model runs using run.jags on the first dataset, and try using lapply as the parallel.method to debug")
 	}
 	
@@ -612,7 +612,7 @@ run.jags.study <- function(simulations, model, datafunction, targets=list(), con
 	success <- try({
 	retval <- summarise.jags.study(results=results[!crashed], targets=targets, confidence=confidence, separatesingles=!forceaverage)
 	})
-	if(class(success)=='try-error'){
+	if(inherits(success, 'try-error')){
 		warning('An unknown error occured while calculating summary statistics')
 		retval <- list(simulations=simulations, model=obj$model, targets=targets, monitor=unique(c(obj$monitor,names(targets))), dropk=fromdropk, datafunction=datafunction, data=DATAS, crashed=crashed, errors=error)
 	}else{

@@ -47,7 +47,7 @@ NULL
 combine.mcmc <- function(mcmc.objects=list(), thin=1, return.samples=NA, collapse.chains=if(length(mcmc.objects)==1) TRUE else FALSE, vars=NA, add.mutate=TRUE){
 
 	if(class(mcmc.objects)!="list"){
-		if(any(class(mcmc.objects)==c("mcmc.list", "mcmc", "runjags"))){
+		if(inherits(mcmc.objects,c("mcmc.list", "mcmc", "runjags"))){
 			mcmc.objects <- list(mcmc.objects)
 		}else{
 			stop("Data must be provided as a list of or single mcmc object(s), or a list of or single mcmc.list(s) (for multiple chains)")

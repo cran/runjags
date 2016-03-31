@@ -94,6 +94,20 @@ Objects of class 'runjags' are produced by \code{\link{run.jags}}, \code{\link{r
 The functions and methods detailed here permit conversion of runjags objects to MCMC objects and to/from jags models created by \code{\link[rjags]{jags.model}}.  There are also S3 methods for print, summary and plot available for runjags class objects - see \code{\link{add.summary}} for details of the arguments available to these.
 The 'failed.jags' function allows the user to interrogate the details of JAGS models that failed to compile or produce MCMC output.  By default, any simulation folders for models that failed to import are kept until the R session is ended - in some circumstances it may be possible to partially recover the results using \code{\link{results.jags}}.  The cleanup.jags function can be used to remove simulation folders created in the current R session, and is called when the runjags package is unloaded.
 }
+\examples{
+if(require('rjags')){
+# Coercion between jags and runjags objects (requires loading the rjags package):
+data(LINE)
+jags.model <- LINE
+runjags.model <- as.runjags(jags.model, monitor=c('alpha','beta'))
+runjags.model <- extend.jags(runjags.model, method='interruptible')
+jags.model <- as.jags(runjags.model)
+# Coercion to MCMC (requires loading the coda package):
+library('coda')
+mcmc <- as.mcmc.list(runjags.model)
+summary(mcmc)
+}
+}
 \seealso{
 \code{\link{add.summary}} for details on plot, print and summary methods for runjags class objects, \code{\link{extract.runjags}} for a method to extract peripheral information from runjags objects, \code{\link{runjags.options}} for general options available, and \code{\link{run.jags}} and \code{\link{autorun.jags}} for the functions that create objects of this class.
 }

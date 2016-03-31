@@ -1,4 +1,4 @@
-This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Carsten Dormann, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Hohle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Jonathan Bartlett, Miriam Casey, Bob O'Hara, Kristin Broms, Bryan Matthias, Torrin Liddell, Jan Glascher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for continued development of the excellent JAGS software.
+This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Carsten Dormann, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Hoehle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Jonathan Bartlett, Miriam Casey, Bob O'Hara, Kristin Broms, Bryan Matthias, Torrin Liddell, Jan Glaescher, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Johannes Bjork, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for developing JAGS.
 
 
 OPEN ISSUES
@@ -6,7 +6,7 @@ OPEN ISSUES
 
 BUGS
 
-The adapt.incomplete option may not function correctly depending on the version of JAGS and the batch.jags argument
+The adapt.incomplete option may not function correctly depending on the version of JAGS and the batch.jags argument - this will be fixed in a future update (this will not be back-compatible with JAGS 3.x)
 
 
 FEATURES TO BE IMPLEMENTED
@@ -15,8 +15,47 @@ A predict method for runjags objects
 
 Capability to have no valid monitored variables
 
+Implement concurrent trace, mean and variance monitors
+
+
 
 VERSION HISTORY
+
+
+Version 2.0.3
+
+NEW FEATURES
+
+The configure file should now detect the correct version of JAGS more often (particularly on Windows)
+
+A JAGS_MAJOR_VERSION environmental variable can now be set in case of problems - see the README file
+
+The argument NULL can now be used equivalently to NA for autorun.jags and run.jags
+
+Simulations started with keep.jags.files = TRUE are no longer deleted when R exits, even if the simulation failed
+
+The key plot is no longer produced by default
+
+The testjags function now compares the installed versions of JAGS and rjags and gives a warning if there is a mismatch
+
+The summary statistics are now calculated on 20,000 thinned iterations by default (instead of 10,000)
+
+
+BUG FIXES
+
+The autocorrelation and crosscorrelation is now calculated on un-thinned chains for summary statistics
+
+A nasty bug was fixed that could cause issues with reading the devaince correctly for models run using rjags methods
+
+A bug was fixed that prevented runjags working with dataframes created by dplyr
+
+Bug fixed that prevented re-calculation of the DIC under some circumstances (penalty would be returned as NA)
+
+The force.summary option is now respected, and the default behaviour is to omit calculating summary statistics for > 50 variables
+
+Quoted variable names (and the use of $, ^, and logical vectors) now works as expected
+
+A number of other minor bugs (and improvements in error handling) have also been addressed
 
 
 Version 2.0.2
@@ -51,7 +90,6 @@ Bug fixed which could cause errors in max.time of autorun.jags
 Bug fixed giving strange errors if the modeest package was not installed
 
 Problems with LaTeX code in vignette fixed
-
 
 
 Version 2.0.1

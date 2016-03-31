@@ -120,19 +120,21 @@ makerunjagsobject <- function(combinedoutput, summarise, summaryargs, burnin, sa
 	class(combinedoutput) <- 'runjags'
 	combinedoutput$summary.pars <- getdefaultsummarypars()
 	
-	# If too many vars (>20?), don't summarise or plot unless forced to:
-	if(!silent && is.na(summarise) && !runjags.getOption('force.summary') && nvar(combinedoutput$mcmc)>50){
-		warning("Summary statistics were not produced as there are >50 monitored variables - to override this behaviour see ?add.summary and ?runjags.options", call.=FALSE)
+	if(is.na(summarise)) summarise <- TRUE
+	# If too many vars (>50?), don't summarise or plot unless forced to:
+	if(summarise && !runjags.getOption('force.summary') && nvar(combinedoutput$mcmc)>50){
+		# Don't produce the warning - it breaks one of the tests (fb('Check that summary statistics arent calculated for >50 variables (and it can be overridden)') for a start
+#		if(!silent)
+#			warning("Summary statistics were not produced as there are >50 monitored variables - to override this behaviour see ?add.summary and ?runjags.options", call.=FALSE)
 		summarise <- FALSE
 	}
-	if(is.na(summarise)) summarise <- TRUE
 		
 	# Call function to calculate summary statistics and plots etc:
 	if(summarise){
 		success <- try({
 		summaries <- do.call('add.summary', c(list(runjags.object=combinedoutput), summaryargs))
 		}, silent=TRUE)
-		if(!silent && class(success)=='try-error'){
+		if(!silent && inherits(success, 'try-error')){
 			warning(paste('The following error occured while calculating summary statistics:\n  ', gsub('\n$','',as.character(success)), sep=''),call.=FALSE)
 			message <- "An error occured while calculating summary statistics - see ?add.summary"
 			summaries <- list(summary=message, HPD=message, hpd=message, mcse=message, psrf=message, autocorr=message, crosscorr=message, stochastic=message, trace=message, density=message, hist=message, ecdfplot=message, key=message, acplot=message, ccplot=message, summaries=NULL, summary.available=FALSE, summary.pars=evalsumargs)
@@ -930,7 +932,7 @@ safe.autocorr.diag <- function(x, ...){
 safe.gelman.diag <- function(x, warn=TRUE,...){
 	
 	success <- try(gelman <- gelman.diag(x, ...), silent=TRUE)
-	if(class(success)=="try-error"){
+	if(inherits(success, 'try-error')){
 		
 		nvars <- nvar(x)
 		psrfs <- matrix(ncol=2, nrow=nvars, dimnames=list(varnames(x), c("Point est.", "97.5% quantile")))
@@ -940,7 +942,7 @@ safe.gelman.diag <- function(x, warn=TRUE,...){
 			psrfs[i,] <- gelman.diag(x[,i,drop=FALSE], ...)$psrf
 		}
 		}, silent=TRUE)
-		if(class(success)=="try-error"){
+		if(inherits(success, 'try-error')){
 			#name <- new_unique("gelman.failed", ".Rsave")
 			#save(failedmcmc, file=name)
 			stop("An error occured while calculating the Gelman-Rubin statistic")
@@ -1306,10 +1308,10 @@ checkvalidmonitorname <- function(monitor){
 	if(any(problem))
 		stop(paste('Invalid monitor name(s) "', paste(monitor[problem],collapse='", "'), '" - empty indexes are not allowed', sep=''), call.=FALSE)
 
-	# Look for ,, and [, and ,] and give an error
-	problem <- grepl('"', monitor, fixed=TRUE) | grepl("'", monitor, fixed=TRUE)
-	if(any(problem))
-		stop(paste('Invalid monitor name(s): ', paste(monitor[problem],collapse=', '), ' - quotation marks are not allowed', sep=''), call.=FALSE)
+	# Quotation marks are allowed (as are $ and ^), as we use them for matching specific variables:
+#	problem <- grepl('"', monitor, fixed=TRUE) | grepl("'", monitor, fixed=TRUE)
+#	if(any(problem))
+#		stop(paste('Invalid monitor name(s): ', paste(monitor[problem],collapse=', '), ' - quotation marks are not allowed', sep=''), call.=FALSE)
 	
 	# Look for unmatched brackets:
 	problem <- (grepl('[', monitor, fixed=TRUE) & !grepl("]", monitor, fixed=TRUE)) | (!grepl('[', monitor, fixed=TRUE) & grepl("]", monitor, fixed=TRUE))
@@ -1322,7 +1324,7 @@ checkvalidmonitorname <- function(monitor){
 		stop(paste('Invalid monitor name(s): ', paste(monitor[problem],collapse=', '), ' - commas are only allowed within square brackets', sep=''), call.=FALSE)
 	
 	# The word 'to' is going to give a problem:
-	if(any(grepl('to', monitor)))
+	if(!all(is.na(monitor)) && any(monitor=='to'))
 		warning('Use of the monitor name "to" may cause problems with some JAGS methods', call.=FALSE)
 	
 	monitor <- expandindexnames(monitor)
@@ -1354,6 +1356,12 @@ expandindexnames <- function(names){
 	split <- strsplit(newnames,'#')
 	# And recombine with the indexes explicitly rolled out:
 	toret <- as.character(unlist(lapply(split,f)))
+	# Remove any spaces:
+	toret <- gsub(' ','',toret)
+	# Check the bracket isn't empty:
+	if(any(grepl('[]',toret,fixed=TRUE))){
+		stop(paste('Empty indexes provided for variable(s) ', paste(toret[grepl('[]',toret,fixed=TRUE)], collapse=', '), ' - ensure that the full range of indices are specified using a colon (e.g. var[1:2,1])', sep=''), call.=FALSE)
+	}
 	
 	if(length(toret)==0 || identical(toret, '') || identical(toret, NA))
 	  return(toret)
@@ -1387,7 +1395,7 @@ matchvars <- function(vars, names, exactneeded=NA, testfound=TRUE){
 		vars <- expandindexnames(vars)
 	#	matched <- vapply(vars, function(m) return(grepl(paste("^",m,sep=""),names)), logical(length(names)))
 		
-		matched <- vapply(vars, function(m) return(grepl(m,paste("^",names,sep=""),fixed=TRUE)), logical(length(names)))	
+		matched <- vapply(vars, function(m) return(grepl(m,paste("^",names,"$",sep=""),fixed=TRUE)), logical(length(names)))	
 		exact <- vapply(vars, function(m) return((gsub("'","",gsub('"','',m,fixed=TRUE),fixed=TRUE)) == names), logical(length(names)))
 		namesnoindex <- sapply(strsplit(names,'[',fixed=TRUE), function(x) return(x[[1]]))
 		nameswithoutindex <- vapply(vars, function(m) return((gsub("'","",gsub('"','',m,fixed=TRUE),fixed=TRUE)) == namesnoindex), logical(length(names)))
@@ -1434,7 +1442,7 @@ matchvars <- function(vars, names, exactneeded=NA, testfound=TRUE){
 
 		if(any(sapply(selected,length)==0) && testfound)
 			stop(paste("No matches found for the following variable name(s): ", paste(vars[sapply(selected,length)==0],collapse=','), sep=''), call.=FALSE)
-		
+
 		selected <- unique(unlist(selected))
 		
 	}else{
@@ -1471,8 +1479,8 @@ checkvalidforjags <- function(object){
 		if(is.null(x)){
 			return("NULL")
 		}
-		if(class(x)=="data.frame"){
-			return("class 'data.frame' - try converting it to a valid type using as.matrix")
+		if(inherits(x, "data.frame")){
+			return("inherits from class 'data.frame' - try converting it to a valid type using as.matrix")
 		}
 		if(length(x)==0){
 			return("length zero")
@@ -1514,12 +1522,6 @@ getrunjagsmethod <- function(method){
 		stop(paste("Unsupported or ambiguous method '", method, "'; choose one of 'rjags', 'simple', 'interruptible', 'parallel', 'snow', 'rjparallel', 'background' or 'bgparallel'", sep=""), call.=FALSE)
 	}else{
 		method <- c('rjags', 'simple', 'interruptible', 'parallel', 'snow', 'rjparallel', 'background', 'bgparallel', 'xgrid')[methodmatch]
-	}
-	if(method%in%runjagsprivate$rjagsmethod){
-		if(!requireNamespace('rjags'))
-			stop("The rjags package is not installed (or failed to load) - please (re-)install this package to use the 'rjags' method for runjags", call.=FALSE)
-		if(packageVersion('rjags') < 3.9)
-			stop("Please update the rjags package to version 3-9 or later", call.=FALSE)				
 	}
 	if(.Platform$OS.type=='unix' && (.Platform$GUI!="AQUA" & Sys.info()['user']=='nobody' && !(method %in% c('rjags','simple')))){
 		warning("You may be trying to use a runjags method on Xgrid which won't work - choose either rjags or simple methods for using run.jags functions on Xgrid (or see the xgrid.jags functions for an alternative)")
@@ -1686,4 +1688,31 @@ getstoptexts <- function(adaptfail=runjags.getOption('adapt.incomplete')%in%c('e
 	# JAGS version 4 will not stop at Adaptation incomplete ??with batch.jags TRUE or FALSE??
 		return(st[!st %in% c('Adaptation incomplete')])
 	
+}
+
+loadandcheckrjags <- function(stop=TRUE, silent=FALSE){
+	
+	fail <- FALSE
+
+	if(!any(.packages(TRUE)=="rjags")){
+		if(!silent)
+			swcat("\nThe rjags package is not installed - either install the package from CRAN or from https://sourceforge.net/projects/mcmc-jags/files/rjags/\n")
+		fail <- TRUE
+	}
+	
+	if(!fail && !requireNamespace("rjags")){
+		if(!silent)
+			swcat("\nThe rjags package is installed, but could not be loaded - run the testjags() function for more detailed information\n", sep="")
+		fail <- TRUE
+	}
+	if(!fail && packageVersion('rjags') < 3.9){
+		if(!silent)
+			swcat("\nPlease update the rjags package to version 3-9 or later\n", call.=FALSE)
+		fail <- TRUE
+	}
+
+	if(fail && stop)
+		stop("Loading the rjags package failed (diagnostics are given above this error message)", call.=FALSE)
+	
+	return(!fail)
 }

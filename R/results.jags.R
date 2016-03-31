@@ -86,7 +86,7 @@ results.jags <- function(foldername, echo=NA, combine=NA, summarise=NA, keep.jag
 	if(is.na(sub.samples)) sub.samples <- FALSE
 		
 	background.runjags.object <- foldername
-	if(class(background.runjags.object)=='character' && file.exists(file.path(background.runjags.object, 'jagsinfo.Rsave'))){
+	if(is.character(background.runjags.object) && file.exists(file.path(background.runjags.object, 'jagsinfo.Rsave'))){
 		# The folder may have been moved, so save the new path (make it an absolute path):
 		newpath <- normalizePath(background.runjags.object, winslash='/')
 		# A copy of the original background.runjags.object will be loaded from here:
@@ -97,14 +97,22 @@ results.jags <- function(foldername, echo=NA, combine=NA, summarise=NA, keep.jag
 			# Give a warning or display of some kind here?
 		}
 	}
-	if(class(background.runjags.object)!="runjagsbginfo") stop("An object produced by a background runjags method (or a path to the JAGS folder to be imported) must be supplied (see the manual page for more details)")
+	if(!inherits(background.runjags.object, "runjagsbginfo")){
+		if(is.character(background.runjags.object)){
+			stop(paste("No valid runjags simulation found at the path provided: '", background.runjags.object, "'", sep=''))
+		}else{
+			stop("An object produced by a background runjags method (or a path to the JAGS folder to be imported) must be supplied (see the manual page for more details)")
+		}
+	}
 	if(background.runjags.object$method=="xgrid"){
 		warning("Re-routing function call to xgrid.results.jags to retrieve xgrid job")
 		return(xgrid.results.jags(background.runjags.object))
 	}
 	background.runjags.object <- checkvalidrunjagsobject(background.runjags.object)
 	
-	if(!file.exists(background.runjags.object$directory)) stop("The JAGS files for the model supplied were not found - they may have been deleted")
+	if(!file.exists(background.runjags.object$directory)){
+		stop(paste("The JAGS files for the model supplied were not found at the saved directory '", background.runjags.object$directory, "' - try calling results.jags with the path to the new location of the simulation folder", sep=""))
+	}
 	
 	if(!identical(summarise, NA)){
 		background.runjags.object$summarise <- summarise
@@ -169,8 +177,9 @@ results.jags <- function(foldername, echo=NA, combine=NA, summarise=NA, keep.jag
 			if(!allok)
 			  swcat('Note: Either one or more simulation(s) failed, or there was an error in processing the results.  You may be able to retrieve any successful simulations using:\nresults.jags("', new.directory, '", recover.chains=TRUE)\nSee the help file for that function for possible options.\n', sep='')
 			
-			if(!new.directory %in% runjagsprivate$simfolders)
-        runjagsprivate$simfolders <- c(runjagsprivate$simfolders, new.directory)
+			# Don't add to the delete on exit list:
+#			if(!new.directory %in% runjagsprivate$simfolders)
+#				runjagsprivate$simfolders <- c(runjagsprivate$simfolders, new.directory)
 		}else{
 			if(!allok && runjags.getOption('keep.crashed.files') && new.directory!="Directory not writable"){
 			  swcat('Note: Either one or more simulation(s) failed, or there was an error in processing the results.  You may be able to retrieve any successful simulations using:\nresults.jags("', new.directory, '", recover.chains=TRUE)\nSee the help file for that function for possible options.\n', sep='')

@@ -135,7 +135,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 					if(is.null(success)) success <- TRUE
 				}
 			}
-			if(class(success)=="try-error") stop(paste("Failed to ", if(extra.options$modules[[i]][2]=='FALSE') "un", "load the module '", extra.options$modules[[i]][1], "'", sep=""))			
+			if(inherits(success, 'try-error')) stop(paste("Failed to ", if(extra.options$modules[[i]][2]=='FALSE') "un", "load the module '", extra.options$modules[[i]][1], "'", sep=""))			
 		}		
 		if(!identical(extra.options$factories,"")) for(i in 1:length(extra.options$factories)){
 			fa <- ""
@@ -145,7 +145,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 			success <- try(rjags::set.factory(extra.options$factories[[i]][1], extra.options$factories[[i]][2], as.logical(extra.options$factories[[i]][3])))
 			if(is.null(success)) success <- TRUE
 
-			if(class(success)=="try-error") stop(paste("Failed to ", if(extra.options$factories[[i]][3]=='FALSE') "un", "set the factory '", extra.options$factories[[i]][1], "' of type '", extra.options$factories[[i]][2], "'", sep=""))			
+			if(inherits(success, 'try-error')) stop(paste("Failed to ", if(extra.options$factories[[i]][3]=='FALSE') "un", "set the factory '", extra.options$factories[[i]][1], "' of type '", extra.options$factories[[i]][2], "'", sep=""))			
 		}
 		
 		chains <- extra.options$sim.chains[[s]]
@@ -212,7 +212,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 			dimnames(samplers)[[2]] <- c('Index.No', 'Sampler', 'Node')
 			samplers$Index.No <- as.numeric(samplers$Index.No)	
 			}, silent=TRUE)
-		if(class(success)=='try-error')
+		if(inherits(success, 'try-error'))
 			samplers <- NA
 		
 		return(list(mcmc=mcmc, end.state=end.state, samplers=samplers, adaptdone=adaptdone))
@@ -222,7 +222,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		allm <- parLapply(cl,1:n.sims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
 		#	allm <- lapply(1:n.sims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
 	}, silent=TRUE)
-	if(class(success)=='try-error'){
+	if(inherits(success, 'try-error')){
 		if(!file.exists(outfile))
 			err <- paste("One or more rjags sessions failed with the following error:\n",as.character(success),'\nHave you remembered to specify all required modules and factories?',sep='')
 		else
@@ -435,7 +435,7 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 				returns <- parLapply(cl, 1:n.sims, f, files=files, jags=jags, batch.jags=batch.jags, silent.jags=silent.jags, path=thed)
 			}
 		}, silent=TRUE)
-		if(class(success)=='try-error'){
+		if(inherits(success, 'try-error')){
 			if(!file.exists(outfile))
 				err <- paste("One or more snow sessions failed with the following error:\n",as.character(success),'\n',sep='')
 			else
@@ -852,7 +852,8 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 	mcmcout <- lapply(samples[names(samples)!='pD'], as.mcmc.list)
 	
 	nvar <- length(varnames)
-	niter <- sapply(mcmcout,niter)
+  
+  	niter <- sapply(mcmcout,niter)
 	if(!all(niter==niter[1])) stop("An error occured with the rjags method - variables returned with differing numbers of iterations")
 	niter <- niter[1]
 
@@ -869,24 +870,25 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 	fullsumpd <- NA
 	########
 	
-	mcmc <- vector('list',length=extra.options$n.chains)
-	if('deviance'%in%varnames){
-	  sum.deviance <- mean(sapply(1:extra.options$n.chains, function(x) return(mean(mcmcout[[which(varnames=='deviance')]][[x]]))))
-	}
-		
 	# rjags (verison 3) returns variables in alphabetical order regardless of input order, so re-order here:
 	reindex <- matchvars(monitor[monitor!="pD"],varnames,exactneeded=TRUE,testfound=FALSE)
 	varnames <- varnames[reindex]
 	
+	mcmc <- vector('list',length=extra.options$n.chains)
 	for(i in 1:extra.options$n.chains){
 		mcmc[[i]] <- mcmc(do.call('cbind',lapply(mcmcout, function(x) return(x[[i]])))[,reindex,drop=FALSE], start=extra.options$burnin+1, thin=extra.options$thin)
 		dimnames(mcmc[[i]]) <- list(1:niter, varnames)
-		if(!'deviance'%in%extra.options$monitor && any(varnames=='deviance')){
+	}
+	if('deviance'%in%varnames){
+	  sum.deviance <- mean(sapply(1:extra.options$n.chains, function(x) return(mean(mcmc[[x]][,'deviance']))))
+	}
+	if(!'deviance'%in%extra.options$monitor && any(varnames=='deviance')){
+		for(i in 1:extra.options$n.chains){
 		  mcmc[[i]] <- mcmc[[i]][,-which(varnames=='deviance'),drop=FALSE]
 		}
 	}
 	mcmc <- as.mcmc.list(mcmc)
-	
+		
 	fullsumpd <- NA
 	if(any(c("pD",'full.pd')%in%names(samples))){
 		fullsumpd <- mcmc(matrix(unlist(samples[names(samples)=='pD']),ncol=1,dimnames=list(NULL,"pD")), start=extra.options$burnin+1, thin=extra.options$thin)
@@ -1009,7 +1011,7 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 		dimnames(samplers)[[2]] <- c('Index.No', 'Sampler', 'Node')
 		samplers$Index.No <- as.numeric(samplers$Index.No)	
 		}, silent=TRUE)
-	if(class(success)=='try-error'){
+	if(inherits(success, 'try-error')){
 		# warning('There was an error retrieving the samplers',call.=FALSE)
 		# This is dealt with elsewhere
 		samplers <- NA
@@ -1282,9 +1284,8 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			swcat("Unable to call JAGS using '", jags, "' - try specifying the path to the JAGS binary as the jags argument, or using the rjags method.  Use the testjags() function for more detailed diagnostics.\n", sep="")
 			stop("Unable to call JAGS", call.=FALSE)
 		}
-		if(method%in%runjagsprivate$rjagsmethod && !requireNamespace("rjags")){
-			swcat("The rjags package was not found, either install the rjags package or use another method\n", sep="")
-			stop("The rjags package was not found", call.=FALSE)
+		if(method%in%runjagsprivate$rjagsmethod){
+			loadandcheckrjags(stop=TRUE)
 		}
 	
 		if(jags.status$JAGS.major=="unknown" | is.na(jags.status$JAGS.major)){

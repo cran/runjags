@@ -499,9 +499,13 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		data <- dump.format(extradata)
 	}
 	
-	modules <- c('dic', 'glm')
+	if(zifamily){
+		modules <- c('dic', 'glm')
+	}else{
+		modules <- c('glm')
+	}
 	factories <- ''
-	monitor <- c(varnames[!varnames%in%c('non_zero_group','zero_inflation_intercept')], if(zifamily) 'non_zero_propotion', 'deviance', 'dic', 'resid.sum.sq')
+	monitor <- c(varnames[!varnames%in%c('non_zero_group','zero_inflation_intercept')], if(zifamily) 'non_zero_propotion' else c('deviance', 'dic'), 'resid.sum.sq')
 	
 	# Over-write inits with values we have been given:
 	for(c in 1:n.chains){

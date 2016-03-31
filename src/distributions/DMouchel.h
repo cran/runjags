@@ -26,6 +26,9 @@
 #ifndef DMOUCH_H_
 #define DMOUCH_H_
 
+// Checks the JAGS version and sets necessary macros:
+#include "../jagsversions.h"
+
 #ifndef INCLUDERSCALARDIST
 #include <distribution/RScalarDist.h>
 namespace jags {
