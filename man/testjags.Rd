@@ -42,7 +42,8 @@ installs found on the user's system (returned invisibly).}
 
 \examples{ 
 # Run the function to determine if JAGS is installed: 
-testjags() 
+testjags()
+testjags('some/jags/path') 
 }
 
 \keyword{methods}

@@ -123,9 +123,7 @@ makerunjagsobject <- function(combinedoutput, summarise, summaryargs, burnin, sa
 	if(is.na(summarise)) summarise <- TRUE
 	# If too many vars (>50?), don't summarise or plot unless forced to:
 	if(summarise && !runjags.getOption('force.summary') && nvar(combinedoutput$mcmc)>50){
-		# Don't produce the warning - it breaks one of the tests (fb('Check that summary statistics arent calculated for >50 variables (and it can be overridden)') for a start
-#		if(!silent)
-#			warning("Summary statistics were not produced as there are >50 monitored variables - to override this behaviour see ?add.summary and ?runjags.options", call.=FALSE)
+		swcat("Note: Summary statistics were not produced as there are >50 monitored variables\n[To override this behaviour see ?add.summary and ?runjags.options]", call.=FALSE)
 		summarise <- FALSE
 	}
 		

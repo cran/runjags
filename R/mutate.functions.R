@@ -23,6 +23,10 @@
 #' @param vars an optional character vector of variable names.  If supplied, only variable names in the object supplied with a partial match to anything in 'vars' will be used.  Note that regular expressions are not allowed, but the caret (^) token can be used to specify the match at the start of a variable name, and a quoted vars will be matched exactly.  Default NA meaning all variables available are returned.
 NULL
 
+#' @references
+#' Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
+
+
 
 #' @rdname mutate.functions
 contrasts.mcmc <- function(x, vars){

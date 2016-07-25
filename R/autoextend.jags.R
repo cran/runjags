@@ -123,12 +123,16 @@
 
 #' @param batch.jags option to call JAGS in batch mode, rather than using input redirection.  On JAGS >= 3.0.0, this suppresses output of the status which may be useful in some situations.  Default TRUE if silent.jags is TRUE, or FALSE otherwise.
 
-#' @param method the method with which to call JAGS; probably a character vector specifying one of 'rjags', 'simple', 'interruptible', 'parallel', 'rjparallel', or 'snow'. The 'rjags' and 'rjparallel' methods run JAGS using the rjags package, whereas other options do not require the rjags package and call JAGS as an external executable.  The advantage of the 'rjags' method is that the model will not need to be recompiled between successive calls to extend.jags, all other methods require a re-compilation (and adaptation if necessary) every time the model is extended.  The 'parallel' and 'interruptible' methods for Windows require XP Professional, Vista or later (or any Unix-alike).  For more information refer to the userguide vignette.
+#' @param method the method with which to call JAGS; probably a character vector specifying one of 'rjags', 'simple', 'interruptible', 'parallel', 'rjparallel', or 'snow'. The 'rjags' and 'rjparallel' methods run JAGS using the rjags package, whereas other options do not require the rjags package and call JAGS as an external executable.  The advantage of the 'rjags' method is that the model will not need to be recompiled between successive calls to extend.jags, all other methods require a re-compilation (and adaptation if necessary) every time the model is extended.  Note that the 'rjparallel' and 'snow' methods may leave behind zombie JAGS processes if the user interrupts the R session used to start the simulations - for this reason the 'parallel' method is recommended for interactive use with parallel chains. The 'parallel' and 'interruptible' methods for Windows require XP Professional, Vista or later (or any Unix-alike).  For more information refer to the userguide vignette.
 
 #' @param method.options a deprecated argument currently permitted for backwards compatibility, but this will be removed from a future version of runjags.  Pass these arguments directly to autorun.jags or autoextend.jags. 
 
 #' @param ... summary parameters to be passed to \code{\link{add.summary}}, and/or additional options to control some methods including n.sims for parallel methods, cl for rjparallel and snow methods, remote.jags for snow, and by and progress.bar for the rjags method.
 NULL
+
+#' @references
+#' Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
+
 
 #' @rdname autorun.jags
 autorun.jags <- function(model, monitor = NA, data=NA, n.chains=NA, inits = NA, startburnin = 4000, startsample = 10000, adapt=1000, datalist=NA, initlist=NA, jags = runjags.getOption('jagspath'), silent.jags = runjags.getOption('silent.jags'), modules=runjags.getOption('modules'), factories=runjags.getOption('factories'), summarise = TRUE, mutate = NA, thin = 1, thin.sample = FALSE, raftery.options = list(), crash.retry=1, interactive=FALSE, max.time=Inf, tempdir=runjags.getOption('tempdir'), jags.refresh=0.1, batch.jags=silent.jags, method=runjags.getOption('method'), method.options=list(), ...){
@@ -491,7 +495,7 @@ autoextend.jags <- function(runjags.object, add.monitor=character(0), drop.monit
 				}	
 			}
 									
-			if(is.numeric(convergence$mpsrf)){
+			if(!is.numeric(convergence$mpsrf)){
 				mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
 			}else{
 				mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")

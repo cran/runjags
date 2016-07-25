@@ -225,7 +225,15 @@ new_unique <- function(name=NA, suffix="", ask=FALSE, prompt="A file or director
 
 timestring <- function(time1, time2=NA, units=NA, show.units=TRUE){
 	
-	time <- na.omit(c(time1, time2))
+	if(all(is.na(time1)) && all(is.na(time2))){
+		stop('Either one or both of time1, time2 must be specified as non-NA')
+	}else if(all(is.na(time2))){
+		time <- time1
+	}else if(all(is.na(time1))){
+		time <- time2
+	}else{
+		time <- c(time1, time2)
+	}
 	
 	if(length(time)==2){
 		time <- as.integer(difftime(time[2], time[1], units="secs")*10)
@@ -425,6 +433,7 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 	
 	if(jags=="JAGS not found") jags <- "findjags()"
 		
+	jags.major <- NA
 	if(success){
 		if(success==-1){
 			if(!silent) suppressWarnings(swcat("JAGS version ", version, " found successfully using the command '", jags, "', but returned the status code '", attributes(returnval)$status, "' - this may indicate a compatibility issue, procede with caution\n", sep=""))
@@ -438,16 +447,19 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 			jags.avail <- TRUE
 		}
 		jagsfound <- TRUE
+		jags.major <- floor(num.version)
 	}else{
 		if(rjags.avail){
 			if(!silent) suppressWarnings(swcat("JAGS was not found on your system using the command '", jags, "'.  Please ensure that the command is correct and that the latest version of JAGS is installed from http://mcmc-jags.sourceforge.net\n", sep=""))
 			jags.avail <- TRUE
 			# If it's just rjags assume the version number is high enough:
 			num.version <- Inf
+			jags.major <- NA
 		}else{
 			if(!silent) suppressWarnings(swcat("JAGS was not found on your system using the command '", jags, "'.  Please ensure that the command is correct.\n", sep=""))
 			jags.avail <- FALSE
-			num.version <- "none found"			
+			num.version <- "none found"	
+			jags.major <- NA
 		}
 		if(gui %in% c('RStudio', 'AQUA') && !silent)
 			swcat("Note that as of OS X Yosemite, the FULL path must be provided to JAGS as the $PATH global variable is not passed to processes started from within a GUI application\n", sep="")
@@ -483,7 +495,7 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 		swcat("The rjags package is not installed\n",sep="")
 	}
 		
-	invisible(list("os"=os, "JAGS.available"=jags.avail, "JAGS.found"=jagsfound, "rjags.found"=rjags.avail, "rjags.version"=rjags.version, "rjags.major"=rjags.major, "JAGS.path"=jags, "JAGS.version"=version, "JAGS.major"=floor(num.version), "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username, libpaths=libpaths))
+	invisible(list("os"=os, "JAGS.available"=jags.avail, "JAGS.found"=jagsfound, "rjags.found"=rjags.avail, "rjags.version"=rjags.version, "rjags.major"=rjags.major, "JAGS.path"=jags, "JAGS.version"=version, "JAGS.major"=jags.major, "R.version"=rversion, "R.GUI"=gui, "R.package.type"=p.type, "username"=username, libpaths=libpaths))
 }
 
 findJAGS <- findjags

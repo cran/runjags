@@ -18,7 +18,7 @@
 #' \code{\link{run.jags}} to run the model, \code{\link{add.summary}} for details of summary statistics available from the fitted model, and \code{\link{runjags-class}} for details of how to extract information such as residuals and the fitted values.
 
 #' @references 
-#' Lunn D, Jackson C, Best N, Thomas A, Spiegelhalter D (2012). The BUGS book: A practical introduction to Bayesian analysis. CRC press.
+#' Lunn D, Jackson C, Best N, Thomas A, Spiegelhalter D (2012). The BUGS book: A practical introduction to Bayesian analysis. CRC press; and Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
 
 #' @examples
 #' \dontrun{
@@ -151,7 +151,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	if(any(notfound))
 		stop(paste('The following offset term(s) was/were not found in the data: ', paste(offsets[notfound], collapse=', ')))	
 	
-	warnmissing <- FALSE
+	missingwarn <- FALSE
 		
 	randoms <- terms[grepl('|',terms,fixed=TRUE)]
 	if(any(sapply(strsplit(randoms,'|',fixed=TRUE), length)!=2))
@@ -174,7 +174,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 				madefactors <- c(madefactors, randoms[i])
 			}
 			if(any(is.na(data[[randoms[i]]])))
-				warnmissing <- TRUE
+				missingwarn <- TRUE
 		}
 	}
 	if(length(madefactors)>0)
@@ -190,7 +190,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	notfound <- ! allvars %in% names(data)
 	if(any(notfound))
 		stop(paste('The following term(s) is/are not in the data: ', paste(allvars[notfound], collapse=', ')))
-	warnmissing <- warnmissing || any(sapply(data[allvars], function(x) return(any(is.na(x)))))
+	missingwarn <- missingwarn || any(sapply(data[allvars], function(x) return(any(is.na(x)))))
 	
 	classes <- sapply(data[allvars], class)
 	# mode() rather than class() makes integer and double both numeric, but also makes factor numeric
@@ -220,11 +220,17 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		variances <- c(variances, variance)
 		if(abs(mean) > 0.1*variance)
 			centerwarn <- TRUE
+		
+		if(any(is.na(data[[allvars[i]]])))
+			missingwarn <- TRUE
 	}	
 	if(centerwarn)
 		warning('One or more numeric variables has a mean substantially different to 0 - it is highly recommended to centre predictor variables to aid convergence')
 	if(length(variances)>1 && any(variances/max(variances, na.rm=TRUE) < 0.01, na.rm=TRUE))
 		warning('There is a marked discrepancy in the variance of the numeric predictor variables - it may help convergence to re-scale predictor variables')
+
+	if(missingwarn)
+		warning('One or more of the predictor variables contains missing values - a prior distribution must be placed on these within the model before it will run. Alternatively, you can re-run the template.jags call after running na.omit on your data to remove the missing values.')
 	
 	# Now set up interactions
 	termtypes <- sapply(termvars, function(x){
@@ -331,7 +337,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 			ok <- TRUE
 		}
 		if(class(data[[response]])%in%c('logical','numeric','integer')){
-			if(any(abs(as.integer(data[[response]])-data[[response]])>0.001))
+			if(any(abs(as.integer(data[[response]])-data[[response]])>0.001, na.rm=TRUE))
 				stop('Unexpected non integer value in the numeric response variable (or Binomial_Total variable)')
 			data[[response]] <- as.integer(data[[response]])
 			if(all(data$Binomial_Total==1) && !all(data[[response]]%in%c(0,1), na.rm=TRUE))
@@ -350,7 +356,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	if(family=='poisson'){
 		if(!class(data[[response]])%in%c('numeric','integer'))
 			stop('The response variable class must be either numeric or integer for the Poisson family')
-		if(any(data[[response]]<0, na.rm=TRUE) || any(as.integer(data[[response]])!=data[[response]]))
+		if(any(data[[response]]<0, na.rm=TRUE) || any(as.integer(data[[response]])!=data[[response]], na.rm=TRUE))
 			stop('Only positive integers are allowed in the response variable for the Poisson family')
 		respline <- paste('\t', response, '[i] ~ dpois(regression_fitted[i])\n\tregression_residual[i] <- ', response, '[i] - regression_fitted[i]\n\t', if(zifamily) 'regression_fitted[i] <- non_zero_regression[i] * non_zero_group[i]\n\tlog(non_zero_regression[i]) <- ' else 'log(regression_fitted[i]) <- ', sep='')
 		priorline <- ''		
@@ -358,14 +364,14 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	if(family=='nb'){
 		if(!class(data[[response]])%in%c('numeric','integer'))
 			stop('The response variable class must be either numeric or integer for the Negative Binomial family')
-		if(any(data[[response]]<0, na.rm=TRUE) || any(as.integer(data[[response]])!=data[[response]]))
+		if(any(data[[response]]<0, na.rm=TRUE) || any(as.integer(data[[response]])!=data[[response]], na.rm=TRUE))
 			stop('Only positive integers are allowed in the response variable for the Poisson family')
 		respline <- paste('\t', response, '[i] ~ dpois(regression_fitted[i])\n\tregression_residual[i] <- ', response, '[i] - regression_fitted[i]\n\tdispersion[i] ~ dgamma(k, k)\n\tregression_fitted[i] <- regression_mean[i] * dispersion[i]', if(zifamily) ' * non_zero_group[i]', '\n\t# Note: this formulation of a gamma-Poisson is exactly equivalent to a Negative Binomial\n\tlog(regression_mean[i]) <- ', sep='')
 		priorline <- paste('k ~ ', precision.prior, '\n\t# Note: the prior for the diserpsion parameter k is quite important for convergence\n\t# [A DuMouchel prior may be better than a Gamma prior]\n', sep='')
 		varnames <- c(varnames, 'k')
 		signs <- sample(precision.inits, n.chains, replace=TRUE)
 		for(c in 1:n.chains)
-			varvalues[[c]] <- c(varvalues[[c]], list(signs[c]))		
+			varvalues[[c]] <- c(varvalues[[c]], list(signs[c]))
 	}
 	if(intercept!=0){
 		respline <- paste(respline, 'intercept + ', sep='')

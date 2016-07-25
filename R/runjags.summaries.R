@@ -109,7 +109,7 @@ runjags.summaries <- function(fullmcmclist, thinnedmcmclist, psrf.target, normal
 			}
 
 			if(n.chains > 1 && n.iter > 1){
-				if(class(convergence$mpsrf)!="numeric"){
+				if(!is.numeric(convergence$mpsrf)){
 					mpsrfstring <- " (Unable to calculate the multi-variate psrf)"
 				}else{
 					mpsrfstring <- paste(" (multi-variate psrf = ", round(convergence$mpsrf, digits=3), ")", sep="")

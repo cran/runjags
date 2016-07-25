@@ -25,6 +25,8 @@
 #' @param ... other arguments which are passed to the default print method for some methods but ignored (with/without a warning) for others
 NULL
 
+#' @references
+#' Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
 
 
 #' @rdname runjags.printmethods

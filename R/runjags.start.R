@@ -82,7 +82,8 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 	}	
 	
 	outfile <- ''
-	if(identical(cl, NA)){
+	makecluster <- identical(cl, NA)
+	if(makecluster){
 		outfile <- tempfile()
 		cl <- parallel::makeCluster(n.sims, type=if(.Platform$OS.type=='unix') 'FORK' else 'PSOCK', outfile=outfile)
 		on.exit({
@@ -218,10 +219,20 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		return(list(mcmc=mcmc, end.state=end.state, samplers=samplers, adaptdone=adaptdone))
 	
 	}
+
+	on.exit(warning('The parent function call was interrupted before the JAGS simulations finished - this may leave zombie JAGS processes still working in the background!  Use the "parallel" method for interactive sessions with parallel JAGS chains.', call.=FALSE), add=TRUE)
 	success <- try({
 		allm <- parLapply(cl,1:n.sims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
 		#	allm <- lapply(1:n.sims,clfun,model=model,data=data,inits=inits,extra.options=extra.options,monitor=monitor)
 	}, silent=TRUE)
+	on.exit()
+	if(makecluster){
+		on.exit({
+			stopCluster(cl)
+			unlink(outfile)
+		})
+	}
+
 	if(inherits(success, 'try-error')){
 		if(!file.exists(outfile))
 			err <- paste("One or more rjags sessions failed with the following error:\n",as.character(success),'\nHave you remembered to specify all required modules and factories?',sep='')
@@ -407,7 +418,8 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 		}
 		
 		outfile <- ''
-		if(identical(cl, NA)){
+		makecluster <- identical(cl, NA)
+		if(makecluster){
 			outfile <- tempfile()
 			cl <- parallel::makeCluster(n.sims, type=if(.Platform$OS.type=='unix') 'FORK' else 'PSOCK', outfile=outfile)
 			on.exit({
@@ -426,7 +438,8 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 			unlink(paste('sim',1:n.sims,sep='.'), recursive=TRUE)
 			cat('Forcing file recreation for snow method\n')
 		}
-		
+
+		on.exit(warning('The parent function call was interrupted before the JAGS simulations finished - this may leave zombie JAGS processes still working in the background! Use the "parallel" method for interactive sessions with parallel JAGS chains.', call.=FALSE), add=TRUE)
 		success <- try({
 			if(runjags.getOption('debug')>=100){
 				warning('Using lapply in debug mode for snow')
@@ -435,6 +448,14 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 				returns <- parLapply(cl, 1:n.sims, f, files=files, jags=jags, batch.jags=batch.jags, silent.jags=silent.jags, path=thed)
 			}
 		}, silent=TRUE)
+		on.exit()
+		if(makecluster){
+			on.exit({
+				stopCluster(cl)
+				unlink(outfile)
+			})
+		}
+		
 		if(inherits(success, 'try-error')){
 			if(!file.exists(outfile))
 				err <- paste("One or more snow sessions failed with the following error:\n",as.character(success),'\n',sep='')

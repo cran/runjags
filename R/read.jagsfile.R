@@ -14,6 +14,9 @@
 #' @seealso
 #' \code{\link{read.jagsfile}} and \code{\link{run.jags}} for the reverse operation
 
+#' @references 
+#' Lunn D, Jackson C, Best N, Thomas A, Spiegelhalter D (2012). The BUGS book: A practical introduction to Bayesian analysis. CRC press; and Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
+
 #' @examples
 
 #' # Set up a model:
@@ -55,9 +58,6 @@
 #' results <- run.jags(filepath)
 #' 
 #' }
-
-#' @references 
-#' Lunn D, Jackson C, Best N, Thomas A, Spiegelhalter D (2012). The BUGS book: A practical introduction to Bayesian analysis. CRC press.
 
 
 #' @param runjags.object a valid (but not necessarily updated) runjags object to be saved to file.  No default.

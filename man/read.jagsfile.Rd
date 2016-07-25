@@ -117,9 +117,6 @@ an example of the formatting allowed
 
 
 \examples{
-
-
-
 # ALL SYNTAX GIVEN BELOW IS EQUIVALENT
 
 # Use a modified WinBUGS text file with manual inits and manual data and
@@ -225,6 +222,10 @@ results <- run.jags(string, n.chains=2)
 
 
 
+}
+
+\references{
+Lunn D, Jackson C, Best N, Thomas A, Spiegelhalter D (2012). The BUGS book: A practical introduction to Bayesian analysis. CRC press; and Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
 }
 
 \keyword{methods}

@@ -5,7 +5,7 @@ dump.format <- function(namedlist=list(), checkvalid=TRUE, convertfactors=TRUE){
 	if(identical(data, list()))
 		return('')
 	
-	if(length(data)==2 & is.null(names(data)) & class(data[[1]])=="character" & length(data[[1]])==1){  # allows old style dump.format (length = 1)
+	if(length(data)==2 & is.null(names(data)) & is.character(data[[1]]) & length(data[[1]])==1){  # allows old style dump.format (length = 1)
 		names <- data
 		data <- list(data[[2]])
 		names(data) <- names[[1]]

@@ -1,17 +1,19 @@
-citHeader("Please cite the 'runjags' package in publications as:")
-
-year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date)
-vers <- paste("R package version", meta$Version)
-
-citEntry(entry="article",
-         title = "runjags: An R package providing interface utilities, model templates, parallel computing methods and additional distributions for MCMC models in JAGS",
-         author = personList(as.person("M. J. Denwood")),
-         year = "in press",
-		 journal = "Journal of Statistical Software",
-		 url = "http://runjags.sourceforge.net",
-         textVersion = "M. J. Denwood (in press). runjags: An R package providing interface utilities, 
-		 parallel computing methods and additional distributions for MCMC models in JAGS.  
-		 Journal of Statistical Software.  URL: http://runjags.sourceforge.net"
-		 )
-
-
+bibentry(bibtype = "Article",
+  title        = "{runjags}: An {R} Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for {MCMC} Models in {JAGS}",
+  author       = person(given = c("Matthew", "J."),
+                        family = "Denwood",
+                        email = "md@sund.ku.dk"),
+  journal      = "Journal of Statistical Software",
+  year         = "2016",
+  volume       = "71",
+  number       = "9",
+  pages        = "1--25",
+  doi          = "10.18637/jss.v071.i09",
+  
+  header       = "To cite runjags in publications use:",
+  textVersion  =
+  paste("Matthew J. Denwood (2016).",
+        "runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS.",
+        "Journal of Statistical Software, 71(9), 1-25.",
+        "doi:10.18637/jss.v071.i09")
+)
