@@ -1364,8 +1364,8 @@ expandindexnames <- function(names){
 	if(length(toret)==0 || identical(toret, '') || identical(toret, NA))
 	  return(toret)
 	
-	if(grepl(',,',toret,fixed=TRUE) || grepl('[,',toret,fixed=TRUE) || grepl(',]',toret,fixed=TRUE))
-		stop(paste('Ambiguous index entry provided for variable(s) ', paste(toret[grepl(',,',toret,fixed=TRUE) || grepl('[,',toret,fixed=TRUE) || grepl(',]',toret,fixed=TRUE)], collapse=', '), ' - ensure that all indices are specified using a colon (e.g. var[1:2,1])', sep=''), call.=FALSE)
+	if(any(grepl(',,',toret,fixed=TRUE) | grepl('[,',toret,fixed=TRUE) | grepl(',]',toret,fixed=TRUE)))
+		stop(paste('Ambiguous index entry provided for variable(s) ', paste(toret[grepl(',,',toret,fixed=TRUE) | grepl('[,',toret,fixed=TRUE) | grepl(',]',toret,fixed=TRUE)], collapse=', '), ' - ensure that all indices are specified using a colon (e.g. var[1:2,1])', sep=''), call.=FALSE)
 	
 	return(toret)	
 }

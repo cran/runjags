@@ -276,9 +276,18 @@ runjags.summaries <- function(fullmcmclist, thinnedmcmclist, psrf.target, normal
 		if(!any(names(modeest.opts)=='tie.limit'))
 			modeest.opts$tie.limit <- Inf
 		modeest.opts$MARGIN <- 2
-		modeest.opts$FUN <- function(x, ...){
-			return(modeest::mlv(x, ...)$M[1])
+
+		# Account for breaking change in modeest version 2.3.2:
+		if(packageVersion('modeest') >= 2.3){
+			modeest.opts$FUN <- function(x, ...){
+				return(modeest::mlv(x, ...))
+			}
+		}else{
+			modeest.opts$FUN <- function(x, ...){
+				return(modeest::mlv(x, ...)$M[1])
+			}
 		}
+		
 		modeest.opts$X <- collapsed[,is.na(modestats)&!nonstochastic,drop=FALSE]
 		modestats[is.na(modestats)&!nonstochastic] <- do.call('apply', args=modeest.opts)
 	}

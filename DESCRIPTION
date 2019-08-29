@@ -1,6 +1,6 @@
 Package: runjags
-Version: 2.0.4-2
-Date: 2016-07-25
+Version: 2.0.4-4
+Date: 2019-08-29
 Title: Interface Utilities, Model Templates, Parallel Computing Methods
         and Additional Distributions for MCMC Models in JAGS
 Authors@R: c(person("Matthew", "Denwood", role=c("aut","cre"), email="md@sund.ku.dk"),
@@ -23,13 +23,12 @@ Description: User-friendly interface utilities for MCMC models via
     the half-Cauchy prior.
 License: GPL-2
 URL: http://runjags.sourceforge.net
-RoxygenNote: 5.0.1
 NeedsCompilation: yes
-Packaged: 2016-07-25 14:12:17 UTC; matthewdenwood
+Packaged: 2019-08-29 14:13:21 UTC; matthewdenwood
 Author: Matthew Denwood [aut, cre],
   Martyn Plummer [cph] (Copyright holder of the code in
     /src/distributions/jags, src/distributions/DPar1.*, configure.ac,
     and original copyright holder of some modified code where
     indicated)
 Repository: CRAN
-Date/Publication: 2016-07-25 20:30:21
+Date/Publication: 2019-08-29 15:50:02 UTC

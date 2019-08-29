@@ -154,7 +154,7 @@ userunjagsmodule <- function(distribution, funtype, parameters, x, uselog=FALSE,
 	values <- numeric(N)
 
 	# Having problems with bools on sparc, so use ints here:
-	output <- .C('testrunjags',PACKAGE='runjags',disttype=as.integer(disttype),dpqr=as.integer(dpqr),uselog=as.integer(uselog),lower=as.integer(lower),N=as.integer(N), x=as.double(x),npars=as.integer(npars),parameters=as.double(parameters),values=as.double(values),status=integer(1))
+	output <- .C("testrunjags",disttype=as.integer(disttype),dpqr=as.integer(dpqr),uselog=as.integer(uselog),lower=as.integer(lower),N=as.integer(N), x=as.double(x),npars=as.integer(npars),parameters=as.double(parameters),values=as.double(values),status=integer(1),PACKAGE='runjags')
 
 	if(output$status==1) stop("Incorrect number of parameters provided")
 	if(output$status==2) stop("Unrecognised distribution type")

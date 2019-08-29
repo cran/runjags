@@ -16,6 +16,13 @@
 ###
 ######################################################################################################
 
+## Conditionally set the JAGS_ROOT variable (if it is not already set) to a location specified by the CRAN team:
+JAGS_ROOT ?= /c/progra~1/JAGS/JAGS-4.3.0
+
+## Use the old ABI to match JAGS 4.x compilation on Windows:
+PKG_CXXFLAGS = -D_GLIBCXX_USE_CXX11_ABI=0
+## Note: this behaviour will be changed (and runjags updated) before JAGS 5 is released
+## If you are trying to compile this version of runjags against JAGS 5 you may need to remove this PKG_CXXFLAGS line
 
 ###############
 ###  Flags
@@ -66,7 +73,7 @@ PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-$(JAGS_MAJOR)
 ### NB: the objects in distributions/jags are only necessary for JAGS <=3, and are excluded by the sources when compiling against JAGS >= 4
 ###############
 
-OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o init.o runjags.o testrunjags.o
 
 ###############
 
@@ -79,11 +86,11 @@ OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distri
 ### For JAGS major version <= 3:
 # PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include" -D INCLUDERSCALARDIST
 # PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-3
-# OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+# OBJECTS = distributions/jags/DFunction.o distributions/jags/DPQFunction.o distributions/jags/PFunction.o distributions/jags/QFunction.o distributions/jags/RScalarDist.o distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o init.o runjags.o testrunjags.o
 
 ### For JAGS major version >=4:
 # PKG_CPPFLAGS=-I"$(JAGS_ROOT)/include"
 # PKG_LIBS=-L"$(JAGS_ROOT)/${R_ARCH}/bin" -ljags-4
-# OBJECTS = distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o runjags.o testrunjags.o
+# OBJECTS = distributions/DPar1.o distributions/DPar2.o distributions/DPar3.o distributions/DPar4.o distributions/DLomax.o distributions/DMouchel.o distributions/DGenPar.o distributions/DHalfCauchy.o init.o runjags.o testrunjags.o
 
 ###############
