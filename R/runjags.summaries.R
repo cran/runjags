@@ -53,7 +53,7 @@ runjags.summaries <- function(fullmcmclist, thinnedmcmclist, psrf.target, normal
 	options(show.error.messages = FALSE)
 	success <- try({
 	  suppressWarnings(tsummary <- summary(combine.mcmc(thinnedmcmclist, collapse.chains=FALSE)))
-	  if(class(tsummary$statistics)=="numeric"){
+	  if(inherits(tsummary$statistics, "numeric")){
 	    tsummary$statistics <- t(as.matrix(tsummary$statistics))
 	    dimnames(tsummary$statistics)[[1]] <- varnames(thinnedmcmclist)
 	    tsummary$quantiles <- t(as.matrix(tsummary$quantiles))

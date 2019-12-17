@@ -101,7 +101,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	# May change this, but only for write.data:
 	convertstrings <- FALSE
 	
-	if(class(family)!='character')
+	if(!inherits(family,'character'))
 		stop('Invalid family specification - a character string must be supplied')
 	possibles <- c('gaussian','binomial','poisson','nb','negative binomial','zib','zip','zinb')
 	family <- possibles[pmatch(tolower(family), possibles)]
@@ -169,7 +169,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		if(any(notfound))
 			stop(paste('The following random effects term(s) was/were not found in the data: ', paste(randoms[notfound], collapse=', ')))
 		for(i in 1:length(randoms)){
-			if(class(data[[randoms[i]]])!='factor'){
+			if(!inherits(data[[randoms[i]]], 'factor')){
 				data[[randoms[i]]] <- factor(data[[randoms[i]]])
 				madefactors <- c(madefactors, randoms[i])
 			}
@@ -286,7 +286,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	extradata <- list(N=nrow(data))
 	# Check the response variable:
 	if(family=='gaussian'){
-		if(!class(data[[response]])%in%c('numeric','integer'))
+		if(!inherits(data[[response]], c('numeric','integer')))
 			stop('The response variable class must be either numeric or integer for the Gaussian family')
 		respline <- paste('\t', response, '[i] ~ dnorm(regression_fitted[i], regression_precision)\n\tregression_residual[i] <- ', response, '[i] - regression_fitted[i]\n\tregression_fitted[i] <- ', sep='')
 		priorline <- paste('regression_precision ~ ', precision.prior, '\n', sep='')
@@ -299,7 +299,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		if(length(offsets)>0)
 			warning('Using an offset() with a logistic regression model is not recommended - did you mean to specify the response variable as a matrix with columns for successes and failures?')
 		ok <- FALSE
-		if(class(data[[response]])=='matrix'){
+		if(inherits(data[[response]], 'matrix')){
 			if(ncol(data[[response]])!=2)
 				stop('If the response is a matrix, it must have exactly 2 columns')
 			data$Binomial_Total <- data[[response]][,1]+data[[response]][,2]
@@ -327,16 +327,16 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		if(all(data$Binomial_Total==1) && zifamily)
 			stop('The ZIB model is only available for data with multiple trials - try specifying the data as a matrix, or using Binomial_Total to denote the total number of trials')
 		
-		if(!write.data && class(data[[response]])%in%c('factor','logical'))
+		if(!write.data && inherits(data[[response]], c('factor','logical')))
 			stop('The data must be written to file when supplying a Binomial response as a factor or logical')
 		
-    	if(class(data[[response]])=='factor'){
+    	if(inherits(data[[response]], 'factor')){
 			data[[response]] <- as.numeric(data[[response]])-1
 			if(any(data[[response]]>1, na.rm=TRUE))
 				warning('Grouping factor levels 2 and above in the response variable')
 			ok <- TRUE
 		}
-		if(class(data[[response]])%in%c('logical','numeric','integer')){
+		if(inherits(data[[response]], c('logical','numeric','integer'))){
 			if(any(abs(as.integer(data[[response]])-data[[response]])>0.001, na.rm=TRUE))
 				stop('Unexpected non integer value in the numeric response variable (or Binomial_Total variable)')
 			data[[response]] <- as.integer(data[[response]])
@@ -354,7 +354,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		extradata <- c(extradata, list(Binomial_Total=data$Binomial_Total))
 	}
 	if(family=='poisson'){
-		if(!class(data[[response]])%in%c('numeric','integer'))
+		if(!inherits(data[[response]], c('numeric','integer')))
 			stop('The response variable class must be either numeric or integer for the Poisson family')
 		if(any(data[[response]]<0, na.rm=TRUE) || any(as.integer(data[[response]])!=data[[response]], na.rm=TRUE))
 			stop('Only positive integers are allowed in the response variable for the Poisson family')
@@ -362,7 +362,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		priorline <- ''		
 	}
 	if(family=='nb'){
-		if(!class(data[[response]])%in%c('numeric','integer'))
+		if(!inherits(data[[response]], c('numeric','integer')))
 			stop('The response variable class must be either numeric or integer for the Negative Binomial family')
 		if(any(data[[response]]<0, na.rm=TRUE) || any(as.integer(data[[response]])!=data[[response]], na.rm=TRUE))
 			stop('Only positive integers are allowed in the response variable for the Poisson family')

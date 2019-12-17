@@ -24,6 +24,16 @@ Implement concurrent trace, mean and variance monitors
 VERSION HISTORY
 
 
+Version 2.0.4-6
+
+Update required by CRAN due to change in the behaviour of class(c('matrix','array'))
+
+
+Version 2.0.4-4
+
+Update required by CRAN to allow compilation on the new toolchain for Windows 
+
+
 Version 2.0.4
 
 NEW FEATURES

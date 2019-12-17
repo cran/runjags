@@ -1483,13 +1483,13 @@ checkvalidforjags <- function(object){
 		if(length(x)==0){
 			return("length zero")
 		}
-		if(class(x)=="logical" && !all(is.na(x))){
+		if(inherits(x, "logical") && !all(is.na(x))){
 			return("TRUE/FALSE")
 		}
-		if(class(x)=="character" && !all(is.na(x))){
+		if(inherits(x,"character") && !all(is.na(x))){
 			return("character")
 		}
-		if(class(x)=="factor" && !all(is.na(x))){
+		if(inherits(x,"factor") && !all(is.na(x))){
 			return("factor")
 		}
 		if(any(x==Inf, na.rm=TRUE)){
