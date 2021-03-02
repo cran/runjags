@@ -1,16 +1,11 @@
 Package: runjags
-Version: 2.0.4-6
-Date: 2019-12-16
 Title: Interface Utilities, Model Templates, Parallel Computing Methods
         and Additional Distributions for MCMC Models in JAGS
+Version: 2.2.0-2
+Date: 2021-03-01
 Authors@R: c(person("Matthew", "Denwood", role=c("aut","cre"), email="md@sund.ku.dk"),
-             person("Martyn", "Plummer", role="cph", comment="Copyright holder of the code in /src/distributions/jags, src/distributions/DPar1.*, configure.ac, and original copyright holder of some modified code where indicated"))
-Maintainer: Matthew Denwood <md@sund.ku.dk>
-Depends: R (>= 2.14.0)
-Imports: parallel, lattice (>= 0.20-10), coda (>= 0.17-1), stats, utils
-Suggests: rjags, modeest, knitr
-VignetteBuilder: knitr
-SystemRequirements: JAGS (http://mcmc-jags.sourceforge.net)
+             person("Martyn", "Plummer", role="cph", 
+             comment="Copyright holder of the code in src/distributions/DPar1.*, configure.ac, R/rjags_functions.R, and original copyright holder of some modified code where indicated"))
 Description: User-friendly interface utilities for MCMC models via
     Just Another Gibbs Sampler (JAGS), facilitating the use of parallel
     (or distributed) processors for multiple chains, automated control
@@ -21,14 +16,26 @@ Description: User-friendly interface utilities for MCMC models via
     BUGS syntax.  A JAGS extension module provides additional distributions
     including the Pareto family of distributions, the DuMouchel prior and
     the half-Cauchy prior.
+URL: https://github.com/ku-awdc/runjags
+BugReports: https://github.com/ku-awdc/runjags/issues
 License: GPL-2
-URL: http://runjags.sourceforge.net
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1.9000
+SystemRequirements: JAGS >= 4.3.0 (http://mcmc-jags.sourceforge.net)
+Depends: R (>= 2.14.0)
+Imports: parallel, lattice (>= 0.20-10), coda (>= 0.17-1), stats, utils
+Suggests: rjags (>= 4-7), modeest, testthat (>= 3.0.0), knitr,
+        markdown, spelling
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Language: en-GB
 NeedsCompilation: yes
-Packaged: 2019-12-16 19:52:03 UTC; matthewdenwood
+Packaged: 2021-03-02 12:45:10 UTC; matthewdenwood
 Author: Matthew Denwood [aut, cre],
   Martyn Plummer [cph] (Copyright holder of the code in
-    /src/distributions/jags, src/distributions/DPar1.*, configure.ac,
-    and original copyright holder of some modified code where
-    indicated)
+    src/distributions/DPar1.*, configure.ac, R/rjags_functions.R, and
+    original copyright holder of some modified code where indicated)
+Maintainer: Matthew Denwood <md@sund.ku.dk>
 Repository: CRAN
-Date/Publication: 2019-12-17 08:30:02 UTC
+Date/Publication: 2021-03-02 20:40:02 UTC

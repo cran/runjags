@@ -1,6 +1,6 @@
 ######################################################################################################
 ###
-###  This file is based on that in the rjags package (version 3-10)
+###  This file is based on that in the rjags package (version 4-10)
 ###  Original file is Copyright (C) Martyn Plummer, licensed under GPL-2
 ###
 ###  This file allows compilation between JAGS 3 and 4 (or later) without modifying runjags.
@@ -9,7 +9,7 @@
 ###  
 ###  Once JAGS version 3 is obsolete, the module will be simplified to be dependent on JAGS >= 4
 ###  
-###  Matthew Denwood, 29th March 2016
+###  Matthew Denwood, 24th February 2021
 ###
 ######################################################################################################
 
@@ -20,8 +20,8 @@
 ###  JAGS_MAJOR_ASSUMED is not needed (always 0) on unix
 ###############
 
-PKG_CPPFLAGS = -I"@JAGS_INCLUDE@" -D JAGS_MAJOR_FORCED=0$(JAGS_MAJOR_VERSION) -D JAGS_MAJOR_ASSUMED=0
-PKG_LIBS=-L@JAGS_LIB@ -ljags @JAGS_RPATH@
+PKG_CPPFLAGS=@JAGS_CFLAGS@ -D JAGS_MAJOR_FORCED=0$(JAGS_MAJOR_VERSION) -D JAGS_MAJOR_ASSUMED=0
+PKG_LIBS=@JAGS_LIBS@ @JAGS_RPATH@
 
 ###############
 

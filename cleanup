@@ -3,7 +3,6 @@
 rm -f .DS_Store
 rm -f R/.DS_Store
 rm -f inst/.DS_Store
-rm -f inst/xgrid/.DS_Store
 rm -f inst/doc/.DS_Store
 rm -f man/.DS_Store
 rm -rf R/.svn

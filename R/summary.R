@@ -1,9 +1,6 @@
 #' @title Summary statistics and plot methods for runjags class objects
 #' @name add.summary
 #' @aliases add.summary summary.runjags plot.runjags
-#' @export
-#' @export print runjags
-#' @export plot runjags
 
 #' @description
 #' Objects of class \code{\link{runjags-class}} have specialised options available for print, plot and summary.  These allow various options for controlling how the output is presented, including sub-selection of variables of interest (using partial matching).
@@ -18,19 +15,17 @@
 #' @return
 #' The summary method returns a numeric matrix of summary statistics for each variable (invisibly for the print method), wheras the add.summary function returns an object of class \code{\link{runjags-class}} with the new sumamry statistics (and plots if selected) stored for future use.  Some summary statistics are only calculated for stochastic variables, but all monitored variables are shown in the output. The information returned as part of the summary is as follows:
 
-#' \describe{
-#' \item{LowerXX}{The lower confidence limit for the highest posterior density (HPD) credible interval, as calculated by \code{\link[coda]{HPDinterval}}. One or more confidence limits can be selected using the confidence argument - the default of 0.95 corresponds to 95\% credible intervals.}
-#' \item{Median}{The median value, as calculated by \code{\link[stats]{median}}.}
-#' \item{UpperXX}{The upper confidence limit for the highest posterior density (HPD) credible interval, as calculated by \code{\link[coda]{HPDinterval}}. One or more confidence limits can be selected using the confidence argument - the default of 0.95 corresponds to 95\% credible intervals.}
-#' \item{Mean}{The mean value, as calculated by \code{\link[base]{mean}}.}
-#' \item{SD}{The sample standard deviation, derived from \code{\link[stats]{var}}.}
-#' \item{Mode}{The mode of the variable. For discrete variables this is calculated using \code{\link[base]{table}}, and for continuous variables by \code{\link[modeest]{mlv}} if this package is installed - see the modeest.opts argument for more details.}
-#' \item{MCerr}{The Monte Carlo standard error associated with this variable, which is the standard error divided by the square root of the effective sample size as caulculated by \code{\link[coda]{effectiveSize}}.}
-#' \item{MC\%ofSD}{The Monte Carlo standard error expressed as a percentage of the standard deviation of the variable - a rule of thumb is that this should be less than approximately 5\%.}
-#' \item{SSeff}{The effective sample size as caulculated by \code{\link[coda]{effectiveSize}}.  An effective sample size of over 400 should correspond to an MCerr of less than 5\% of the sample standard deviation.}
-#' \item{AC.XX}{The autocorrelation of the sample, as calculated by \code{\link[coda]{autocorr.diag}}.  One or more lag values can be specified using the autocorr.lags argument - the default is 10 iterations.}
-#' \item{psrf}{The potential scale reduction factor of the Gelman-Rubin statistic autocorrelation of the sample, as calculated by \code{\link[coda]{autocorr.diag}}.  This is sometimes referred to as Rhat (or R-hat).  Note that any variables marked with a $ sign were stochastic in some chains but not in others - this usually indicates a problem with the model or sampler.}
-#' }
+#' * LowerXX The lower confidence limit for the highest posterior density (HPD) credible interval, as calculated by \code{\link[coda]{HPDinterval}}. One or more confidence limits can be selected using the confidence argument - the default of 0.95 corresponds to 95\% credible intervals.
+#' * Median The median value, as calculated by \code{\link[stats]{median}}.
+#' * UpperXX The upper confidence limit for the highest posterior density (HPD) credible interval, as calculated by \code{\link[coda]{HPDinterval}}. One or more confidence limits can be selected using the confidence argument - the default of 0.95 corresponds to 95\% credible intervals.
+#' * Mean The mean value, as calculated by \code{\link[base]{mean}}.
+#' * SD The sample standard deviation, derived from \code{\link[stats]{var}}.
+#' * Mode The mode of the variable. For discrete variables this is calculated using \code{\link[base]{table}}, and for continuous variables by \code{\link[modeest]{mlv}} if this package is installed - see the modeest.opts argument for more details.
+#' * MCerr The Monte Carlo standard error associated with this variable, which is the standard error divided by the square root of the effective sample size as caulculated by \code{\link[coda]{effectiveSize}}.
+#' * MC\%ofSD The Monte Carlo standard error expressed as a percentage of the standard deviation of the variable - a rule of thumb is that this should be less than approximately 5\%.
+#' * SSeff The effective sample size as caulculated by \code{\link[coda]{effectiveSize}}.  An effective sample size of over 400 should correspond to an MCerr of less than 5\% of the sample standard deviation.
+#' * AC.XX The autocorrelation of the sample, as calculated by \code{\link[coda]{autocorr.diag}}.  One or more lag values can be specified using the autocorr.lags argument - the default is 10 iterations.
+#' * psrf The potential scale reduction factor of the Gelman-Rubin statistic autocorrelation of the sample, as calculated by \code{\link[coda]{autocorr.diag}}.  This is sometimes referred to as Rhat (or R-hat).  Note that any variables marked with a $ sign were stochastic in some chains but not in others - this usually indicates a problem with the model or sampler.
 
 #' @references
 #' Matthew J. Denwood (2016). runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. Journal of Statistical Software, 71(9), 1-25. doi:10.18637/jss.v071.i09
@@ -46,7 +41,7 @@
 
 #' @param vars an optional character vector of variable names.  If supplied, only variable names in the object supplied with a partial match to anything in 'vars' will be used.  Note that regular expressions are not allowed, but the caret (^) token can be used to specify the match at the start of a variable name, and a quoted vars will be matched exactly.  Default NA meaning all variables available are returned.
 
-#' @param mutate either a function or a list with first element a function and remaining elements arguments to this function.  This can be used to add new variables to the posterior chains that are derived from the directly monitored variables in JAGS. This allows the variables to be summarised or extracted as part of the MCMC objects as if they had been calculated in JAGS, but without the computational or storage overheads associated with calculating them in JAGS directly.  The plot, summary and as.mcmc methods for runjags objects will automatically extract the mutated variables along with the directly monitored variables.  
+#' @param mutate either a function or a list with first element a function and remaining elements arguments to this function.  This can be used to add new variables to the posterior chains that are derived from the directly monitored variables in JAGS. This allows the variables to be summarised or extracted as part of the MCMC objects as if they had been calculated in JAGS, but without the computational or storage overheads associated with calculating them in JAGS directly.  The plot, summary and as.mcmc methods for runjags objects will automatically extract the mutated variables along with the directly monitored variables.
 
 #' @param psrf.target the desired cutoff for 'convergence' as determined Gelman and Rubin's convergence diagnostic (see \code{\link[coda]{gelman.diag}}).  This is somewhat arbitrary, but 1.05 is a commonly used figure.
 
@@ -98,54 +93,55 @@ NULL
 
 
 #' @rdname add.summary
+#' @export
 add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, normalise.mcmc = TRUE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(10), custom=NULL, silent.jags=runjags.getOption('silent.jags'), plots=runjags.getOption('predraw.plots'), plot.type=c('trace','ecdf','histogram','autocorr','key','crosscorr'), col=NA, summary.iters=20000, trace.iters=1000, separate.chains=FALSE, trace.options=list(), density.options=list(), histogram.options=list(), ecdfplot.options=list(), acplot.options=list()){
-	
+
 	# We may be passed some unevaluated function arguments from parent functions using getargs so evaluate everything here:
 	argnames <- names(formals(add.summary))
 	for(i in 1:length(argnames)){
-		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)		
+		success <- try(assign(argnames[i], eval(get(argnames[i]))), silent=TRUE)
 		if(inherits(success, 'try-error')){
 			stop(paste("object '", strsplit(as.character(success),split="'",fixed=TRUE)[[1]][2], "' not found", sep=""), call.=FALSE)
 		}
 	}
-	
+
 	if(identical(mutate, NA))
 		mutate <- runjags.object$summary.pars$mutate
-	
+
 	runjags.object <- checkvalidrunjagsobject(runjags.object)
 	if(niter(runjags.object$mcmc)<100 && !runjags.getOption('force.summary'))
 		stop("Cannot produce meaningful summary statistics with less than 100 samples")
-		
+
 	# Preserve original silent.jags:
 	sj <- runjags.object$summary.pars$silent.jags
 	if(is.null(sj))
 		sj <- silent.jags
-	
+
 	plot.type <- c("trace","density","key","ecdf","histogram","crosscorr","autocorr","all")[pmatch(tolower(plot.type), c("trace","density","key","ecdf","histogram","crosscorr","autocorr","all"))]
 
 	if(length(plot.type)==0 || any(is.na(plot.type))) stop("The plot.type options supplied must be in 'trace', 'density', 'key', 'ecdf', 'histogram', 'autocorr', 'crosscorr' or 'all'")
 	plot.type <- unique(plot.type)
-	
+
 	if(any(plot.type=="all")){
 		plot.type <- c("trace","density","key","ecdf","histogram","autocorr","crosscorr")
 	}
-	
+
 	# Add mutated variables to the mcmc list:
-	mcmc <- addmutated(runjags.object$mcmc, mutate)	
+	mcmc <- addmutated(runjags.object$mcmc, mutate)
 	monitor <- runjags.object$monitor   # This is only used to see if DIC is included
-	
+
 	if(!identical(vars, NA)){
 		mcmc <- combine.mcmc(mcmc, collapse.chains=FALSE, vars=vars, add.mutate=FALSE)
 	}
-	
+
 	if(summary.iters < 100) stop('Too small a value provided for summary.iters - this must be >=100')
-	
+
 	if(!silent.jags)
 		swcat('Calculating summary statistics...\n')
-	
+
 	thinnedmcmc <- combine.mcmc(mcmc, collapse.chains=FALSE, return.samples=min(niter(mcmc),summary.iters))
 	summariesout <- runjags.summaries(fullmcmclist=mcmc, thinnedmcmclist=thinnedmcmc, psrf.target = psrf.target, normalise.mcmc = normalise.mcmc, modeest.opts=modeest.opts, confidence=confidence, autocorr.lags=autocorr.lags, custom=custom, silent=silent.jags)
-	
+
 	if(plots && all(summariesout$nonstochastic)){
 		plots <- FALSE
 		if(runjags.getOption('summary.warning'))
@@ -156,36 +152,37 @@ add.summary <- function(runjags.object, vars=NA, mutate=NA, psrf.target = 1.05, 
 		if(runjags.getOption('summary.warning'))
 			warning('Unable to pre-draw plots with less than 2 iterations', call.=FALSE)
 	}
-	
+
 	if(plots){
-		# Don't do thin before sending to plots, otherwise the autocorr will be wrong			
+		# Don't do thin before sending to plots, otherwise the autocorr will be wrong
 		plotsout <- runjagsplots(mcmclist=thinnedmcmc[,!summariesout$nonstochastic,drop=FALSE], psrfs=summariesout$psrf$psrf[!summariesout$nonstochastic,], discrete=summariesout$discrete[!summariesout$nonstochastic], silent=silent.jags, trace='trace'%in%plot.type, density='density'%in%plot.type, histogram='histogram'%in%plot.type, ecdf='ecdf'%in%plot.type, autocorr='autocorr'%in%plot.type, crosscorr='crosscorr'%in%plot.type, key='key'%in%plot.type, col=col, trace.iters=min(trace.iters,niter(mcmc)), separate.chains=separate.chains, trace.options=trace.options, density.options=density.options, histogram.options=histogram.options, ecdfplot.options=ecdfplot.options, acplot.options=acplot.options)
 	}else{
 		msg <- "Predrawn plots not available - see ?add.summary or ?plot.runjags"
 		plotsout <- list(trace = msg, density = msg, histogram=msg, ecdfplot=msg, key=msg, acplot=msg, ccplot=msg)
 	}
-	
+
 	runjags.object <- runjags.object[! names(runjags.object)%in%names(summariesout)]
 	runjags.object <- runjags.object[! names(runjags.object)%in%names(plotsout)]
 	runjags.object <- runjags.object[! names(runjags.object)%in%c("summary.pars","summary.available")]
-	
+
 	newobj <- c(runjags.object, summariesout, plotsout, list(summary.available=TRUE, summary.pars=list(plots=plots, plot.type=plot.type, vars=vars, mutate=mutate, psrf.target=psrf.target, normalise.mcmc=normalise.mcmc, modeest.opts=modeest.opts, confidence=confidence, autocorr.lags=autocorr.lags, custom=custom, silent.jags=sj, col=col, trace.iters=trace.iters, separate.chains=separate.chains, trace.options=trace.options, density.options=density.options, histogram.options=histogram.options, ecdfplot.options=ecdfplot.options, acplot.options=acplot.options)))
 	class(newobj) <- 'runjags'
-	
+
 	return(newobj)
 
 }
 
 #' @rdname add.summary
+#' @method summary runjags
 summary.runjags <- function(object, ...){
-	
+
 	# Check ... doesn't contain plots
 	passed <- list(...)
 	if(any(names(passed)=='plots'))
 		stop('Cannot specify a "plots" argument for the summary method')
 	if(!identical(list(), passed) && (is.null(names(passed)) || any(names(passed)=='')))
 		stop('Unnamed extra arguments are not allowed')
-  
+
 	# If no summary saved this overrides everything:
 	if(identical(object$summary.pars, NULL) || !object$summary.available || !identical(passed, list())){
 		redo <- TRUE
@@ -193,48 +190,49 @@ summary.runjags <- function(object, ...){
 		# If not changing anything, we can just reprint the saved summary:
 		redo <- FALSE
 	}
-	
+
 	# Catches the special circumstance of previous vars=NA (all) and now a sub-selection:
 	if(identical(names(passed), "vars") && !is.null(object$summaries) && !is.null(object$summary.pars$vars) && object$summary.available && is.na(object$summary.pars$vars)){
 		vars <- checkvalidmonitorname(passed$vars)
 		selected <- matchvars(checkvalidmonitorname(vars),  varnames(as.mcmc.list(object)))
 		return(object$summaries[selected,,drop=FALSE])
-	}			
-	
+	}
+
 	passed$plots <- FALSE
 	passed$runjags.object <- object
 	if(redo)
 		object <- do.call('add.summary', passed)
-	
+
 	return(object$summaries)
 }
 
 
 #' @rdname add.summary
+#' @export
 plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","crosscorr"), vars=NA, layout=runjags.getOption('plot.layout'), new.windows=runjags.getOption('new.windows'), file="", mutate=NULL, col=NA, trace.iters=NA, separate.chains=NA, trace.options=NA, density.options=NA, histogram.options=NA, ecdfplot.options=NA, acplot.options=NA, ...){
-	
+
 	passed <- list(...)
   	if(length(passed)>0){
 		unused <- names(passed)
 		unused <- unused[! unused %in% names(formals(pdf))]
 		if(length(unused)>0)
-			stop(paste('unused argument(s) ', paste(unused,collapse=', '), sep=' '))	
+			stop(paste('unused argument(s) ', paste(unused,collapse=', '), sep=' '))
 	}
-	
+
   	plot.type <- c("trace","density","key","ecdf","histogram","crosscorr","autocorr","all")[pmatch(tolower(plot.type), c("trace","density","key","ecdf","histogram","crosscorr","autocorr","all"))]
 
 	if(length(plot.type)==0 || any(is.na(plot.type))) stop("The plot.type options supplied must be in 'trace', 'density', 'key', 'ecdf', 'histogram', 'autocorr', 'crosscorr' or 'all'")
 	plot.type <- unique(plot.type)
-	
+
 	if(any(plot.type=="all")){
 		plot.type <- c("trace","density","key","ecdf","histogram","autocorr","crosscorr")
 	}
-	
+
 	x <- checkvalidrunjagsobject(x)
-	
+
 	if(identical(separate.chains, NA)) separate.chains <- x$summary.pars$separate.chains
  	nchains <- nchain(x$mcmc)
-	
+
 	# Need to convert logical vars to the quoted varnames here to avoid problems with un-matched lengths:
 	if(is.logical(vars) && !all(is.na(vars))){
 		using <- vars
@@ -242,15 +240,15 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 		if(length(allvars)!=length(using)){
 			stop(paste("The length of the logical vector specified to 'vars' (", length(using), ") does not match the number of monitored variables (", length(allvars), ")", sep=""), call.=FALSE)
 		}
-		vars <- paste("'", allvars, "'", sep="")[using]		
+		vars <- paste("'", allvars, "'", sep="")[using]
 	}
-	
-	
+
+
   if(x$summary.pars$plots && all(plot.type %in% x$summary.pars$plot.type) && is.null(mutate) && identical(col, NA) && identical(trace.iters, NA) && identical(separate.chains, x$summary.pars$separate.chains) && identical(trace.options, NA) && identical(density.options, NA) && identical(histogram.options, NA) && identical(ecdfplot.options, NA) && identical(acplot.options, NA) && (identical(vars, NA) || !'crosscorr'%in%plot.type)){
 		# If vars != type then we have to redo crosscorr
 		nvars <- sum(!x$nonstochastic)
 	}else{
-		
+
 		# If we need to re-generate plots:
 		if(identical(trace.options, NA)) trace.options <- x$summary.pars$trace.options
 		if(identical(density.options, NA)) density.options <- x$summary.pars$density.options
@@ -259,12 +257,12 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 		if(identical(acplot.options, NA)) acplot.options <- x$summary.pars$acplot.options
 		if(identical(trace.iters, NA)) trace.iters <- x$summary.pars$trace.iters
 		if(identical(col, NA)) col <- x$summary.pars$col
-		
+
 		if(!x$summary.available || !is.null(mutate)){
 			# If we need to generate summaries as well (for stochastic):
 			swcat('Generating summary statistics and plots (these will NOT be saved for reuse)...\n')
 			x <- add.summary(x, vars=vars, mutate=mutate, psrf.target = 1.05, normalise.mcmc = FALSE, modeest.opts=list(), confidence=c(0.95), autocorr.lags=c(1), custom=NULL, silent.jags=runjags.getOption('silent.jags'), plots=TRUE, col=col, summary.iters=trace.iters, trace.iters=trace.iters, separate.chains=separate.chains, trace.options=trace.options, density.options=density.options, histogram.options=histogram.options, ecdfplot.options=ecdfplot.options, acplot.options=acplot.options)
-			nvars <- sum(!x$nonstochastic)	
+			nvars <- sum(!x$nonstochastic)
 		}else{
 			# Otherwise just get plots:
 
@@ -272,49 +270,49 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 				stop('Unable to produce plots - all variables are non-stochastic', call.=FALSE)
 			if(niter(x$mcmc)==1)
 				stop('Unable to produce plots with less than 2 iterations', call.=FALSE)
-			
+
 			selected <- matchvars(checkvalidmonitorname(vars),  names(x$nonstochastic))
 			toselect <- logical(length(x$nonstochastic))
 			toselect[selected] <- TRUE
-			
+
 			if(sum(toselect & !x$nonstochastic)==0)
 				stop('Unable to produce plots - all selected variables are non-stochastic', call.=FALSE)
-			
+
 			# We need to re-add the mutated variables to the mcmc list - this will match the summary stats but isn't saved:
 			mcmc <- addmutated(x$mcmc, x$summary.pars$mutate)
-			
+
 			nvars <- sum(!x$nonstochastic & toselect)
 			if(nvars==0)
 				stop('An unexpected error occured while producing plots (no plottable variables available) - please file a bug report to the package author', call.=FALSE)
-			
+
 			swcat('Generating plots...\n')
 			x <- runjagsplots(mcmc[,!x$nonstochastic & toselect,drop=FALSE], psrfs=x$psrf$psrf[!x$nonstochastic & toselect,], discrete=x$discrete[!x$nonstochastic & toselect], silent=FALSE, trace='trace'%in%plot.type, density='density'%in%plot.type, histogram='histogram'%in%plot.type, ecdf='ecdf'%in%plot.type, autocorr='autocorr'%in%plot.type, crosscorr='crosscorr'%in%plot.type, key='key'%in%plot.type, col=col, trace.iters=min(trace.iters,niter(mcmc)), separate.chains=separate.chains, trace.options=trace.options, density.options=density.options, histogram.options=histogram.options, ecdfplot.options=ecdfplot.options, acplot.options=acplot.options)
 		}
 	}
-	
+
 	# I might update crosscorr to do separate chains at some point - for now it is always 1 (char if not done):
 	stopifnot(length(x$ccplot)==1)
 	nplotseach <- max(nchains * separate.chains, 1)
-	
+
 	indplots <- sum(plot.type%in%c("trace","density","autocorr","ecdf","histogram"))
 	totalindplots <- indplots * nplotseach * nvars
 	combplots <- ("key" %in% plot.type) + (("crosscorr" %in% plot.type) && nvars>1)
 
 	if(nvars==1 && indplots==0 && combplots==0)
 		stop('Cannot produce a crosscorr plot for 1 variable!', call.=FALSE)
-		
+
 	# Have to unlist here because the $trace is always a list with length equal to number of chains if separate.chains or 1 otherwise
 	toplot <- vector('list', length=totalindplots+combplots)
 	varnames=plotnames <- character(totalindplots+combplots)
 	keyorcrosscorr <- rep(FALSE,(totalindplots+combplots))
 	chainnames <- gsub(' ', '0', format(1:nchains, scientific=FALSE))
-	
+
 	if(separate.chains){
 		chainnames <- paste('.chain_', gsub(' ', '0', format(1:nchains, scientific=FALSE)), sep='')
 	}else{
 		chainnames <- ''
-	} 
-	
+	}
+
 	start <- 1
 	if('trace'%in%plot.type){
 		indexes <- start:((start-1)+(nvars*nplotseach))
@@ -351,7 +349,7 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 		toplot[indexes] <- unlist(x$acplot, recursive=FALSE)
 		start <- start+(nvars*nplotseach)
 	}
-	
+
 	if('key'%in%plot.type){
 		varnames[start] <- 'key'
 		plotnames[start] <- 'key'
@@ -366,8 +364,8 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 		toplot[start] <- x$ccplot
 		keyorcrosscorr[start] <- TRUE
 		start <- start+1
-	}	
-	
+	}
+
 	if(start > 1 && indplots>0){
 		# Need to sort here or the indexing gets out of whack:
     	selected <- sort(matchvars(checkvalidmonitorname(vars),  varnames[!keyorcrosscorr]))
@@ -379,9 +377,9 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 	}else{
 		selected <- (1:length(toplot))[!keyorcrosscorr]
 	}
-	
+
 	names(toplot) <- plotnames
-	
+
 	# Interleave plots for the same variable:
 	indexes <- numeric()
 	if(length(selected)>0){
@@ -398,38 +396,38 @@ plot.runjags <- function(x, plot.type=c("trace","ecdf","histogram","autocorr","c
 #' @rdname add.summary
 #' @method print runjags
 print.runjags <- function(x, vars=NA, digits = 5, ...){
-	
+
 	x <- checkvalidrunjagsobject(x)
-	
+
 	numbers <- NULL
 	success <- try({
 		if(!is.list(x$method) && is.na(x$method)){
 			cat("\nJAGS model summary:  Model not yet updated\n\n")
 		}else{
-			
+
 			chainstring <- paste("(", if(x$thin>1) "thin = ", if(x$thin>1) x$thin, if(x$thin>1) "; ", if(nchain(x$mcmc)>1) "chains = ", if(nchain(x$mcmc)>1) nchain(x$mcmc), if(nchain(x$mcmc)>1) "; ", "adapt+burnin = ", x$burnin, ")",sep="")
 
 			if(!x$summary.available){
 				cat("\nJAGS model with ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, "\n", sep="") # add #monitors
 				cat("\nFull summary statistics have not been pre-calculated - use either the summary method or add.summary to calculate summary statistics\n\n", sep="")
 			}else{
-				
+
 				# First check that we have matching variables:
 				selected <- matchvars(checkvalidmonitorname(vars), dimnames(x$summaries)[[1]])
-								
+
 				cat("\nJAGS model summary statistics from ", niter(x$mcmc)*nchain(x$mcmc), " samples ", chainstring, ":\n", sep="")
 
 				selected <- matchvars(checkvalidmonitorname(vars),  dimnames(x$summaries)[[1]])
 				numbers <- x$summaries[selected,,drop=FALSE]
-			
+
 				m <- prettifytable(numbers, digits=digits, colsequal=FALSE, nastring="--", psrfcoldollar= (x$semistochastic & niter(x$mcmc)>1))
 
 				print.noquote(m)
 				cat("\n")
-				
+
 				if(any(x$semistochastic) && niter(x$mcmc)>1)
-					cat("Note: parameters marked with '$' were non-stochastic in some chains - these parameters can not be assumed to have converged!\n")				
-				
+					cat("Note: parameters marked with '$' were non-stochastic in some chains - these parameters can not be assumed to have converged!\n")
+
 				if(class(x$dic)!="character"){
           if(is.na(x$dic$dic)){
 					  cat("[DIC not available from the stored object]\n", sep="")
@@ -441,7 +439,7 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 			}else{
 				cat("PED = ", format(round(x$dic$ped, digits=digits), scientific=FALSE), if(!any(is.na(x$dic$ped.chains))) paste("  (range between chains: ", format(round(min(x$dic$ped.chains), digits=digits), scientific=FALSE), " - ", format(round(max(x$dic$ped.chains), digits=digits), scientific=FALSE), ")", sep=""), "\n", sep="")
 			}
-					
+
           if(is.na(x$dic$meanpd))
             pdstring <- ''
           else
@@ -454,7 +452,7 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 
           cat("Estimated effective number of parameters:  ", pdstring, if(pdstring!='' && poptstring!='') ', ', poptstring, "\n\n", sep="")
 				}
-				
+
 			  cat("Total time taken: ", timestring(as.numeric(x$timetaken, units="secs")), "\n\n", sep="")
 			}
 		}
@@ -467,30 +465,30 @@ print.runjags <- function(x, vars=NA, digits = 5, ...){
 #' @rdname add.summary
 #' @method print runjagsplots
 print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.windows=runjags.getOption('new.windows'),file="",...){
-	
+
 	if(!length(layout)==2) stop("The layout option must be a numeric vector of length 2")
 	if(!all(layout>0)) stop("All dimensions in the layout vector must be >=1")
-	
+
 	newwindows <- new.windows
 	if(Sys.getenv('RSTUDIO')!="" && newwindows){
 		warning('Only a single graphics device is permitted in Rstudio - setting new.windows to FALSE')
 		newwindows <- FALSE
 	}
-	
+
 	if(class(x)=="runjags"){
-		
+
 		x <- checkvalidrunjagsobject(x)
-		
+
 		if(!x$summary.pars$plots){
 			cat(c(x$trace, x$density, x$histogram, x$ecdf, x$acplot, x$key, x$ccplot))
 			invisible(c(x$trace, x$density, x$histogram, x$ecdf, x$acplot, x$key, x$ccplot))
 		}
-		
+
 		# Call plot.runjags which will do the shuffling around and recall print:
 		return(plot.runjags(x, vars=NA, layout=layout, new.windows=new.windows, file=file, plot.type=x$summary.pars$plot.type, col=NA, trace.iters=NA, separate.chains=NA, trace.options=NA, density.options=NA, histogram.options=NA, ecdfplot.options=NA, acplot.options=NA))
 		# vars=NA and type= here combined with return if all character above should ensure they are never re-plotted
 	}
-	
+
 	if(class(x)=='runjagsplots' && !all(sapply(x,class)=='trellis')){
 		# If we are directly invoking the print method for $trace we may to sort out the possible list of separate chains
 		# If called from plot(rjo) then we are passed a list, and the separating of separate chains has already been done
@@ -501,12 +499,12 @@ print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.win
 			return(todo)
 			})
 	}
-  
+
 	if(class(x)=="character"){
 		cat(x)
 		invisible(x)
 	}
-	
+
 	if(!all(sapply(x,class)=='trellis')){
 		if(runjags.getOption('debug')){
       		cat('Not all list items are trellis\n')
@@ -514,7 +512,7 @@ print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.win
     	}
     	stop('There was an unexpected problem formatting the plots ready for printing - please contact the package author', call.=FALSE)
 	}
-	          
+
 	toplot <- x
 
 #  	if(file==""){
@@ -525,11 +523,11 @@ print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.win
 #		}
 #	}else{
 #		swcat("Producing ", length(toplot), " plots to file\n",sep="")
-#	}			
-	
+#	}
+
 	# Make layout consistent with ordering of dimensions of arrays:
 	layout <- layout[2:1]
-	
+
 	if(file!=""){
 		grDevices::pdf(file,...)
 	}else{
@@ -543,18 +541,18 @@ print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.win
 		layout <- c(1,1)
 	if(N==2)
 		layout <- c(1,2)
-	
+
 	numperpage <- layout[1] * layout[2]
 	numpages <- ceiling(N/numperpage)
-	
+
 	mores <- logical(N)
 	mores[] <- TRUE
 	mores[pmin(N,(0:numpages)*numperpage)] <- FALSE
-	
+
 	newpage <- TRUE
 	p1 <- 1
 	p2 <- 1
-	
+
 	for(i in 1:N){
 		if(newpage && file=="" && newwindows){
 			dev.new()
@@ -573,10 +571,10 @@ print.runjagsplots <- function(x,layout=runjags.getOption('plot.layout'),new.win
 			}
 		}
 	}
-	
+
 	if(file!="")
 		dev.off()
-		
+
 	invisible(toplot)
 }
 

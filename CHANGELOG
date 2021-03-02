@@ -1,4 +1,4 @@
-This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Carsten Dormann, Ed Merkle, Andrew Cohen, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Hoehle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Jonathan Bartlett, Miriam Casey, Bob O'Hara, Kristin Broms, Bryan Matthias, Torrin Liddell, Jan Glaescher, Tyson Wepprich, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Johannes Bjork, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for developing JAGS.
+This package is now (relatively) feature stable, however I am continually using and improving the functions - so if you find a bug (especially under Windows), or if you have any comments/criticisms/questions about this package, then please feel free to email the package developer.  I am grateful to John Kruschke, Stefano Conti, Hefin Williams, Carsten Dormann, Ed Merkle, Andrew Cohen, Steven Novick, David Norris, Gregory Hart, Tomas Telensky, Michael Hoehle, Darren Shaw, Ollie Wearn, Glenn Meyers, Rebecca Taylor, Avraham Adler, Jared Laufenberg, Jonathan Bartlett, Miriam Casey, Bob O'Hara, Kristin Broms, Bryan Matthias, Torrin Liddell, Jan Glaescher, Tyson Wepprich, Benedict Escoto, Xavier Harrison, Balthasar Bickel, Johannes Bjork, Ghislain Vieilledent, Georges Kunstler, Ian Handel and Richard Reeve for reporting bugs and making suggestions over the years that I have been developing runjags.  Thanks also to Martyn Plummer for developing JAGS.
 
 
 OPEN ISSUES
@@ -8,7 +8,6 @@ BUGS
 
 The adapt.incomplete option may not function correctly depending on the version of JAGS and the batch.jags argument - this will be fixed in a future update, but will not be back-compatible with JAGS 3.x
 
-Note:  version 2.0.4 will be the last to support JAGS version 3.x and Apple's (long discontinued) xgrid
 
 
 FEATURES TO BE IMPLEMENTED
@@ -24,6 +23,29 @@ Implement concurrent trace, mean and variance monitors
 VERSION HISTORY
 
 
+Version 2.2.0
+
+NEW FEATURES
+
+Migration to GitHub and re-structuring of the package to use tidy package development
+
+Start of migration of code base away from run.jags and towards run_jags
+
+Compatibility with the modeest package version >= 2.3.2
+
+Removal of support for xgrid
+
+
+BUG FIXES
+
+A bug preventing back-compatibility with runjags 1.2.0 was fixed (thanks to Ollie Wearn)
+
+Renamed an argument in the tailf function to avoid the use of 'return' as a variable name
+
+Bug fixed in drop.k that could cause issues with reading data correctly
+
+
+
 Version 2.0.4-6
 
 Update required by CRAN due to change in the behaviour of class(c('matrix','array'))
@@ -31,7 +53,7 @@ Update required by CRAN due to change in the behaviour of class(c('matrix','arra
 
 Version 2.0.4-4
 
-Update required by CRAN to allow compilation on the new toolchain for Windows 
+Update required by CRAN to allow compilation on the new toolchain for Windows
 
 
 Version 2.0.4

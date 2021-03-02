@@ -1,6 +1,6 @@
 # Methods can return either a character string representing an error to be returned, or TRUE if files are to be read immediately or FALSE if JAGS run is ongoing.  Or a list starting with TRUE or FALSE (optionally named complete), and containing other things that will be returned in the runjags object if the JAGS run is ongoing.  If it returns an error the JAGS run is assumed to be not successful.
 
-runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+runjags_simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 	
 	retval <- 'An unknown error occured while calling JAGS using the simple method'
 	
@@ -19,10 +19,10 @@ runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libp
 			
     	if(os == "windows"){
 			# This was working but sometimes seems not to fully quote the path to JAGS?  One above doesn't work either...
-			suppressWarnings(success <- shell(paste(shQuote(jags, type='cmd'), if(!batch.jags) " <", " sim.1/script.cmd 2>&1", sep = ""), intern=TRUE, wait=TRUE, ignore.stderr=FALSE))
+			suppressWarnings(success <- shell(paste(shQuote(jags, type='cmd'), " sim.1/script.cmd 2>&1", sep = ""), intern=TRUE, wait=TRUE, ignore.stderr=FALSE))
 
 		}else{
-			suppressWarnings(success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd 2>&1", sep=""), intern=TRUE, wait=TRUE, ignore.stderr=FALSE))
+			suppressWarnings(success <- system(paste(shQuote(jags), " sim.1/script.cmd 2>&1", sep=""), intern=TRUE, wait=TRUE, ignore.stderr=FALSE))
 		}
 	
 
@@ -40,8 +40,10 @@ runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libp
 	return(retval)
 }
 
-runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
-
+runjags_rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+	
+	stop('The rjparallel method is not functional in this development version of runjags')
+	
 	# Eventually we should compile the model once and then export the compiled model and then change the inits - but we are currently unable to change RNG states on compiled models with rjags 3.x
 	# We also have to destroy the compiled rjags object after calling runjags.start() as we update different compiled objects
 
@@ -287,7 +289,7 @@ runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 	
 }
 
-runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+runjags_snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 		
 	retval <- 'An unknown error occured while calling JAGS using the snow method'
 	
@@ -386,9 +388,9 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 						Sys.setenv(LTDL_LIBRARY_PATH=paste(currentsysbinpath, if(currentsysbinpath!='') ';', testjags$libpaths$LTDL_LIBRARY_PATH, sep=''))
 					}		
 								
-					success <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=TRUE)
+					success <- shell(paste(shQuote(jags), " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=TRUE)
 				}else{
-					suppressWarnings(success <- system(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep=""), intern=TRUE, wait=TRUE))
+					suppressWarnings(success <- system(paste(shQuote(jags), " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep=""), intern=TRUE, wait=TRUE))
 				}
 				
 				retval <- "An error occured transferring the model output from the snow cluster"
@@ -503,7 +505,7 @@ runjags.snow <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpat
 
 
 
-runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+runjags_background <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 	
 	if(n.sims==1) retval <- 'An unknown error occured while calling JAGS using the background method' else retval <- 'An unknown error occured while calling JAGS using the parallel background method'
 	
@@ -514,17 +516,15 @@ runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 	if(runjags.getOption('bg.alert')!=""){
 	  if (os == "windows"){
       lsfile <- 'lastsimlauncher.bat'
-      cat(paste(shQuote(jags), if(!batch.jags) " <", " sim.", n.sims, "/script.cmd > sim.", n.sims, "/jagsoutput.txt 2>&1", sep=""),'\n',file=lsfile)      
+      cat(paste(shQuote(jags), " sim.", n.sims, "/script.cmd > sim.", n.sims, "/jagsoutput.txt 2>&1", sep=""),'\n',file=lsfile)      
       if(bg.alert=="beep"){
-          bg.alert <- paste(shQuote(system.file('xgrid', 'beep.bat', package='runjags')),'\n',sep='')
-		  #  Doesn't seem to produce 2 beeps....
-#          bg.alert <- paste(shQuote(system.file('xgrid', 'beep.bat', package='runjags')),'\n',shQuote(system.file('xgrid', 'beep.bat', package='runjags')),sep='')
+          bg.alert <- paste(shQuote(system.file('beep', 'beep.bat', package='runjags')),'\n',sep='')
       }
       cat(bg.alert,'\n',file=lsfile,append=TRUE)
       
 	  }else{
 	    lsfile <- 'lastsimlauncher.sh'
-	    cat(paste(shQuote(jags), if(!batch.jags) " <", " sim.", n.sims, "/script.cmd > sim.", n.sims, "/jagsoutput.txt 2>&1", sep=""),'\n',file=lsfile)      
+	    cat(paste(shQuote(jags), " sim.", n.sims, "/script.cmd > sim.", n.sims, "/jagsoutput.txt 2>&1", sep=""),'\n',file=lsfile)      
 	    if(bg.alert=="beep"){
 	      bg.alert <- "printf '\\007'\nsleep 1\nprintf '\\007'\n"
 	    }
@@ -539,7 +539,7 @@ runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 		
 		success <- numeric(n.sims)
 		for(s in 1:n.sims){
-		  	command <- paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep="")      
+		  	command <- paste(shQuote(jags), " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep="")      
       		if(s == n.sims){
         		command <- shQuote(file.path(getwd(),lsfile))
       	  	}
@@ -565,7 +565,7 @@ runjags.background <- function(jags, silent.jags, jags.refresh, batch.jags, os, 
 }
 
 
-runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+runjags_interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 	
 	if(runjags.getOption('debug'))
 		swcat('Using the following simulation directory: ', getwd(), '\n')
@@ -601,7 +601,7 @@ runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, o
 				return(chars[chars!=""][2])
 				})))
 
-			output <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.1/script.cmd > sim.1/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=FALSE)
+			output <- shell(paste(shQuote(jags), " sim.1/script.cmd > sim.1/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=FALSE)
 
 			tasks <- system('TASKLIST', intern=TRUE)
 			newpid=as.numeric(unlist(lapply(tasks[grepl("jags-terminal", tasks) | grepl("JAGS-T~1.EXE", tasks) ], function(x){
@@ -656,7 +656,7 @@ runjags.interruptible <- function(jags, silent.jags, jags.refresh, batch.jags, o
 
 }
 
-runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+runjags_parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 	
 	if(n.sims==1) swcat("Calling the simulation using the parallel method...\n") else swcat("Calling ", n.sims, " simulations using the parallel method...\n")
 
@@ -688,7 +688,7 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 			})))
 
 			for(s in 1:n.sims){
- 				output <- shell(paste(shQuote(jags), if(!batch.jags) " <", " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=FALSE)
+ 				output <- shell(paste(shQuote(jags), " sim.", s, "/script.cmd > sim.", s, "/jagsoutput.txt 2>&1", sep = ""), intern=FALSE, wait=FALSE)
 				# Allow simulation to start before we move onto the next one:
 				Sys.sleep(0.1)
 			}
@@ -794,13 +794,71 @@ runjags.parallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, li
 }
 
 
-runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
+runjags_rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 	
 	# rjags object should have been compiled by extend.jags or autoextend.jags if this was necessary - and the modules/factories loaded just before that
 	extra.options <- rjags[names(rjags)!='rjags']
 	rjags <- rjags$rjags
 
 	if(silent.jags) extra.options$progress.bar <- "none"
+	
+	
+	monitor <- extra.options$monitor
+	
+	## If we have dic, ped or waic monitors then change to the necessary types:
+	sm <- grepl('^dic\\(', monitor)
+	if(any(sm))
+		monitor <- c(monitor[!sm], gsub('^dic\\(', 'pD(', monitor[sm]), gsub('^dic\\(', 'deviance_poolmean(', monitor[sm]))
+	sm <- grepl('^ped\\(', monitor)
+	if(any(sm))
+		monitor <- c(monitor[!sm], gsub('^ped\\(', 'popt(', monitor[sm]), gsub('^ped\\(', 'deviance_poolmean(', monitor[sm]))
+	sm <- grepl('^waic\\(', monitor)
+	if(any(sm))
+		monitor <- c(monitor[!sm], gsub('^waic\\(', 'density_mean(', monitor[sm]), gsub('^waic\\(', 'logdensity_variance(', monitor[sm]))
+
+	## For JAGS 4 make these back-compatible where possible:
+	todenspm <- matrix(nrow=0, ncol=2, dimnames=list(NULL, c('true','j4conversion')))
+	todenspv <- matrix(nrow=0, ncol=2, dimnames=list(NULL, c('true','j4conversion')))
+	if(jags5()){
+		
+		stop('Not yet implemented')
+		
+	}else{
+	
+		monitor[monitor==paste0('pD(', jags_obs_stoch_var_name, ')')] <- 'mean(pD)'
+		monitor[monitor==paste0('pD_total(', jags_obs_stoch_var_name, ')')] <- 'trace(pD)'
+		monitor[monitor==paste0('popt(', jags_obs_stoch_var_name, ')')] <- 'mean(popt)'
+		monitor[monitor==paste0('deviance_poolmean(', jags_obs_stoch_var_name, ')')] <- 'mean(deviance)'
+		monitor <- unique(monitor)
+		
+		# For WAIC with a specified variable:
+		sm <- grepl('^density_mean\\(', monitor)
+		if(any(sm)){
+			vname <- getmonitortype(monitor[sm])[,'monitor']
+			checkok <- sapply(paste0('density_',vname), function(x){
+#				if(!grepl(x, model)){
+#					stop(paste0('You need to add a "', x, '" monitor to your model to monitor WAIC with JAGS 4.x'), call.=FALSE)
+#				}
+			})
+			todenspm <- rbind(todenspm, cbind(vname, paste0('density_',vname)))
+			monitor[sm] <- paste0('mean(density_',vname,')')
+		}
+		sm <- grepl('^logdensity_variance\\(', monitor)
+		if(any(sm)){
+			vname <- getmonitortype(monitor[sm])[,'monitor']
+			checkok <- sapply(paste0('logdens_',vname), function(x){
+#				if(!grepl(x, model)){
+#					stop(paste0('You need to add a "', x, '" monitor to your model to monitor WAIC with JAGS 4.x'), call.=FALSE)
+#				}
+			})
+			todenspv <- rbind(todenspv, cbind(vname, paste0('logdens_',vname)))
+			monitor[sm] <- paste0('variance(logdens_',vname,')')
+		}
+	
+	}
+	monmat <- getmonitortype(monitor)
+
+
 	
 	if(!silent.jags) swcat("Calling the simulation using the rjags method...\n")
 
@@ -848,183 +906,102 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 		flush.console()
 	}
 	
-	# The behaviour of rjags method for dic stats is slightly different to the others, but should appear to be the same:
-	# If just DIC is specified, do like I have always done BUT don't return pd and deviance unless specifically requested
-	# If ped is specified, call dic.samples
-	# If full.pd is specified, call dic.samples
-	
-	# Remove full.pd and popt monitors
-	monitor <- extra.options$monitor[! extra.options$monitor %in% c("popt","full.pd","dic","ped")]
-	monitor[monitor=="pd"] <- "pD"
-	if(any(extra.options$monitor=='dic'))
-		monitor <- unique(c(monitor, 'pD', 'deviance'))	
-	
 	by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
 	if(!silent.jags) swcat("  Running the model for ", format(extra.options$sample,scientific=FALSE), " iterations", if(runjags.getOption('debug')>5) paste(" (updating by ", by, ")", sep=""), "...\n",sep="")
-	flush.console()	
-	samples <- rjags::jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin,by=by)
-	
-	# Do this BEFORE our dummy call of 1 iteration
-	end.state <- sapply(rjags$state(internal=TRUE),dump.format)	
-	
-	# This is just a dummy call so that we can get the names of the variables:
-	suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=2,progress.bar="none", thin=1)))
 	flush.console()
-	mcmcout <- lapply(samples[names(samples)!='pD'], as.mcmc.list)
-	
-	nvar <- length(varnames)
-  
-  	niter <- sapply(mcmcout,niter)
-	if(!all(niter==niter[1])) stop("An error occured with the rjags method - variables returned with differing numbers of iterations")
-	niter <- niter[1]
 
-	########
-	# For deviance.sum:
-	sum.pd <- NA
-	sum.popt <- NA
-	sum.deviance <- NA
-	# For deviance.table:
-	pd <- NA
-	popt <- NA
-	deviance <- NA
-	# For $pd:
-	fullsumpd <- NA
-	########
+	samples <- rjags::jags.samples(rjags, variable.names=monmat[,'monitor'], n.iter=extra.options$sample, progress.bar=extra.options$progress.bar, thin=extra.options$thin, by=by, type=monmat[,'type'], force.list=TRUE)
+		
 	
-	# rjags (verison 3) returns variables in alphabetical order regardless of input order, so re-order here:
-	reindex <- matchvars(monitor[monitor!="pD"],varnames,exactneeded=TRUE,testfound=FALSE)
-	varnames <- varnames[reindex]
-	
-	mcmc <- vector('list',length=extra.options$n.chains)
-	for(i in 1:extra.options$n.chains){
-		mcmc[[i]] <- mcmc(do.call('cbind',lapply(mcmcout, function(x) return(x[[i]])))[,reindex,drop=FALSE], start=extra.options$burnin+1, thin=extra.options$thin)
-		dimnames(mcmc[[i]]) <- list(1:niter, varnames)
-	}
-	if('deviance'%in%varnames){
-	  sum.deviance <- mean(sapply(1:extra.options$n.chains, function(x) return(mean(mcmc[[x]][,'deviance']))))
-	}
-	if(!'deviance'%in%extra.options$monitor && any(varnames=='deviance')){
-		for(i in 1:extra.options$n.chains){
-		  mcmc[[i]] <- mcmc[[i]][,-which(varnames=='deviance'),drop=FALSE]
+	## Make all the other monitor types into bugsarrays:
+	if(FALSE){  # TODO: variable in options (can be over-ridden by the user) controlling if JAGS 5 is available
+		samples <- lapply(samples, as.bugsarray)
+		osvnames <- stop('Get the osv names from rjags here')
+	}else{
+		# For JAGS 4 we need to rename the WAIC monitors:
+		newsamples <- list()
+		if(nrow(todenspm) > 0){
+			alldenspm <- list()
+			for(i in 1:nrow(todenspm)){
+				temp <- samples$mean[[todenspm[i,'j4conversion']]]
+				samples$mean[todenspm[i,'j4conversion']] <- NULL
+				
+				if(!is.null(attr(temp, "elementnames"))){
+					attr(temp, "elementnames") <- gsub('^density_', '', attr(temp, "elementnames"))
+				}
+				attr(temp, "varname") <- gsub('^density_', '', attr(temp, "varname"))
+				attr(temp, "type") <- "density_mean"
+				alldenspm[[todenspm[i,'true']]] <- temp
+			}
+			if(length(samples$mean)==0){
+				samples$mean <- NULL
+			}
+			newsamples$density_mean <- as.bugsarray(alldenspm)
 		}
-	}
-	mcmc <- as.mcmc.list(mcmc)
-		
-	fullsumpd <- NA
-	if(any(c("pD",'full.pd')%in%names(samples))){
-		fullsumpd <- mcmc(matrix(unlist(samples[names(samples)=='pD']),ncol=1,dimnames=list(NULL,"pD")), start=extra.options$burnin+1, thin=extra.options$thin)
-		dimnames(fullsumpd) <- list(1:niter(fullsumpd), dimnames(fullsumpd)[[2]])
-		
-		# We want the mean of the sum pD monitor here:
-		sum.pd <- mean(fullsumpd)
-		if(!'full.pd'%in%extra.options$monitor)
-			fullsumpd <- NA
-	}
-	
-	if(any(c('ped','popt')%in%extra.options$monitor)){
-		if(runjags.getOption('repeatable.methods')){
-		  	if(!silent.jags) swcat("  Re-compiling the model with original starting values...\n",sep="")
-			
-			# Retrieve model, data and initial values with RNG states:
-			model <- paste(rjags$model(),collapse="\n")
-			data <- rjags$data()
-			# Prevents problems with data/inits reloading:
-			data <- data[names(data) %in% extra.options$origdatanames]
-			
-			n.chains <- length(inits)
-			tmodel <- textConnection(model)
-
-			rjags <- rjags::jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=0, quiet=TRUE)
-			close(tmodel)
-		
-			if(extra.options$adapt>0 && needsadapting){
-				if(!silent.jags) swcat("  Re-adapting the model for ", format(extra.options$adapt,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by				
-				adaptdone <- rjags::adapt(rjags,n.iter=extra.options$adapt,end.adaptation=TRUE,progress.bar=extra.options$progress.bar, by=by)
+		if(nrow(todenspv) > 0){
+			alldenspv <- list()
+			for(i in 1:nrow(todenspv)){
+				temp <- samples$variance[[todenspv[i,'j4conversion']]]
+				samples$variance[todenspv[i,'j4conversion']] <- NULL
+				
+				if(!is.null(attr(temp, "elementnames"))){
+					attr(temp, "elementnames") <- gsub('^logdens_', '', attr(temp, "elementnames"))
+				}
+				attr(temp, "varname") <- gsub('^logdens_', '', attr(temp, "varname"))
+				attr(temp, "type") <- "logdensity_variance"
+				alldenspv[[todenspv[i,'true']]] <- temp
 			}
-		
-			if(extra.options$burnin>0){
-				if(!silent.jags) swcat("  Re-burning in the model for ", format(extra.options$burnin,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
-				update(rjags,n.iter=extra.options$burnin,progress.bar=extra.options$progress.bar, by=by)
-				flush.console()
+			if(length(samples$variance)==0){
+				samples$variance <- NULL
 			}
-
-			flush.console()
+			newsamples$logdensity_variance <- as.bugsarray(alldenspv)
 		}
 		
-	  	if(!silent.jags) swcat("  Extending ", format(extra.options$sample,scientific=FALSE), " iterations for pOpt/PED estimates...\n",sep="")
-	  	flush.console()
-		by <- if(is.na(extra.options$by)) min(100, extra.options$sample/50) else extra.options$by
-		
-	  	dics <- rjags::dic.samples(rjags, n.iter=extra.options$sample, thin=extra.options$thin, type='popt', progress.bar=extra.options$progress.bar, by=by)
-	  	flush.console()	  
-    	deviance <- as.matrix(dics$deviance)
-    	popt <- as.matrix(dics$penalty)	  
-		dn <- dimnames(as.matrix(dics$deviance))[[1]]
-
-		# Ensures mean pd is not replicated:
-		sum.deviance <- sum(deviance)
-		sum.popt <- sum(popt)
-	}
-	if(any(c('pd')%in%extra.options$monitor) || (runjags.getOption('repeatable.methods') && 'dic'%in%extra.options$monitor)){
-		if(runjags.getOption('repeatable.methods')){
-		  	if(!silent.jags) swcat("  Re-compiling the model with original starting values...\n",sep="")
-			
-			# Retrieve model, data and initial values with RNG states:
-			model <- paste(rjags$model(),collapse="\n")
-			data <- rjags$data()
-			# Prevents problems with data/inits reloading:
-			data <- data[names(data) %in% extra.options$origdatanames]
-			
-			n.chains <- length(inits)
-			tmodel <- textConnection(model)
-
-			rjags <- rjags::jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=0, quiet=TRUE)
-			close(tmodel)
-		
-			if(extra.options$adapt>0 && needsadapting){
-				if(!silent.jags) swcat("  Re-adapting the model for ", format(extra.options$adapt,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by				
-				adaptdone <- rjags::adapt(rjags,n.iter=extra.options$adapt,end.adaptation=TRUE,progress.bar=extra.options$progress.bar,by=by)
+		# And treat mean pd/popt/deviance specially as they have the wrong names:
+		osvnames <- jags_obs_stoch_var_name
+		if('trace' %in% names(samples)){
+			if(any(names(samples$trace) == 'pD')){
+				attr(samples$trace[['pD']],'varname') <- jags_obs_stoch_var_name
+				attr(samples$trace[['pD']], "type") <- "pD_total"
+				newsamples$pD_total <- as.bugsarray(samples$trace['pD'])
 			}
-		
-			if(extra.options$burnin>0){
-				if(!silent.jags) swcat("  Re-burning in the model for ", format(extra.options$burnin,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
-				update(rjags,n.iter=extra.options$burnin,progress.bar=extra.options$progress.bar, by=by)
-				flush.console()
+			faketrace <- names(samples$trace) %in% c('pD')
+			if(any(!faketrace)){
+				newsamples$trace <- as.bugsarray(samples$trace[!faketrace])
 			}
-
-			flush.console()
 		}
-
-	  	if(!silent.jags) swcat("  Extending ", format(extra.options$sample,scientific=FALSE), " iterations for pD/DIC estimates...\n",sep="")
-	  	flush.console()
-		by <- if(is.na(extra.options$by)) min(100, extra.options$sample/50) else extra.options$by
-	  	dics <- rjags::dic.samples(rjags, n.iter=extra.options$sample, thin=extra.options$thin, type='pD', progress.bar=extra.options$progress.bar, by=by)
-	  	flush.console()	  
-    	deviance <- as.matrix(dics$deviance)
-    	pd <- as.matrix(dics$penalty)	  
-		dn <- dimnames(as.matrix(dics$deviance))[[1]]
-
-		sum.deviance <- sum(deviance)
-		sum.pd <- sum(pd)
+		if('mean' %in% names(samples)){
+			if(any(names(samples$mean) == 'pD')){
+				attr(samples$mean[['pD']],'varname') <- jags_obs_stoch_var_name
+				attr(samples$mean[['pD']], "type") <- "pD"
+				newsamples$pD <- as.bugsarray(samples$mean['pD'])
+				osvnames <- dimnames(newsamples$pD)[[3]] #TODO: Might be the wrong dimension after rejigging bugsarrays
+			}
+			if(any(names(samples$mean) == 'popt')){
+				attr(samples$mean[['popt']],'varname') <- jags_obs_stoch_var_name
+				attr(samples$mean[['popt']], "type") <- "popt"
+				newsamples$popt <- as.bugsarray(samples$mean['popt'])
+				osvnames <- dimnames(newsamples$popt)[[3]] #TODO: Might be the wrong dimension after rejigging bugsarrays
+			}
+			if(any(names(samples$mean) == 'deviance')){
+				attr(samples$mean[['deviance']],'varname') <- jags_obs_stoch_var_name
+				attr(samples$mean[['deviance']], "type") <- "deviance_poolmean"
+				newsamples$deviance_poolmean <- as.bugsarray(samples$mean['deviance'])
+				osvnames <- dimnames(newsamples$deviance_poolmean)[[3]] #TODO: Might be the wrong dimension after rejigging bugsarrays
+			}
+			fakemeans <- names(samples$mean) %in% c('pD','popt','deviance')
+			if(any(!fakemeans)){
+				newsamples$mean <- as.bugsarray(samples$mean[!fakemeans])
+			}
+		}
+		if('variance' %in% names(samples)){
+			newsamples$variance <- as.bugsarray(samples$variance)
+		}
 	}
 	
-	deviance.sum=deviance.table <- NA
-	if(any(!is.na(c(deviance, pd, popt)))){
-		deviance.table <- cbind(deviance, pd, popt)
-		dimnames(deviance.table) <- list(dn,c('mean.deviance','mean.pD','mean.pOpt'))
-	}
-	if(any(!is.na(c(sum.deviance, sum.pd, sum.popt)))){
-		deviance.sum <- c(sum.deviance, sum.pd, sum.popt)
-		names(deviance.sum) <- c('sum.mean.deviance', 'sum.mean.pD', 'sum.mean.pOpt')
-	}
+	samples <- newsamples
+	
+	end.state <- sapply(rjags$state(internal=TRUE),dump.format)	
 	
 	success <- try({
 		samplers <- rjags::list.samplers(rjags)
@@ -1040,12 +1017,16 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 	
 	if(!silent.jags) swcat("Simulation complete\n")
 	
-	return(list(complete=TRUE, mcmc=mcmc, deviance.table=deviance.table, deviance.sum=deviance.sum, pd=fullsumpd, end.state=end.state, samplers=samplers))
+	#TODO: maybe drop the mcmc return element and re-include trace in samples
+	mcmc <- as.mcmc.list(samples$trace)
+	samples$trace <- NULL
+		
+	return(list(complete=TRUE, mcmc=mcmc, samples=samples, osvnames=osvnames, deviance.table=NA, deviance.sum=NA, pd=NA, end.state=end.state, samplers=samplers))
 
 }
 
 
-runjags.start <- function(model, monitor, data, inits, modules, factories, burnin, sample, adapt, thin, tempdir, dirname, method, method.options, internal.options=list()){
+runjags_start <- function(model, monitor, data, inits, modules, factories, burnin, sample, adapt, thin, tempdir, dirname, method, method.options, internal.options=list()){
 	
 	# Reset failedjags stuff:
 	failedjags$model <- NA
@@ -1205,7 +1186,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		}else{
 			# Change jobname to match folder name:
 			if(method=='xgrid'){
-				stop("xgrid support is no longer available")
+				stop("xgrid is no longer supported")				
 			}else{
 				if(is.na(dirname)){
 					dirname <- "runjagsfiles"
@@ -1225,11 +1206,11 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		extramethodargs <- list(sim.chains=list())
 		if(strmethod=="simple"){
 			n.sims <- 1
-			method <- runjags.simple
+			method <- runjags_simple
 		}
 		if(strmethod=="interruptible"){
 			n.sims <- 1
-			method <- runjags.interruptible
+			method <- runjags_interruptible
 		}
 		if(strmethod=="parallel"){			
 			if(is.na(ncores)){
@@ -1240,7 +1221,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			if(!identical(NA, inputsims)){
 				if(inputsims!=as.integer(inputsims) || inputsims <1) warning("The supplied n.sims option is not a positive integer and was ignored") else n.sims <- min(n.chains, inputsims)
 			}
-			method <- runjags.parallel
+			method <- runjags_parallel
 		}
 		if(strmethod=="snow"){
 			if(is.na(ncores)){
@@ -1251,7 +1232,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			if(!is.na(inputsims)){
 				if(inputsims!=as.integer(inputsims) || inputsims <1) warning("The supplied n.sims option is not a positive integer and was ignored") else n.sims <- min(n.chains, inputsims)
 			}
-			method <- runjags.snow
+			method <- runjags_snow
 			rjt <- remote.jags
 			if(class(rjt)=="function"){
 				s <- try(rjt <- rjt())
@@ -1270,13 +1251,13 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 				if(inputsims!=as.integer(inputsims) || inputsims <1) warning("The supplied n.sims option is not a positive integer and was ignored") else n.sims <- min(n.chains, inputsims)
 			}
 			progress.bar <- 'none'  # no point having a progress bar
-			method <- runjags.rjparallel			
+			method <- runjags_rjparallel			
 			extramethodargs <- c(extramethodargs,list(monitor=monitor, modules=modules, factories=factories, adapt=adapt, burnin=burnin, sample=sample, n.chains=n.chains, thin=thin, by=by, progress.bar=progress.bar))
 			writefiles <- FALSE
 		}
 		if(strmethod=="background"){
 			n.sims <- 1
-			method <- runjags.background
+			method <- runjags_background
 		}
 		if(strmethod=="bgparallel"){
 			if(is.na(ncores)){
@@ -1287,7 +1268,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 			if(!is.na(inputsims)){
 				if(inputsims!=as.integer(inputsims) || inputsims <1) warning("The supplied n.sims option is not a positive integer and was ignored") else n.sims <- min(n.chains, inputsims)
 			}
-			method <- runjags.background
+			method <- runjags_background
 		}
 		if(strmethod=='xgrid'){
 			stop("xgrid is no longer supported")
@@ -1295,7 +1276,7 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		if(strmethod=='rjags'){
 			n.sims <- 1
 			# n.sims can never be more than 1 for rjags in case we don't specify parallel methods!!!
-			method <- runjags.rjags
+			method <- runjags_rjags
 			extramethodargs <- c(extramethodargs,list(monitor=monitor, modules=modules, factories=factories, adapt=adapt, burnin=burnin, sample=sample, n.chains=n.chains, thin=thin, by=by, progress.bar=progress.bar))
 			writefiles <- FALSE
 		}
@@ -1384,9 +1365,9 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 	realmonitor <- monitor[! (monitor %in% c("dic","ped","popt","pd","full.pd")) ]
 	# We have already checked for monitors but that included dic/popt/pd/full.pd - but we can't have zero real monitors (not including popt/full.pd/pd):
 	if(length(realmonitor)==0) stop("Cannot run a model with only popt, pd or full.pd monitored - add a named variable (e.g. 'deviance') to the monitors", call.=FALSE)
-	monitorcollapse <- paste(", thin(", thin, ")\nmonitor ", sep="")
-	monitors <- paste("monitor ", paste(realmonitor, collapse=monitorcollapse), ", thin(", thin, ")\n", sep="")
-
+#	monitorcollapse <- paste(", thin(", thin, ")\nmonitor ", sep="")
+#	monitors <- paste("monitor ", paste(realmonitor, collapse=monitorcollapse), ", thin(", thin, ")\n", sep="")
+	
 	n.params <- length(monitor)
 	params.names <- monitor
 	
@@ -1448,43 +1429,95 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 
 			scriptstring <- paste(scriptstring, "initialize\n", sep="")
 			
-			####  TODO adapt and adapt.incomplete option needs sorting for JAGS 3 vs 4 and batch.jags FALSE/TRUE
+			####  TODO:  adaptation options with JAGS 4 with autoadapt as well
 			# To check adaptation I either do: 
-			# adapt 0 -> error if it needs adapting, not otherwise
-			# update 0 -> warning if adaptation incomplete
-			# adapt 1 will cause an error in JAGS 3 but not 4 - needs sorting out properly		
+			# adapt 0 -> error if it needs adapting (look for adaptation incomplete), not otherwise
+			# update 0 -> NOTE if adaptation incomplete
+			# do autoadapt by default?
+
+			adapt.by <- adapt.runs/50	
+			burnin.by <- ini.runs/50	
+			sample.by <- real.runs/50	
+
 			if(adapt.runs > 0){
-				scriptstring <- paste(scriptstring, "adapt ", adapt.runs, "\n", sep="")
+				scriptstring <- paste(scriptstring, "adapt ", adapt.runs, ", by(", adapt.by, ")\n", sep="")
 			}else{
 				# If we have specified a burnin but adapt==0, allow the adapt to happen during burnin
 				if(runjags.getOption('adapt.incomplete')=='error' && ini.runs==0){
 					scriptstring <- paste(scriptstring, "adapt 0\n", sep="")
 				}else{
 					if(ini.runs == 0)   # Don't want 2 lots of update 0!
-						scriptstring <- paste(scriptstring, "update ", ini.runs, "\n", sep="")
+						scriptstring <- paste(scriptstring, "update ", ini.runs, ", by(", burnin.by, ")\n", sep="")
 				}
 			}			
 			if(ini.runs > 0)
-				scriptstring <- paste(scriptstring, "update ", ini.runs, "\n", sep="")
+				scriptstring <- paste(scriptstring, "update ", ini.runs, ", by(", burnin.by, ")\n", sep="")
 			####
 			
-			# trace monitor for deviance is just a standard monitor name (and not used to calculate DIC)
-			scriptstring <- paste(scriptstring, if(any(c("dic","ped")%in%monitor)) paste("monitor deviance, type(mean) thin(", thin, ")\n", "monitor pD, type(mean) thin(", thin, ")\n", "monitor popt, type(mean) thin(", thin, ")\n", sep=""), monitors, if(any(monitor=="full.pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), sep="")
+			# Monitors are done by category and all with explicit thin:
+			# monitor <- c('mean(one)', 'trace(two)', 'variance(three)', 'var(three)', 'four')
 			
-			if(real.runs > 0) scriptstring <- paste(scriptstring, "update ", real.runs, "\n", sep="")
+			monitors <- monitor
+			brackets <- grepl('(', monitors, fixed=TRUE) & grepl(')', monitors, fixed=TRUE)
+			monitors[!brackets] <- paste('trace(', monitors[!brackets], ')', sep='')
+			# TODO:  needs to be in a check monitors function
+			
+			openbrackets <- gregexpr('(', monitors, fixed=TRUE)
+			closebrackets <- gregexpr('(', monitors, fixed=TRUE)
+			# Check these both have exactly 1
+
+			monitor_components <- t(simplify2array(strsplit(gsub(')','',monitors,fixed=TRUE), '(', fixed=TRUE)))
+			monitor_types <- tolower(monitor_components[,1])
+			monitor_types[monitor_types=='var'] <- 'variance'
+			monitor_names <- monitor_components[,2]	
+
+			# TODO:  This breaks pd/popt etc as well
+			scriptstring <- paste(scriptstring, paste("monitor ", monitor_names, ", thin(", thin, ") type(", monitor_types, ")", sep="", collapse="\n"),"\n",sep="\n")
+
+			# trace monitor for deviance is just a standard monitor name (and not used to calculate DIC)
+			#scriptstring <- paste(scriptstring, if(any(c("dic","ped")%in%monitor)) paste("monitor deviance, type(mean) thin(", thin, ")\n", "monitor pD, type(mean) thin(", thin, ")\n", "monitor popt, type(mean) thin(", thin, ")\n", sep=""), monitors, if(any(monitor=="full.pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), sep="")
+			
+			if(real.runs > 0) scriptstring <- paste(scriptstring, "update ", real.runs, ", by(", sample.by, ")\n", sep="")
 		
 			for(c in 1:nsim.chains[s]){
 				i <- sim.chains[[s]][c]
-				scriptstring <- paste(scriptstring, "parameters to \"out", i, ".Rdump\", chain(", c, ")\n", sep="")
+				scriptstring <- paste(scriptstring, "parameters to \"endstate_c", i, ".R\", chain(", c, ")\n", sep="")
 			}
-
+						
+			### Behaviour will be different for JAGS 5:
+			if(jags5()){
+				
+				stop('Not yet implemented')
+				
+			}else{
+				
+				## Need to check here for monitors with the same name and different types and throw an error:
+				
+				
+			}
+			
 			# Write out the mean pd, popt and deviances and then delete them so they dont get re-written by coda *
-			if(any(c("dic","ped")%in%monitor))
-				scriptstring <- paste(scriptstring, "coda deviance, stem(\"sim.", s, "/deviance\")\n", "coda pD, stem(\"sim.", s, "/pd\")\n", "coda popt, stem(\"sim.", s, "/popt\")\n", "monitor clear deviance, type(mean)\nmonitor clear pD, type(mean)\nmonitor clear popt, type(mean)\n", sep="")
+#			if(any(c("dic","ped")%in%monitor))
+#				scriptstring <- paste(scriptstring, "coda deviance, stem(\"sim.", s, "/deviance\")\n", "coda pD, stem(\"sim.", s, "/pd\")\n", "coda popt, stem(\"sim.", s, "/popt\")\n", "monitor clear deviance, type(mean)\nmonitor clear pD, type(mean)\nmonitor clear popt, type(mean)\n", sep="")
+			
+#			scriptstring <- paste(scriptstring, "coda *, stem(sim.", s, "/CODA)\n", sep="")
+			
+			scriptstring <- paste(scriptstring, "samplers to sim.", s, "/samplers.csv\n", sep="")
+			all_monitor_types <- unique(monitor_types)
+			# Trace is still handled by coda:
+			all_monitor_types <- all_monitor_types[all_monitor_types!='trace']
+			for(monitor_type in all_monitor_types){
+				scriptstring <- paste(scriptstring, "monitors to sim.", s, "/monitors_", monitor_type, ".R, type(", monitor_type, ")\n", sep="")
+			}
+			# Prevent unnecessary tables from being generated:
+			monitor_names <- monitor_names[monitor_types!='trace']
+			monitor_types <- monitor_types[monitor_types!='trace']
+			stopifnot(length(monitor_names)==length(monitor_types))
+			if(length(monitor_names)>0)
+				scriptstring <- paste(scriptstring, paste("monitor clear ", monitor_names, ", type(", monitor_types, ")", sep="", collapse="\n"),"\n",sep="\n")
 			
 			scriptstring <- paste(scriptstring, "coda *, stem(sim.", s, "/CODA)\n", sep="")
 			
-			scriptstring <- paste(scriptstring, "samplers to sim.", s, "/samplers.csv\n", sep="")	
 			
 			# model clear is used to detect the model being finished, update 0 is used to detect the model not having crashed
 			scriptstring <- paste(scriptstring, "update 0\nmodel clear\nexit\n", sep="")
@@ -1555,8 +1588,10 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 		results <- result
 		if(any(names(results)=="complete")){
 			result <- results$complete
-			if(!all(names(results)==c('complete','mcmc','deviance.table','deviance.sum','pd','end.state','samplers')))
-				stop('Unsupported return type from the JAGS method function - it should be a list with the elements complete, mcmc, deviance.table (may be NA), deviance.sum (may be NA), pd (may be NA), end.state, and samplers',call.=FALSE)
+			
+			# TODO: remove deviance.table, deviance.sum, pd as they are now in samples
+			if(!all(names(results)==c('complete','mcmc','samples','osvnames','deviance.table', 'deviance.sum', 'pd', 'end.state','samplers')))
+				stop('Unsupported return type from the JAGS method function - it should be a list with the elements complete, mcmc, samples, osvnames, deviance.table, deviance.sum, pd, end.state, and samplers',call.=FALSE)
 		}else{
 			result <- results[[1]]
 			names(results)[1] <- "complete"

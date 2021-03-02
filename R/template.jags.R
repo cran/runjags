@@ -1,7 +1,6 @@
 #' @title Generate a generalised linear mixed model (GLMM) specification in JAGS
 #' @name template.jags
 #' @aliases template.jags template.JAGS
-#' @export
 
 #' @description
 #' Use an lme4 style syntax to create a JAGS model representation of a GLMM, including all data, initial values and monitor specifications required to run the model using \code{\link{run.jags}}.
@@ -76,6 +75,7 @@
 NULL
 
 #' @rdname template.jags
+#' @export
 template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian', write.data=TRUE, write.inits=TRUE, precision.prior='dgamma(0.001, 0.001)', effect.prior='dnorm(0, 10^-6)', n.chains=2, precision.inits=c(0.01,10), effect.inits=c(-1, 1), inits=NULL){
 	
 	formula <- as.formula(formula)
@@ -101,7 +101,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	# May change this, but only for write.data:
 	convertstrings <- FALSE
 	
-	if(!inherits(family,'character'))
+	if(!is.character(family))
 		stop('Invalid family specification - a character string must be supplied')
 	possibles <- c('gaussian','binomial','poisson','nb','negative binomial','zib','zip','zinb')
 	family <- possibles[pmatch(tolower(family), possibles)]
@@ -169,7 +169,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 		if(any(notfound))
 			stop(paste('The following random effects term(s) was/were not found in the data: ', paste(randoms[notfound], collapse=', ')))
 		for(i in 1:length(randoms)){
-			if(!inherits(data[[randoms[i]]], 'factor')){
+			if(!is.factor(data[[randoms[i]]])){
 				data[[randoms[i]]] <- factor(data[[randoms[i]]])
 				madefactors <- c(madefactors, randoms[i])
 			}
@@ -286,7 +286,7 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 	extradata <- list(N=nrow(data))
 	# Check the response variable:
 	if(family=='gaussian'){
-		if(!inherits(data[[response]], c('numeric','integer')))
+		if(!is.numeric(data[[response]]))
 			stop('The response variable class must be either numeric or integer for the Gaussian family')
 		respline <- paste('\t', response, '[i] ~ dnorm(regression_fitted[i], regression_precision)\n\tregression_residual[i] <- ', response, '[i] - regression_fitted[i]\n\tregression_fitted[i] <- ', sep='')
 		priorline <- paste('regression_precision ~ ', precision.prior, '\n', sep='')
@@ -543,4 +543,6 @@ template.jags <- function(formula, data, file='JAGSmodel.txt', family='gaussian'
 }
 
 
+#' @rdname template.jags
+#' @export
 template.JAGS <- template.jags
