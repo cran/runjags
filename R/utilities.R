@@ -123,7 +123,7 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, ...){
 
 		# Test standard 'jags' as well as variable passed and some common install locations:
 		suppressWarnings({
-			paths <- c(from.variable, "jags", "/opt/local/bin/jags", "/opt/local/sbin/jags", "/usr/texbin/jags", "/usr/bin/jags", "/bin/jags", "/usr/sbin/jags", "/sbin/jags", "/usr/local/bin/jags", "/usr/X11/bin/jags")
+			paths <- c(from.variable, "jags", "/opt/local/bin/jags", "/opt/local/sbin/jags", "/usr/texbin/jags", "/usr/bin/jags", "/bin/jags", "/usr/sbin/jags", "/sbin/jags", "/usr/local/bin/jags", "/opt/R/arm64/bin/jags", "/usr/X11/bin/jags")
 			for(i in 1:length(paths)){
 				jagspath <- system(paste('which ', paths[i], ' 2>&1', sep=""), intern=TRUE)
 				if(length(jagspath)!=0) return(jagspath)
@@ -142,7 +142,7 @@ findjags <- function(ostype = .Platform$OS.type, look_in = NA, ...){
 			return(s)
 		}
 
-		if(class(look_in)!="character") stop("The look_in argument supplied to findjags must be a character vector of paths")
+		if(!is.character(look_in)) stop("The look_in argument supplied to findjags must be a character vector of paths")
 		look_in <- paste(look_in,"/",sep="")
 		look_in <- gsub("//","/",look_in,fixed=TRUE)
 		suppressWarnings(paths <- paste(unlist(lapply(look_in, function(x) return(paste(x,list.files(x),sep="")))),"/",sep=""))
@@ -483,7 +483,7 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 	suppressWarnings(returnval <- try(system2(jags, args=tempfile, stdout=TRUE, stderr=TRUE), silent=TRUE))
 	unlink(tempfile)
 
-	if(class(returnval)=="try-error"){
+	if(inherits(returnval, "try-error")){
 		success <- 0
 	}else{
 		if(is.null(attributes(returnval))){
@@ -503,6 +503,7 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 	}
 
 	if(success){
+
     	rightstring <- which(grepl("Welcome",returnval))[1]
     	if(is.na(rightstring)){  # Will be NA if which is length 0 as selected first element above
     		version <- 'unknown'
@@ -530,9 +531,17 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 		rjags.version <- ""
 	}
 
-	if(!silent)
-		swcat("You are using ", rversion, " on a ", os, " machine, with the ", gui, " GUI\n", sep="")
-
+	if(!silent){
+	  ## Specific output for macOS:
+	  pkt <- .Platform$pkgType
+	  if(grepl("mac", pkt)){
+	    r_type <- ifelse(grepl("arm64",pkt), "arm64", "x86_64")
+	    c_type <- ifelse(grepl("arm64",Sys.info()["machine"]), "arm64", "x86_64")
+	    swcat("You are using ", gsub(")", paste0("; macOS ", r_type, ")"), rversion), " on a unix (macOS ", c_type, ") machine, with the ", gui, " GUI\n", sep="")
+	  }else{
+	    swcat("You are using ", rversion, " on a ", os, " machine, with the ", gui, " GUI\n", sep="")
+	  }
+	}
 
 	if(jags=="JAGS not found") jags <- "findjags()"
 
@@ -541,10 +550,31 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 		if(success==-1){
 			if(!silent) suppressWarnings(swcat("JAGS version ", version, " found successfully using the command '", jags, "', but returned the status code '", attributes(returnval)$status, "' - this may indicate a compatibility issue, procede with caution\n", sep=""))
 		}else{
-			if(!silent) suppressWarnings(swcat("JAGS version ", version, " found successfully using the command '", jags, "'\n", sep=""))
+		  ## Specific output for macOS:
+		  pkt <- .Platform$pkgType
+		  if(grepl("mac", pkt)){
+		    r_type <- ifelse(grepl("arm64",pkt), "arm64", "x86_64")
+		    c_type <- ifelse(grepl("arm64",Sys.info()["machine"]), "arm64", "x86_64")
+		    j_type <- system(paste0("lipo -archs ", gsub("/bin/jags","/libexec/jags-terminal", jags)), intern=TRUE)
+		    if(j_type=="x86_64 arm64") j_type <- "universal"
+		    if(grepl("build",returnval[rightstring])){
+		      bld <- paste0("macOS ", j_type, " build")
+		    }else{
+		      bld <- paste0(j_type, " binary")
+		    }
+		    if(!silent) suppressWarnings(swcat("JAGS version ", version, " (", bld, ") found successfully using the command '", jags, "'\n", sep=""))
+		    if(!j_type=="universal" && (j_type!=r_type)){
+		      warning(paste0("Your R build (", r_type, ") does not match your JAGS build (", j_type, "): you should re-install JAGS and/or R so they match"))
+		    }
+		    if(!silent && !j_type=="universal" && (j_type!=c_type)){
+		      swcat("Your JAGS build (", j_type, ") does not match your CPU architecture (", c_type, "): JAGS will run under Rosetta2 emulation, which will decrease performance")
+		    }
+		  }else{
+		    if(!silent) suppressWarnings(swcat("JAGS version ", version, " found successfully using the command '", jags, "'\n", sep=""))
+		  }
 		}
 		if(!is.na(num.version) & num.version<1){
-			warning(paste("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from http://mcmc-jags.sourceforge.net\n"))
+			warning(paste("The version of JAGS currently installed on your system is no longer supported.  Please update JAGS from https://mcmc-jags.sourceforge.io/\n"))
 			jags.avail <- FALSE
 		}else{
 			jags.avail <- TRUE
@@ -553,7 +583,7 @@ testjags <- function(jags=runjags.getOption('jagspath'), silent=FALSE){
 		jags.major <- floor(num.version)
 	}else{
 		if(rjags.avail){
-			if(!silent) suppressWarnings(swcat("JAGS was not found on your system using the command '", jags, "'.  Please ensure that the command is correct and that the latest version of JAGS is installed from http://mcmc-jags.sourceforge.net\n", sep=""))
+			if(!silent) suppressWarnings(swcat("JAGS was not found on your system using the command '", jags, "'.  Please ensure that the command is correct and that the latest version of JAGS is installed from https://mcmc-jags.sourceforge.io/\n", sep=""))
 			jags.avail <- TRUE
 			# If it's just rjags assume the version number is high enough:
 			num.version <- Inf

@@ -183,13 +183,13 @@ runjags.summaries <- function(fullmcmclist, thinnedmcmclist, psrf.target, normal
 
 
 		s <- try(sseff <- effectiveSize(thinnedmcmclist), silent=TRUE)
-		if(class(s)=='try-error'){
+		if(inherits(s, 'try-error')){
 			if(runjags.getOption('summary.warning'))
 				warning('There was an error calculating the effective sample size [using coda::effectiveSize()] for one or more parameters', call.=FALSE)
 
 			sseff <- apply(collapsed,2,function(x){
 				ess <- try(size <- effectiveSize(x))
-				if(class(ess)=='try-error')
+				if(inherits(ess, 'try-error'))
 					return(NA)
 				else
 					return(size)
@@ -263,7 +263,8 @@ runjags.summaries <- function(fullmcmclist, thinnedmcmclist, psrf.target, normal
 	discrete <- !is.na(modestats)
 
 	if(any(is.na(modestats)) && runjags.getOption('mode.continuous')){
-		if(!suppressPackageStartupMessages(requireNamespace('modeest', quietly=TRUE)))
+		## Note: attatching the timeSeries package (recursive dependency of modeest) causes a warning message "multiple methods tables found for ‘plot’"
+		if(!suppressPackageStartupMessages(suppressWarnings(requireNamespace('modeest', quietly=TRUE))))
 			stop('The "modeest" package is required to calculate the mode of continuous variables', call.=FALSE)
 		if(is.null(modeest.opts)) modeest.opts <- list()
 		if(!is.list(modeest.opts)){

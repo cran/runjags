@@ -127,12 +127,14 @@ if(require('rjags')){
 data(LINE)
 jags.model <- LINE
 runjags.model <- as.runjags(jags.model, monitor=c('alpha','beta'))
-runjags.model <- extend.jags(runjags.model, method='interruptible')
+\dontrun{
+runjags.model <- extend.jags(runjags.model)
 jags.model <- as.jags(runjags.model)
 # Coercion to MCMC (requires loading the coda package):
 library('coda')
 mcmc <- as.mcmc.list(runjags.model)
 summary(mcmc)
+}
 }
 }
 \seealso{
