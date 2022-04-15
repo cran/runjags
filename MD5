@@ -1,6 +1,6 @@
 712158672d9ac1bc81626c8c579468e3 *CHANGELOG
 94d55d512a9ba36caa9b7df079bae19f *COPYING
-9a26de08f0115f29d48bc58009d42bdf *DESCRIPTION
+c8b917978389b33f876960cad17eaeea *DESCRIPTION
 4aa8e96bf240e7f6fb284d4daf5043b7 *INSTALL
 bd28b07f88565252fd078c33d4f3738f *NAMESPACE
 44ffb57da2e5ed8711bb1fef2aaf79f1 *R/autoextend.jags.R
@@ -36,15 +36,15 @@ ecf52f407b12d30e362cade78d543a0b *README.md
 927e835cc0f2f23dccfbaf630284c924 *build/vignette.rds
 dcaaebcca607ca56db4bac9d69c02576 *cleanup
 d90c124fe633d141204671fdc6e777b5 *configure
-65c482322b9eee78c7d21508803f68ff *configure.ac
+679739b333d557c6c8fb03ab81cfd665 *configure.ac
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 f53086d589d7d20c5ea1217ef40d8cec *inst/CITATION
 d41d8cd98f00b204e9800998ecf8427e *inst/WORDLIST
 548248e7e46cc08ba314e67b186ccb4b *inst/doc/UserGuide.Rtex
-f2f4867008d783daca3bfcab1e298b4e *inst/doc/UserGuide.pdf
+ac15da3de6c97e472f31dec7ed6ec15c *inst/doc/UserGuide.pdf
 c3a8e9805f0e65c7e287d8eac8280e56 *inst/doc/quickjags.R
 e3e4b1d3df7d20b8c69200b6ee403a72 *inst/doc/quickjags.Rmd
-e0b3e0709b358c4c895a0781755d6710 *inst/doc/quickjags.html
+066dadbee21fae9ce2c2d2e803c5cf07 *inst/doc/quickjags.html
 641aba458cad498ffec9233029b19e15 *inst/xgrid/beep.bat
 dc3792898fbded1cb457e88f7ebcf5d3 *man/add.summary.Rd
 43f6ab388c739e0765320f4729f82877 *man/ask.Rd
@@ -70,8 +70,8 @@ da8feaefe5b5feafb7b2b4ddb4257c31 *man/template_huiwalter.Rd
 e71f931a99c20fa00464842c9c7e94a6 *man/timestring.Rd
 1b2bd47af71dcc2623447053325a5fd8 *man/write.jagsfile.Rd
 236641f44f54bf1d31af499812dbf769 *src/Makevars.in
-3121d1a023a59a3427b2b48e0aa832ca *src/Makevars.ucrt
-5083c7dcbffb18caaf5721cb1851115f *src/Makevars.win
+5867cdadce4ca9255acf3f4e2b9aca33 *src/Makevars.ucrt
+d640e800cbe197a65df0259067599f3f *src/Makevars.win
 307dc524f7310df7232a36a672f54586 *src/distributions/DGenPar.cc
 5da2b866a6bf09992c4374fcb123f23c *src/distributions/DGenPar.h
 57678791b799f86d3e6f08725cae1c5d *src/distributions/DHalfCauchy.cc
