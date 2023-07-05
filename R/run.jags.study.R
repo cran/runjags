@@ -12,7 +12,7 @@
 #' @keywords methods
 
 #' @return
-#' An object of class \code{\link{runjagsstudy-class}}, containing a summary of the performance of the model with regards to the target variables specified.  If record.chains=TRUE, an element named 'runjags' containing a list of all the runjags objects returned will also be present.  Any error messages given by individual simulations will be contained in the \$errors element of the returned list.
+#' An object of class \code{\link{runjagsstudy-class}}, containing a summary of the performance of the model with regards to the target variables specified.  If record.chains=TRUE, an element named 'runjags' containing a list of all the runjags objects returned will also be present.  Any error messages given by individual simulations will be contained in the 'errors' element of the returned list.
 
 #' @seealso
 #' \code{\link{autorun.jags}} for the underlying methods used to run simulations to convergence, and \code{\link{runjagsstudy-class}} for details of the returned object
@@ -478,7 +478,7 @@ run.jags.study <- function(simulations, model, datafunction, targets=list(), con
 		runjags.args$tempdir <- eval(runjags.args$tempdir)
 
 		# Detect common problems:
-		if(!require("runjags") || package_version(utils::packageDescription('runjags', fields='Version'))<1)
+		if(!require("runjags") || package_version(utils::packageDescription('runjags', fields='Version')) < "1.0.0")
 			stop(paste("The runjags package (version >=1.0.0) is not installed (or failed to load) on the cluster node '", Sys.info()['nodename'], "'", sep=""))
 		if(runjags.args$method%in%c('rjags','rjparallel') && !requireNamespace("rjags"))
 			stop(paste("The rjags package is not installed (or failed to load) on the cluster node '", Sys.info()['nodename'], "' - try specifying method='simple'", sep=""))

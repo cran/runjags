@@ -39,6 +39,8 @@ getjagsnames <- function(targets){
 	return(retval)
 }
 
+is_na_arg <- function(x) length(x)==1L && is.na(x)
+
 # Currently used only by glm.template - rjags and JAGS now respect initial ordering of variables:
 alphabeticalvars <- function(x, always.last=c('resid.sum.sq','deviance')){
 
@@ -827,7 +829,7 @@ normalise.mcmcfun <- function(mcmc.list, normalise = TRUE, warn = TRUE, remove.n
 			meansdiffer[] <- FALSE
 		}
 
-		nonstochastic <- apply(anyvariancezero,1,all) & !meansdiffer
+		nonstochastic <- apply(anyvariancezero,1,all) & !is.na(meansdiffer) & !meansdiffer
 		removed <- names(nonstochastic)[nonstochastic]
 		if(length(removed)>0 && niter(mcmc)>1){
 			warnmessage <- paste("Note: The monitored variable", if(sum(nonstochastic)>1) "s", " '", if(sum(nonstochastic)>1) paste(removed[1:(length(removed)-1)], collapse="', '"), if(sum(nonstochastic)>1) "' and '", removed[length(removed)], "' appear", if(sum(nonstochastic)==1) "s", " to be non-stochastic; ", if(sum(nonstochastic)>1) "they" else "it", " will not be included in the convergence diagnostic", sep="")
@@ -1235,7 +1237,7 @@ checkvalidrunjagsobject <- function(runjags.object){
 			runjags.object$fitted <- NA
 
 		# Not the best way of doing it - add.summary doesn't update the version:
-	#	if(numeric_version(runjags.object$runjags.version[1]) < 2){
+	#	if(numeric_version(runjags.object$runjags.version[1]) < "2.0.0"){
 	#		runjags.object$summaries <- 'Summary statistics not available - see ?add.summary'
 	#	}
 
@@ -1261,9 +1263,13 @@ checkvalidrunjagsobject <- function(runjags.object){
 
 
 	}else{
-		if(!all(c('plots','vars','mutate','psrf.target','normalise.mcmc','modeest.opts','confidence','autocorr.lags','custom','silent.jags','plots','plot.type','col','summary.iters','trace.iters','separate.chains','trace.options','density.options','histogram.options','ecdfplot.options','acplot.options')%in%names(runjags.object$summary.pars) || length(runjags.object$summary.pars)!=21)){
-			cat('Invalid summary.pars\n')
-			browser()
+    ## summary.iters was not copied correctly until version 2.2.2:
+    if(!"summary.iters" %in% names(runjags.object$summary.pars)){
+      runjags.object$summary.pars$summary.iters <- 10000
+    }
+
+		if(length(runjags.object$summary.pars)!=20 || !all(c('plots','vars','mutate','psrf.target','normalise.mcmc','modeest.opts','confidence','autocorr.lags','custom','silent.jags','plot.type','col','summary.iters','trace.iters','separate.chains','trace.options','density.options','histogram.options','ecdfplot.options','acplot.options') %in% names(runjags.object$summary.pars))){
+			stop('Invalid summary.pars - please submit a bug report\n')
 		}
 	}
 
