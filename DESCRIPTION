@@ -1,7 +1,7 @@
 Package: runjags
 Title: Interface Utilities, Model Templates, Parallel Computing Methods
         and Additional Distributions for MCMC Models in JAGS
-Version: 2.2.2-1
+Version: 2.2.2-1.1
 Date: 2023-07-04
 Authors@R: c(person("Matthew", "Denwood", role=c("aut","cre"), email="md@sund.ku.dk"),
              person("Martyn", "Plummer", role="cph", 
@@ -30,11 +30,11 @@ VignetteBuilder: knitr
 Language: en-GB
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
-Packaged: 2023-07-04 10:36:44 UTC; matthewdenwood
+Packaged: 2023-08-21 06:15:38 UTC; hornik
 Author: Matthew Denwood [aut, cre],
   Martyn Plummer [cph] (Copyright holder of the code in
     src/distributions/DPar1.*, configure.ac, R/rjags_functions.R, and
     original copyright holder of some modified code where indicated)
 Maintainer: Matthew Denwood <md@sund.ku.dk>
 Repository: CRAN
-Date/Publication: 2023-07-06 00:10:34 UTC
+Date/Publication: 2023-08-21 06:42:57 UTC

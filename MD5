@@ -1,6 +1,6 @@
 712158672d9ac1bc81626c8c579468e3 *CHANGELOG
 94d55d512a9ba36caa9b7df079bae19f *COPYING
-5d3b0cba6a87e4e6d40f1d5378b86f39 *DESCRIPTION
+be40be7a913125ec4eea97ff3b663cfa *DESCRIPTION
 4aa8e96bf240e7f6fb284d4daf5043b7 *INSTALL
 bd28b07f88565252fd078c33d4f3738f *NAMESPACE
 44ffb57da2e5ed8711bb1fef2aaf79f1 *R/autoextend.jags.R
@@ -20,7 +20,7 @@ ec29f63453f367864019d217eae00233 *R/run.jags.study.R
 016a784a616681bb0ece2832a09c068f *R/runjags-package.R
 b0342b42f66d24b31ef209ee29a4e68a *R/runjags.readin.R
 ceceed998cbf34e5fa3abf0bfce356d4 *R/runjags.start.R
-085739643a8b98f0db6c158a3102a61e *R/runjags.summaries.R
+d77df5312e79e6a613f9a985d52c3d9f *R/runjags.summaries.R
 a2f162ed4896c4904d0daf80ff49b016 *R/runjags_start.R
 660fd9c1ca567177ff7d6f35f78c411f *R/runjagsclass.R
 53b697b794efaa1f1971e7222a1f3073 *R/setup.jags.jagsfile.R
@@ -29,7 +29,7 @@ ac4147bb61dec1cd867546ab608cacdd *R/setup_jags_jagsfile.R
 f40036fd91efd4d62d7381f438d2b0d6 *R/template.jags.R
 8dad87400da29d73d634d2e68e4fc40c *R/template_huiwalter.R
 bbef7a82217b6ffe81b9e7c32e9ae0d1 *R/utilities.R
-65a82930ab5524470a3158909e5fb76b *R/utilities.invisible.R
+9c0c8aa986222aa4010b54229a87cd34 *R/utilities.invisible.R
 f1896c050e7bc860f71c6f3bdd22a065 *R/write.jagsfile.R
 c85e7699289a7a5c825887602612d934 *R/zzz.R
 ecf52f407b12d30e362cade78d543a0b *README.md
@@ -41,10 +41,10 @@ d41d8cd98f00b204e9800998ecf8427e *configure.win
 f53086d589d7d20c5ea1217ef40d8cec *inst/CITATION
 d41d8cd98f00b204e9800998ecf8427e *inst/WORDLIST
 548248e7e46cc08ba314e67b186ccb4b *inst/doc/UserGuide.Rtex
-afc44a8c889c089e52cf357e64c70124 *inst/doc/UserGuide.pdf
+0a7b10abfd9afc9667215127d76efb66 *inst/doc/UserGuide.pdf
 c3a8e9805f0e65c7e287d8eac8280e56 *inst/doc/quickjags.R
-edac90f28ba80196a1cf6051fd0fd0d7 *inst/doc/quickjags.Rmd
-e9c12a155fd0ceffdc5fb40a6d4202d3 *inst/doc/quickjags.html
+5a36195ac33064b8bb681aeddc037989 *inst/doc/quickjags.Rmd
+e8117a98ade50b62fdb013f0cce08732 *inst/doc/quickjags.html
 641aba458cad498ffec9233029b19e15 *inst/xgrid/beep.bat
 dc3792898fbded1cb457e88f7ebcf5d3 *man/add.summary.Rd
 43f6ab388c739e0765320f4729f82877 *man/ask.Rd
@@ -112,5 +112,5 @@ e59c6bc86d585819d6446b86854df4b5 *tests/moduletargets.Rsave
 27dc73396b7f1a3ceaab1b8a1c3858b1 *tests/testthat.R
 9e6bfaa08de19610b00c92e63bac6ac5 *tests/testthat/test-basic_example.R
 548248e7e46cc08ba314e67b186ccb4b *vignettes/UserGuide.Rtex
-edac90f28ba80196a1cf6051fd0fd0d7 *vignettes/quickjags.Rmd
+5a36195ac33064b8bb681aeddc037989 *vignettes/quickjags.Rmd
 7c9b7eb0fd697f2f8e93d893fd389a8c *vignettes/traceplots.pdf
