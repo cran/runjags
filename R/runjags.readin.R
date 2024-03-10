@@ -646,8 +646,6 @@ read.coda.subset <- function (output.file, index.file, start, end, thin, quiet =
 	iterations <- index[1,2]
 	# TODO:  Modify later
 
-    if (is.R()) {
-
 		if(!identical(as.character(vars), as.character(NA))){
 
 			# Indexes of vars will be expanded earlier in runjags code
@@ -694,16 +692,6 @@ read.coda.subset <- function (output.file, index.file, start, end, thin, quiet =
 	        temp <- as.data.frame(scan(output.file, what = list(iter = 0, val = 0), quiet = TRUE))
 			# TODO: index scan to immediately drop thinned chains ... make sure pd thinned later
 		}
-
-
-    }
-    else {
-		stop('Modified function is not S-compatible')
-		# NOT modified as I don't use S...
-		if(!identical(vars, NA)) warning("Argument 'vars' was ignored")
-        temp <- scan(output.file, what = list(iter = 0, val = 0))
-		# TODO: index scan to immediately drop thinned chains ... make sure pd thinned later
-    }
 
 	# Added to allow sub.samples to control thinning indirectly:
 	if(!is.na(sub.samples)){
