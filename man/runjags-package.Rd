@@ -2,8 +2,8 @@
 % Please edit documentation in R/runjags-package.R
 \docType{package}
 \name{runjags-package}
-\alias{runjags}
 \alias{runjags-package}
+\alias{runjags}
 \alias{runjagspackage}
 \title{runjags: Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS}
 \description{
