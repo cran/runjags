@@ -1,6 +1,6 @@
 \documentclass[nojss]{jss}
 
-\usepackage[utf8]{inputenc} 
+\usepackage[utf8]{inputenc}
 \usepackage{amsmath,booktabs}
 
 %\VignetteIndexEntry{Using the runjags package}
@@ -28,10 +28,10 @@
   \pkg{parallel}.  A module extension for \pkg{JAGS} is also
   included within \pkg{runjags}, providing the Pareto family of
   distributions and a series of minimally-informative priors including
-  the DuMouchel and half-Cauchy priors. This vignette is taken from the 
-  publication for the \pkg{runjags} package \citep{Denwood:2016ee}.  
-  It outlines the primary functions of this package, and gives an 
-  illustration of a simulation study to assess the performance of 
+  the DuMouchel and half-Cauchy priors. This vignette is taken from the
+  publication for the \pkg{runjags} package \citep{Denwood:2016ee}.
+  It outlines the primary functions of this package, and gives an
+  illustration of a simulation study to assess the performance of
   equivalent model specifications.
 }
 
@@ -46,7 +46,7 @@
   University of Copenhagen\\
   Denmark\\
   E-mail: \email{md@sund.ku.dk}\\
-  URL: \url{http://iph.ku.dk/english/employees/?pure=en/persons/487288/}
+  URL: \url{https://researchprofiles.ku.dk/en/persons/matt-denwood/}
 }
 
 
@@ -101,7 +101,7 @@ This paper describes the \pkg{runjags} package \citep{runjags} for
 \proglang{R} \citep{R2014} which can be used to automate MCMC fitting
 and summarizing procedures for \pkg{JAGS} models and is available
 from the Comprehensive \proglang{R} Archive Network (CRAN) at
-\url{https://CRAN.R-project.org/package=runjags}.  The functions are
+\url{https://cran.r-project.org/package=runjags}.  The functions are
 designed to be user-friendly (particularly for those less experienced
 with MCMC analysis), and provide a number of features to make the
 recommended convergence and sample size checks more obvious to the end
@@ -186,8 +186,7 @@ data transformation (see Section 7.0.4 of the \pkg{JAGS} user manual).
 
 As a basic example, we can use the Salmonella example from
 Chapter 6.5.2 of the \proglang{BUGS} book
-\citep[\href{http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-the-bugs-book/bugs-book-examples/the-bugs-book-examples-chapter-6-6-5-2/}{\tt
-http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-the-bugs-book/\linebreak bugs-book-examples/the-bugs-book-examples-chapter-6-6-5-2/}, with thanks to][for permission to reproduce their
+\citep[with thanks to][for permission to reproduce their
 model]{lunn2012bugs}.  Simulation-specific options can be provided to
 the \code{run.jags} function, which may include the required burn-in
 period, sampling length and thinning interval.  A basic model run with
@@ -199,11 +198,11 @@ obtained as follows:
 \begin{Sinput}
 R> filestring <- "
 +  The BUGS Book example Chapter 6.5.2
-+  The following example has been modified only to include 
++  The following example has been modified only to include
 +  curly brackets around the Data and Inits specifications
-+  
++
 +  Poisson model...
-+  
++
 +  model {
 +    for (i in 1:6) {
 +      for (j in 1:3) {
@@ -218,13 +217,13 @@ R> filestring <- "
 +    beta ~ dnorm(0, 0.0001)
 +    gamma ~ dnorm(0, 0.0001)
 +  }
-+  
++
 +  Data {
 +    list(y = structure(.Data = c(15, 21, 29, 16, 18, 21, 16, 26, 33,
 +      27, 41, 60, 33, 38, 41, 20, 27, 42), .Dim = c(6, 3)),
 +      x = c(0, 10, 33, 100, 333, 1000))
 +  }
-+  
++
 +  Inits {
 +    list(alpha = 0, beta = 0, gamma = 0)
 +  }
@@ -233,7 +232,7 @@ R> results <- run.jags(filestring, monitor = c("alpha", "beta", "gamma"))
 \end{Sinput}
 \begin{Soutput}
 Warning message:
-Convergence cannot be assessed with only 1 chain 
+Convergence cannot be assessed with only 1 chain
 \end{Soutput}
 \end{Schunk}
 %
@@ -248,12 +247,12 @@ R> results
 \end{Sinput}
 \begin{Soutput}
 JAGS model summary statistics from 10000 samples (adapt+burnin = 5000):
-                                                                        
+
          Lower95      Median     Upper95       Mean         SD      Mode
 alpha     1.8018      2.1899      2.6135     2.1913    0.20439    2.1939
 beta     0.20684     0.31538     0.41891    0.31414   0.053648    0.3157
 gamma -0.0014678 -0.00099063 -0.00053861 -0.0009922 0.00023808 -0.001008
-                                            
+
             MCerr MC%ofSD SSeff   AC.10 psrf
 alpha    0.019523     9.6   110 0.78631   --
 beta    0.0052936     9.9   103 0.81478   --
@@ -268,7 +267,7 @@ The results show similar inference to that provided by
 the effective sample size (\code{SSeff}), auto-correlation at a lag of
 10 (\code{AC.10}), and the potential scale reduction factor
 (\code{psrf}) of the Gelman-Rubin statistic \citep{Gelman1992} for
-models with multiple chains (the latter is sometimes referred to as 
+models with multiple chains (the latter is sometimes referred to as
 `Rhat').  In this case, an insufficient number of
 samples has been taken for this highly auto-correlated model (although
 it is important to note that the auto-correlation is markedly reduced
@@ -363,11 +362,11 @@ chains one and two, ensuring that initial values are over-dispersed.
 \begin{Sinput}
 R> coef <- function(chain)
 +    return(switch(chain, "1" = -10, "2" = 10))
-R> int <- function(chain) 
+R> int <- function(chain)
 +    return(switch(chain, "1" = -10, "2" = 10))
 R> precision <- function(chain)
 +    return(switch(chain, "1" = 0.01, "2" = 100))
-R> .RNG.seed <- function(chain) 
+R> .RNG.seed <- function(chain)
 +    return(switch(chain, "1" = 1, "2" = 2))
 R> .RNG.name <- function(chain)
 +    return(switch(chain, "1" = "base::Super-Duper",
@@ -513,14 +512,14 @@ follows:
 R> results
 \end{Sinput}
 \begin{Soutput}
-JAGS model summary statistics from 30000 samples (chains = 2; 
+JAGS model summary statistics from 30000 samples (chains = 2;
 adapt+burnin = 5000):
-                                                                              
+
           Lower95  Median Upper95    Mean        SD   Mode       MCerr MC%ofSD
 coef       1.9922  1.9995   2.007  1.9996 0.0038115 1.9994 0.000073962     1.9
 int        9.4388  9.8711  10.307  9.8692   0.22139 9.8768   0.0042942     1.9
 precision 0.61225 0.82946  1.0685 0.83515   0.11731  0.826   0.0007013     0.6
-                                
+
           SSeff     AC.10   psrf
 coef       2656   0.16954  1.002
 int        2658   0.16942 1.0018
@@ -574,11 +573,11 @@ R> outcome <- gl(3, 1, 9)
 R> treatment <- gl(3, 3)
 R> d.AD <- data.frame(treatment, outcome, counts)
 R> glm.D93 <- glm(counts ~ outcome + treatment, family = poisson())
-R> template.jags(counts ~ outcome + treatment, data = d.AD, 
+R> template.jags(counts ~ outcome + treatment, data = d.AD,
 +    family = "poisson")
 \end{Sinput}
 \begin{Soutput}
-Your model template was created at "JAGSmodel.txt" - it is highly 
+Your model template was created at "JAGSmodel.txt" - it is highly
 advisable to examine the model syntax to be sure it is as intended
 You can then run the model using run.jags("JAGSmodel.txt")
 \end{Soutput}
@@ -630,18 +629,6 @@ density function (PDF) and lower bound for the support of each of the
 distributions provided by the module are shown in
 Table~\ref{tab:pareto}, and an example of how to use the distributions
 in this module is given in Section~\ref{sec:illustration}.
-
-One limitation of the module provided within \pkg{runjags} is that it
-is only made available for the `\code{rjags}' and `\code{rjparallel}'
-methods when loaded within \proglang{R}.  However, a standalone
-\pkg{JAGS} module containing the same functions for use with any
-\pkg{JAGS} installation (independently of \proglang{R}) is available
-from \url{http://runjags.sourceforge.net/}.  This module is named
-`\code{paretoprior}' to avoid naming conflicts with the internal
-\pkg{runjags} module, and should install on a variety of platforms
-using the standard `\code{./configure}', `\code{make}', `\code{make
-  install}' convention.  Binary installers are also provided for some
-platforms.
 
 \begin{table}[t!]
 {
@@ -742,7 +729,7 @@ used to call \pkg{JAGS}.
 \addlinespace
 
 \end{tabular}
-\caption{Methods provided by the \pkg{runjags} package to run simulations in \pkg{JAGS}.  
+\caption{Methods provided by the \pkg{runjags} package to run simulations in \pkg{JAGS}.
 Availability of \pkg{JAGS} modules is as follows:\newline
 $^1$Installed in \pkg{JAGS}.  \newline
 $^2$Loadable in the \proglang{R} session. \newline
@@ -764,7 +751,7 @@ the current working directory:
 %
 \begin{Schunk}
 \begin{Sinput}
-R> info <- run.jags(model, n.chains = 2, method = "bgparallel", 
+R> info <- run.jags(model, n.chains = 2, method = "bgparallel",
 +    keep.jags.files = "mysimulation", n.sims = 2)
 \end{Sinput}
 \begin{Soutput}
@@ -863,14 +850,14 @@ R> assessment
 \end{Sinput}
 \begin{Soutput}
 Values obtained from a drop-k study with a total of 5 simulations:
-                                                                      
+
      Target Median   Mean Lower95%CI Upper95%CI Range95%CI Within95%CI
 Y[1] 11.544 11.885 11.879     9.6268     14.055     4.4282           1
 Y[2] 13.051 13.914 13.906     11.549     15.994     4.4445           1
 Y[3] 15.828 15.888 15.878     13.559     18.059     4.5009           1
 Y[4] 18.784 17.832  17.83     15.663      20.12     4.4572           1
 Y[5] 21.398 19.821 19.821     17.657     22.086     4.4285           1
-                    
+
      AutoCorr(Lag10)
 Y[1]        0.010115
 Y[2]        0.014556
@@ -899,20 +886,20 @@ data-points removed from each:
 %
 \begin{Schunk}
 \begin{Sinput}
-R> assessment <- drop.k(results, drop = "Y[1:5]", k = 2, simulations = 100, 
+R> assessment <- drop.k(results, drop = "Y[1:5]", k = 2, simulations = 100,
 +    method = "simple", psrf.target = 1.1)
 R> assessment
 \end{Sinput}
 \begin{Soutput}
 Average values obtained from a drop-k study with a total of 100 simulations:
-                                                                       
+
      Target Av.Median Av.Mean Av.Lower95%CI Av.Upper95%CI Av.Range95%CI
 Y[1] 11.544    11.879  11.874        9.6118        14.079        4.4667
 Y[2] 13.051    13.894  13.899        11.667         16.13        4.4629
 Y[3] 15.828    15.868  15.871        13.636        18.088        4.4516
 Y[4] 18.784    17.847  17.853        15.627        20.036        4.4082
 Y[5] 21.398    19.822  19.827        17.656        22.071        4.4152
-                                                    
+
      Prop.Within95%CI Av.AutoCorr(Lag10) Simulations
 Y[1]                1           0.010223          41
 Y[2]                1          0.0066466          39
@@ -980,12 +967,12 @@ A candidate \pkg{JAGS} Model A (using inline data and monitor statements to be d
 R> ModelA <- "model {
 +    for (i in 1:N) {
 +      Count[i] ~ dpois(lambda[i])
-+      lambda[i] ~ dgamma(shape, rate)	
++      lambda[i] ~ dgamma(shape, rate)
 +    }
 +    shape ~ dmouch(1)
 +    mean ~ dmouch(1)
 +    rate <- shape / mean
-+	
++
 +    #data# N
 +    #modules# runjags
 +    #monitor# mean, shape
@@ -1018,11 +1005,11 @@ R> ModelB <- "model {
 +    for (i in 1:N) {
 +      Count[i] ~ dnegbin(prob, shape)
 +    }
-+	
++
 +    shape ~ dmouch(1)
 +    mean ~ dmouch(1)
 +    prob <- shape / (shape + mean)
-+	
++
 +    #data# N
 +    #modules# runjags
 +    #monitor# mean, shape
@@ -1054,7 +1041,7 @@ parameter in \pkg{JAGS}, this can be calculated more efficiently in
 %
 \begin{Schunk}
 \begin{Sinput}
-R> getcv <- function(x) 
+R> getcv <- function(x)
 +    return(list(cv = sqrt(1 / x[, "shape"])))
 \end{Sinput}
 \end{Schunk}
@@ -1092,7 +1079,7 @@ R> initsfunction <- function(chain) {
 +    mean <- c(10, 0.1)[chain]
 +    .RNG.seed <- c(1, 2)[chain]
 +    .RNG.name <- c("base::Super-Duper", "base::Wichmann-Hill")[chain]
-+    return(list(shape = shape, mean = mean, .RNG.seed = .RNG.seed, 
++    return(list(shape = shape, mean = mean, .RNG.seed = .RNG.seed,
 +      .RNG.name = .RNG.name))
 +  }
 \end{Sinput}
@@ -1108,11 +1095,11 @@ ensure that the model is valid before it is passed to the cluster:
 \begin{Sinput}
 R> library("parallel")
 R> cl <- makeCluster(10)
-R> resultsA <- run.jags.study(S, ModelA, datafunction, 
-+    targets = list(mean = truemean, cv = truecv), cl = cl, 
+R> resultsA <- run.jags.study(S, ModelA, datafunction,
++    targets = list(mean = truemean, cv = truecv), cl = cl,
 +    inits = initsfunction, n.chains = 2, mutate = getcv)
-R> resultsB <- run.jags.study(S, ModelB, datafunction, 
-+    targets = list(mean = truemean, cv = truecv), cl = cl, 
+R> resultsB <- run.jags.study(S, ModelB, datafunction,
++    targets = list(mean = truemean, cv = truecv), cl = cl,
 +    inits = initsfunction, n.chains = 2, mutate = getcv)
 \end{Sinput}
 \end{Schunk}
@@ -1126,11 +1113,11 @@ R> resultsA
 \end{Sinput}
 \begin{Soutput}
 Average values obtained from a JAGS study with a total of 1000 simulations:
-                                                                       
+
      Target Av.Median Av.Mean Av.Lower95%CI Av.Upper95%CI Av.Range95%CI
 mean      2    1.9689  2.0756       0.99815         3.354        2.3559
 cv      1.1    1.0627  1.0909       0.52457        1.6983        1.1737
-                                                    
+
      Prop.Within95%CI Av.AutoCorr(Lag10) Simulations
 mean             0.93           0.043658        1000
 cv              0.926            0.19093        1000
@@ -1144,11 +1131,11 @@ R> resultsB
 \end{Sinput}
 \begin{Soutput}
 Average values obtained from a JAGS study with a total of 1000 simulations:
-                                                                       
+
      Target Av.Median Av.Mean Av.Lower95%CI Av.Upper95%CI Av.Range95%CI
 mean      2    1.9632   2.069        1.0007        3.3294        2.3287
 cv      1.1    1.0625  1.0891       0.52306        1.6905        1.1675
-                                                    
+
      Prop.Within95%CI Av.AutoCorr(Lag10) Simulations
 mean            0.925           0.015783        1000
 cv              0.931           0.040415        1000
@@ -1313,7 +1300,7 @@ example.
 Bates D, Maechler M, Bolker B, Walker S (2014).
 \newblock \emph{\pkg{lme4}: Linear mixed-effects models using Eigen and S4}.
 \newblock \proglang{R}~package version 1.1-7,
-  \urlprefix\url{http://CRAN.R-project.org/package=lme4}.
+  \urlprefix\url{https://cran.r-project.org/package=lme4}.
 
 \bibitem[{Bolker \emph{et~al.}(2009)Bolker, Brooks, Clark, Geange, Poulsen,
   Stevens, and White}]{Bolker2009}
@@ -1323,7 +1310,7 @@ Bolker BM, Brooks ME, Clark CJ, Geange SW, Poulsen JR, Stevens MHH, White JSS
   Ecology and Evolution.}}
 \newblock \emph{Trends in Ecology \& Evolution}, \textbf{24}(3), 127--35.
 \newblock ISSN 0169-5347.
-\newblock \urlprefix\url{http://dx.doi.org/10.1016/j.tree.2008.10.008}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1016/j.tree.2008.10.008}.
 
 \bibitem[{Brooks and Roberts(1998)}]{Brooks:1998ee}
 Brooks SP, Roberts GO (1998).
@@ -1339,7 +1326,7 @@ Christiansen CL, Morris CN (1997).
 \newblock ISSN 0162-1459.
 \newblock \doi{10.1080/01621459.1997.10474013}.
 \newblock
-  \urlprefix\url{http://www.tandfonline.com/doi/abs/10.1080/01621459.1997.10474013}.
+  \urlprefix\url{https://www.tandfonline.com/doi/abs/10.1080/01621459.1997.10474013}.
 
 \bibitem[{Conti \emph{et~al.}(2011)Conti, Presanis, van Veen, Xiridou,
   Donoghoe, {Rinder Stengaard}, and {De Angelis}}]{Conti2011}
@@ -1349,16 +1336,16 @@ Conti S, Presanis AM, van Veen MG, Xiridou M, Donoghoe MC, {Rinder Stengaard}
   a Multi-Parameter Evidence Synthesis Approach}.}
 \newblock \emph{The Annals of Applied Statistics}, \textbf{5}(4), 2359--2384.
 \newblock ISSN 1932-6157.
-\newblock \urlprefix\url{http://dx.doi.org/10.1214/11-AOAS488}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1214/11-AOAS488}.
 
 \bibitem[{Daniels(1999)}]{Daniels1999}
 Daniels M (1999).
 \newblock \enquote{{A prior for the variance in hierarchical models}.}
 \newblock \emph{The Canadian Journal of Statistics}, \textbf{27}, 567--578.
 \newblock ISSN 03195724.
-\newblock \doi{doi: 10.2307/3316112}.
+\newblock \doi{doi:10.2307/3316112}.
 \newblock
-  \urlprefix\url{http://onlinelibrary.wiley.com/doi/10.2307/3316112/abstract}.
+  \urlprefix\url{https://onlinelibrary.wiley.com/doi/10.2307/3316112/abstract}.
 
 \bibitem[{Denwood(2016)}]{Denwood:2016ee}
 Denwood, MJ (2016).
@@ -1371,7 +1358,7 @@ Denwood MJ (2010).
 \newblock \emph{{A Quantitative Approach to Improving the Analysis of Faecal
   Worm Egg Count Data}}.
 \newblock Doctoral thesis, University of Glasgow.
-\newblock \urlprefix\url{http://theses.gla.ac.uk/1837/}.
+\newblock \urlprefix\url{https://theses.gla.ac.uk/1837/}.
 
 \bibitem[{Denwood \emph{et~al.}(2010)Denwood, Reid, Love, Nielsen, Matthews,
   McKendrick, and Innocent}]{Denwood:2010fk}
@@ -1381,7 +1368,7 @@ Denwood MJ, Reid SWJ, Love S, Nielsen MK, Matthews L, McKendrick IJ, Innocent
   Equine Faecal egg Count Reduction Test Data}.}
 \newblock \emph{Preventive Veterinary Medicine}, \textbf{93}(4), 316--23.
 \newblock ISSN 1873-1716.
-\newblock \urlprefix\url{http://dx.doi.org/10.1016/j.prevetmed.2009.11.009}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1016/j.prevetmed.2009.11.009}.
 
 \bibitem[{Denwood \emph{et~al.}(2008)Denwood, Stear, Matthews, Reid, Toft, and
   Innocent}]{Denwood:2008rz}
@@ -1390,7 +1377,7 @@ Denwood MJ, Stear MJ, Matthews L, Reid SWJ, Toft N, Innocent GT (2008).
   \textit{Nematodirus battus} in Lambs is Zero-Inflated}.}
 \newblock \emph{Parasitology}, \textbf{135}(10), 1225--1235.
 \newblock ISSN 1469-8161 (Electronic).
-\newblock \urlprefix\url{http://dx.doi.org/10.1017/S0031182008004708}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1017/S0031182008004708}.
 
 \bibitem[{DuMouchel(1994)}]{DuMouchel1994}
 DuMouchel W (1994).
@@ -1398,7 +1385,7 @@ DuMouchel W (1994).
 \newblock \emph{Technical Report~27}, {National Institute of Statistical
   Sciences}.
 \newblock
-  \urlprefix\url{http://www.niss.org/sites/default/files/pdfs/technicalreports/tr27.pdf}.
+  \urlprefix\url{https://www.niss.org/sites/default/files/technicalreports/tr27.pdf}.
 
 \bibitem[{Gelman(2006)}]{Gelman2006}
 Gelman A (2006).
@@ -1411,7 +1398,7 @@ Gelman A, Rubin DB (1992).
 \newblock \enquote{{Inference from Iterative Simulation Using Multiple
   Sequences}.}
 \newblock \emph{Statistical Science}, \textbf{7}(4), 457--472.
-\newblock \urlprefix\url{http://www.jstor.org/stable/2246093}.
+\newblock \urlprefix\url{https://www.jstor.org/stable/2246093}.
 
 \bibitem[{Gilks \emph{et~al.}(1998)Gilks, Richardson, and
   Spiegelhalter}]{Gilks:1998pt}
@@ -1420,14 +1407,14 @@ Gilks WR, Richardson S, Spiegelhalter DJ (1998).
 \newblock Chapman and Hall, Boca Raton, Fla.
 \newblock ISBN 0412055511.
 \newblock
-  \urlprefix\url{http://www.loc.gov/catdir/enhancements/fy0646/98033429-d.html}.
+  \urlprefix\url{https://search.catalog.loc.gov/search?option=lccn&query=98033429}.
 
 \bibitem[{Hastings(1970)}]{Hastings:1970bi}
 Hastings WK (1970).
 \newblock \enquote{{Monte Carlo Sampling Methods Using Markov Chains and Their
   Applications}.}
 \newblock \emph{Biometrika}, \textbf{57}(1), 97--109.
-\newblock \urlprefix\url{http://dx.doi.org/10.1093/biomet/57.1.97}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1093/biomet/57.1.97}.
 
 \bibitem[{Kass \emph{et~al.}(1998)Kass, Carlin, Gelman, and Neal}]{Kass:1998fu}
 Kass RE, Carlin BP, Gelman A, Neal RM (1998).
@@ -1442,7 +1429,7 @@ Lele SR, Dennis B (2009).
 \newblock \emph{Ecological Applications : a Publication of the Ecological
   Society of America}, \textbf{19}(3), 581--4.
 \newblock ISSN 1051-0761.
-\newblock \urlprefix\url{http://www.ncbi.nlm.nih.gov/pubmed/19425420}.
+\newblock \doi{doi:10.1890/08-0549.1}.
 
 \bibitem[{Lunn \emph{et~al.}(2012)Lunn, Jackson, Best, Thomas, and
   Spiegelhalter}]{lunn2012bugs}
@@ -1458,7 +1445,7 @@ Lunn DJ, Thomas A, Best N, Spiegelhalter D (2000).
   Structure, and Extensibility}.}
 \newblock \emph{Statistics and Computing}, \textbf{10}(4), 325--337.
 \newblock ISSN 0960-3174.
-\newblock \urlprefix\url{http://dx.doi.org/10.1023/A:1008929526011}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1023/A:1008929526011}.
 
 \bibitem[{Phillips \emph{et~al.}(2010)Phillips, Tam, Conti, Rodrigues, Brown,
   Iturriza-Gomara, Gray, and Lopman}]{Phillips2010}
@@ -1469,7 +1456,7 @@ Phillips G, Tam CC, Conti S, Rodrigues LC, Brown D, Iturriza-Gomara M, Gray J,
   Norovirus Diagnosis.}}
 \newblock \emph{American Journal of Epidemiology}, \textbf{171}(9), 1014--22.
 \newblock ISSN 1476-6256.
-\newblock \urlprefix\url{http://dx.doi.org/10.1093/aje/kwq021}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1093/aje/kwq021}.
 
 \bibitem[{Plummer(2003)}]{Plummer2003}
 Plummer M (2003).
@@ -1479,9 +1466,6 @@ Plummer M (2003).
   Statistical Computing (DSC 2003)}, pp. March 20--22,Vienna, Austria. ISSN
   1609--395X.
 \newblock ISSN 1609395X.
-\newblock \doi{10.1.1.13.3406}.
-\newblock
-  \urlprefix\url{http://www.ci.tuwien.ac.at/Conferences/DSC-2003/Drafts/Plummer.pdf}.
 
 \bibitem[{Plummer(2008)}]{Plummer2008}
 Plummer M (2008).
@@ -1494,7 +1478,7 @@ Plummer M (2008).
 Plummer M (2016).
 \newblock \emph{\pkg{rjags}: Bayesian Graphical Models using MCMC}.
 \newblock \proglang{R}~package version 4-6,
-  \urlprefix\url{http://CRAN.R-project.org/package=rjags}.
+  \urlprefix\url{https://cran.r-project.org/package=rjags}.
 
 \bibitem[{Plummer \emph{et~al.}(2006)Plummer, Best, Cowles, and
   Vines}]{Plummer2006}
@@ -1502,20 +1486,20 @@ Plummer M, Best N, Cowles K, Vines K (2006).
 \newblock \enquote{\pkg{CODA}: Convergence Diagnosis and Output Analysis for
   MCMC.}
 \newblock \emph{\proglang{R}~News}, \textbf{6}(1), 7--11.
-\newblock \urlprefix\url{http://CRAN.R-project.org/doc/Rnews/}.
+\newblock \urlprefix\url{https://cran.r-project.org/package=coda}.
 
 \bibitem[{Polson and Scott(2011)}]{Polson2011}
 Polson NG, Scott JG (2011).
 \newblock \enquote{{On the Half-Cauchy Prior for a Global Scale Parameter}.}
 \newblock \emph{Cornell University Library: arXiv.org}.
-\newblock \urlprefix\url{http://arxiv.org/abs/1104.4937}.
+\newblock \urlprefix\url{https://arxiv.org/abs/1104.4937}.
 
 \bibitem[{{\proglang{R}~Core Team}(2015)}]{R2014}
 {\proglang{R}~Core Team} (2015).
 \newblock \emph{\proglang{R}: A Language and Environment for Statistical
   Computing}.
 \newblock \proglang{R}~Foundation for Statistical Computing, Vienna, Austria.
-\newblock \urlprefix\url{http://www.R-project.org/}.
+\newblock \urlprefix\url{https://www.r-project.org}.
 
 \bibitem[{Shaw \emph{et~al.}(1998)Shaw, Grenfell, and Dobson}]{Shaw:1998ty}
 Shaw DJ, Grenfell BT, Dobson AP (1998).
@@ -1531,14 +1515,14 @@ Spiegelhalter DJ, Best NG, Carlin BP, van~der Linde A (2002).
 \newblock \emph{Journal of the Royal Statistical Society B}, \textbf{64}(4),
   583--639.
 \newblock ISSN 13697412.
-\newblock \urlprefix\url{http://www.jstor.org/stable/3088806}.
+\newblock \urlprefix\url{https://www.jstor.org/stable/3088806}.
 
 \bibitem[{Tierney \emph{et~al.}(2013)Tierney, Rossini, Li, and
   Sevcikova}]{Tierney2013}
 Tierney L, Rossini AJ, Li N, Sevcikova H (2013).
 \newblock \emph{{\pkg{snow}: Simple Network of Workstations}}.
 \newblock \proglang{R}~package version 0.3-13,
-  \urlprefix\url{http://cran.r-project.org/package=snow}.
+  \urlprefix\url{https://cran.r-project.org/package=snow}.
 
 \bibitem[{Toft \emph{et~al.}(2007)Toft, Innocent, Gettinby, and
   Reid}]{Toft:2007vl}
@@ -1548,13 +1532,12 @@ Toft N, Innocent GT, Gettinby G, Reid SWJ (2007).
   Standard.}}
 \newblock \emph{Preventive Veterinary Medicine}, \textbf{79}(2-4), 244--256.
 \newblock ISSN 0167-5877.
-\newblock \urlprefix\url{http://dx.doi.org/10.1016/j.prevetmed.2007.01.003}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1016/j.prevetmed.2007.01.003}.
 
 \bibitem[{{Van Hauwermeiren} and Vose(2009)}]{D2009}
 {Van Hauwermeiren} M, Vose D (2009).
 \newblock \emph{{A Compendium of Distributions}}.
 \newblock Vose Software, Ghent, Belgium.
-\newblock \urlprefix\url{http://www.vosesoftware.com/content/ebook.pdf}.
 
 \bibitem[{Wabersich and Vandekerckhove(2014)}]{Wabersich2014}
 Wabersich D, Vandekerckhove J (2014).
@@ -1562,15 +1545,14 @@ Wabersich D, Vandekerckhove J (2014).
   distributions to \proglang{JAGS} (with a diffusion model example).}}
 \newblock \emph{Behavior research methods}, \textbf{46}(1), 15--28.
 \newblock ISSN 1554-3528.
-\newblock \doi{10.3758/s13428-013-0369-3}.
-\newblock \urlprefix\url{http://www.ncbi.nlm.nih.gov/pubmed/23959766}.
+\newblock \doi{doi:10.3758/s13428-013-0369-3}.
 
 \bibitem[{Wilson and Grenfell(1997)}]{Wilson199733}
 Wilson K, Grenfell BT (1997).
 \newblock \enquote{{Generalized Linear Modelling for Parasitologists}.}
 \newblock \emph{Parasitology Today}, \textbf{13}(1), 33--38.
 \newblock ISSN 0169-4758.
-\newblock \urlprefix\url{http://dx.doi.org/10.1016/S0169-4758(96)40009-6}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1016/S0169-4758(96)40009-6}.
 
 \bibitem[{Wilson \emph{et~al.}(1996)Wilson, Grenfell, and Shaw}]{Wilson:1996vm}
 Wilson K, Grenfell BT, Shaw DJ (1996).
@@ -1586,7 +1568,7 @@ Yin Z, Conti S, Desai S, Stafford M, Slater W, Gill ON, Simms I (2013).
   Indices.}}
 \newblock \emph{Sexual Health}, \textbf{10}(2), 102--11.
 \newblock ISSN 1448-5028.
-\newblock \urlprefix\url{http://dx.doi.org/10.1071/SH12057}.
+\newblock \urlprefix\url{https://dx.doi.org/10.1071/SH12057}.
 
 \end{thebibliography}
 
@@ -1608,24 +1590,24 @@ The compound probability mass function of a Poisson distribution (with mean $\la
 Substituting $\alpha=r$ and $\beta=\frac{1-p}{p}$ into Equation~\ref{eqn:nbgp1} gives Equation~\ref{eqn:nbgp2a}, which can be re-written and simplified to Equation~\ref{eqn:nbgp2b}.
 %
 \begin{align}
-f(x; r, p) &= \int_0^\infty \frac{\lambda^x}{x!} e^{-\lambda} \; . \; \left(\frac{1-p}{p}\right)^r \frac{1}{\Gamma(r)} \lambda^{r-1} e^{-\left(\frac{1-p}{p}\right)\lambda} \; \mathrm{d} \lambda 
+f(x; r, p) &= \int_0^\infty \frac{\lambda^x}{x!} e^{-\lambda} \; . \; \left(\frac{1-p}{p}\right)^r \frac{1}{\Gamma(r)} \lambda^{r-1} e^{-\left(\frac{1-p}{p}\right)\lambda} \; \mathrm{d} \lambda
     \label{eqn:nbgp2a}  \\
 &=   \frac{\left(1-p\right)^r}{x! \; p^r \; \Gamma(r)} \; \int_0^\infty \lambda^{x+r-1} e^{-\lambda} e^{- \frac{\left(1-p\right)\lambda}{p}} \;\mathrm{d}\lambda \\
-&=   \frac{\left(1-p\right)^r}{x! \; p^r \; \Gamma(r)} \; \int_0^\infty \lambda^{x+r-1} e^{- \frac{\lambda}{p}} \;\mathrm{d}\lambda 
+&=   \frac{\left(1-p\right)^r}{x! \; p^r \; \Gamma(r)} \; \int_0^\infty \lambda^{x+r-1} e^{- \frac{\lambda}{p}} \;\mathrm{d}\lambda
     \label{eqn:nbgp2b}
 \end{align}
 %
 Substituting the gamma function $\frac{\Gamma(b+1)}{a^{b+1}} = \int_0^\infty t^b e^{-at} \mathrm{d}t$ for $a=\frac{1}{p}$, $b=x+r-1$ and $t=\lambda$ into Equation~\ref{eqn:nbgp2b} gives Equation~\ref{eqn:nbgp3a}.
 %
 \begin{align}
-f(x; r, p) &=   \frac{\left(1-p\right)^r}{x! \; p^r \; \Gamma(r)} \; \frac{\Gamma(x+r-1+1)}{\left(\frac{1}{p}\right)^{x+r-1+1}} 
+f(x; r, p) &=   \frac{\left(1-p\right)^r}{x! \; p^r \; \Gamma(r)} \; \frac{\Gamma(x+r-1+1)}{\left(\frac{1}{p}\right)^{x+r-1+1}}
     \label{eqn:nbgp3a} \\
 &=   \frac{\left(1-p\right)^r}{x! \; p^r \; \Gamma(r)} \; \Gamma(x+r) \, p^{x+r} \\
 &=   \frac{\Gamma(x+r)}{x!\;\Gamma(r)} \; p^x (1-p)^r
     \label{eqn:nbgp3b}
 \end{align}
 %
-Equation~\ref{eqn:nbgp3b} is the probability mass function of the negative binomial distribution defining the number of successes $x$ before $r$ failures with success probability $p$, which is therefore exactly equivalent to a gamma-Poisson compound distribution with mean $\frac{\alpha}{\beta}=\frac{pr}{1-p}$ and shape $\alpha=r$. 
+Equation~\ref{eqn:nbgp3b} is the probability mass function of the negative binomial distribution defining the number of successes $x$ before $r$ failures with success probability $p$, which is therefore exactly equivalent to a gamma-Poisson compound distribution with mean $\frac{\alpha}{\beta}=\frac{pr}{1-p}$ and shape $\alpha=r$.
 
 \end{appendix}
 

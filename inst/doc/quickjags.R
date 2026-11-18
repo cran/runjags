@@ -55,8 +55,8 @@ results
 ## ----results='hide', include=FALSE--------------------------------------------
 plot(results, layout=c(3,4), file='plots.pdf', height=10, width=8)
 
-## ----results='hide'-----------------------------------------------------------
-plot(results, layout=c(3,4))
+## ----results='hide', eval=FALSE-----------------------------------------------
+# plot(results, layout=c(3,4))
 
 ## ----results='hide'-----------------------------------------------------------
 resultswithglm <- run.jags(filestring, monitor=c('alpha','beta','gamma'), modules='glm')
@@ -104,16 +104,25 @@ D9 <- data.frame(weight, group)
 # The JAGS equivalent:
 model <- template.jags(weight ~ group, D9, n.chains=2, family='gaussian')
 
-## ----results='hide'-----------------------------------------------------------
-JAGS.D9 <- run.jags(model)
+## ----include=FALSE------------------------------------------------------------
+if(requireNamespace("rjags") && (rjags::jags.version() %in% c("5.0.0","5.0.1"))){
+ # Work around bug in JAGS 5.0.0-5.0.1
+  JAGS.D9 <- extend.jags(run.jags(model, sample=0), drop.monitor = "dic")
+}else{
+  JAGS.D9 <- run.jags(model)
+}
 lm.D9 <- lm(weight ~ group, data=D9)
+
+## ----eval=FALSE, results='hide'-----------------------------------------------
+# JAGS.D9 <- run.jags(model)
+# lm.D9 <- lm(weight ~ group, data=D9)
 
 ## -----------------------------------------------------------------------------
 JAGS.D9
 summary(lm.D9)
 
 ## ----results='hide'-----------------------------------------------------------
-JAGS.D9 <- run.jags(model, mutate=list(prec2sd, 'precision'))
+JAGS.D9 <- add.summary(JAGS.D9, mutate=list(prec2sd, 'precision'))
 
 ## -----------------------------------------------------------------------------
 summary(JAGS.D9, vars=c('regression_precision.sd', 'intercept', 'group_effect'))
@@ -125,7 +134,7 @@ summary(residuals(lm.D9) - residuals(JAGS.D9, output='mean'))
 extract(JAGS.D9, what='samplers')
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  ?runjags.options
+# ?runjags.options
 
 ## -----------------------------------------------------------------------------
 citation('runjags')

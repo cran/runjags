@@ -9,19 +9,19 @@
 \usage{
 load.runjagsmodule(fail = TRUE, silent = FALSE)
 
-unload.runjagsmodule()
+unload.runjagsmodule(silent = FALSE)
 
 load.runJAGSmodule(fail = TRUE, silent = FALSE)
 
-unload.runJAGSmodule()
+unload.runJAGSmodule(silent = FALSE)
 }
 \arguments{
-\item{fail}{should the function fail using stop() if the module cannot be loaded?}
+\item{fail}{deprecated option - now ignored (with a warning) unless TRUE}
 
-\item{silent}{if !fail, the function will by default print a diagnostic message if the module cannot be loaded - the silent option suppresses this message.}
+\item{silent}{option to suppress messages while loading or unloading the module}
 }
 \value{
-Invisibly returns TRUE if able to (un)load the module, or FALSE otherwise
+Invisibly returns TRUE
 }
 \description{
 The runjags package contains a JAGS extension module that provides several additional distributions for use within JAGS (see details below).  This function is a simple wrapper to load this module.  The version of the module supplied within the runjags package can only be used with the rjags package, or with the rjags or rjparallel methods within runjags.  For a standalone JAGS module for use with any JAGS method (or independent JAGS runs) please see:  https://sourceforge.net/projects/runjags/files/paretoprior/
@@ -119,18 +119,12 @@ HALF CAUCHY:  dhalfcauchy(sigma)
 For an easier to read version of these PDF equations, see the userguide vignette.
 }
 \examples{
-# Load the module for use with any rjags model:
-available <- load.runjagsmodule(fail=FALSE)
-if(available){
 # A simple model to sample from a Lomax distribution.
 # (Requires the rjags or rjparallel methods)
 m <- "model{
  L ~ dlomax(1,1)
 		}"
-\dontrun{
-results <- run.jags(m, monitor="L", method="rjags", modules="runjags")
-}
-}
+results <- run.jags(m, monitor="L", method="rjags")
 }
 \references{
 Denwood, M.J. 2016. runjags: An R Package Providing Interface Utilities, Model Templates, Parallel Computing Methods and Additional Distributions for MCMC Models in JAGS. J. Stat. Softw. 71. doi:10.18637/jss.v071.i09.

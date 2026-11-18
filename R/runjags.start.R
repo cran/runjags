@@ -42,6 +42,8 @@ runjags.simple <- function(jags, silent.jags, jags.refresh, batch.jags, os, libp
 
 runjags.rjparallel <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpaths, n.sims, jobname, cl, remote.jags, rjags){
 
+  # Note: this is compatible with rjags 5 but probably not needed
+
 	# Eventually we should compile the model once and then export the compiled model and then change the inits - but we are currently unable to change RNG states on compiled models with rjags 3.x
 	# We also have to destroy the compiled rjags object after calling runjags.start() as we update different compiled objects
 
@@ -807,6 +809,7 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 	# We may need this current state again later:
 	if(runjags.getOption('repeatable.methods')) inits <- rjags$state(internal=TRUE)
 
+	burnedin <- 0
 	needsadapting <- checkadaptrequired(rjags)
 	# Model is guaranteed to be compiled, but as.jags didn't adapt it - so need to check it is adapted (and/or do adapting):
 	if(extra.options$adapt>0){
@@ -818,6 +821,7 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 			flush.console()
 			by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by
 			adaptdone <- rjags::adapt(rjags,n.iter=extra.options$adapt,end.adaptation=TRUE,progress.bar=extra.options$progress.bar,by=by)
+			burnedin <- burnedin + extra.options$adapt
 			flush.console()
 
 			if(!adaptdone){
@@ -845,32 +849,123 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 		flush.console()
 		by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
 		update(rjags,n.iter=extra.options$burnin,progress.bar=extra.options$progress.bar,by=by)
+		burnedin <- burnedin + extra.options$burnin
 		flush.console()
 	}
 
-	# The behaviour of rjags method for dic stats is slightly different to the others, but should appear to be the same:
-	# If just DIC is specified, do like I have always done BUT don't return pd and deviance unless specifically requested
-	# If ped is specified, call dic.samples
-	# If full.pd is specified, call dic.samples
+	# Remove pd, full.pd and popt monitors
+	monitor <- extra.options$monitor[! extra.options$monitor %in% c("pD","pd","popt","full.pd","dic","ped")]
+	if(length(monitor)==0L) stop("At least 1 standard trace monitor must be set", call.=FALSE)
 
-	# Remove full.pd and popt monitors
-	monitor <- extra.options$monitor[! extra.options$monitor %in% c("popt","full.pd","dic","ped")]
-	monitor[monitor=="pd"] <- "pD"
-	if(any(extra.options$monitor=='dic'))
-		monitor <- unique(c(monitor, 'pD', 'deviance'))
+	# Make it so that dic implies also ped and vice versa:
+	if('dic' %in% extra.options$monitor && !('ped' %in% extra.options$monitor)) extra.options$monitor <- c(extra.options$monitor, 'ped')
+	if('ped' %in% extra.options$monitor && !('dic' %in% extra.options$monitor)) extra.options$monitor <- c(extra.options$monitor, 'dic')
+
+	# TODO: As of rjags_4-18 and later, we can vectorise the type (JAGS 4) or summary (JAGS 5) argument
+	# so we can get DIC/PED stats with the trace variable stats
+	monitor_stat <- rep("value", length(monitor))
+	monitor_summary <- rep("trace", length(monitor))
 
 	by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
 	if(!silent.jags) swcat("  Running the model for ", format(extra.options$sample,scientific=FALSE), " iterations", if(runjags.getOption('debug')>5) paste(" (updating by ", by, ")", sep=""), "...\n",sep="")
 	flush.console()
-	samples <- rjags::jags.samples(rjags,variable.names=monitor,n.iter=extra.options$sample,progress.bar=extra.options$progress.bar, thin=extra.options$thin,by=by)
 
-	# Do this BEFORE our dummy call of 1 iteration
-	end.state <- sapply(rjags$state(internal=TRUE),dump.format)
+	base_monitor <- monitor
 
-	# This is just a dummy call so that we can get the names of the variables:
-	suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=monitor[monitor!="pD"],n.iter=2,progress.bar="none", thin=1)))
+	if(packageVersion('rjags') < "5"){
+
+	  # For JAGS 4 and rjags_4-18
+
+	  if(any(c('full.pd') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "pD")
+	    monitor_summary <- c(monitor_summary, "trace")
+	  }
+	  if(any(c('pd','dic') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "pD")
+	    monitor_summary <- c(monitor_summary, "mean")
+	  }
+	  if(any(c('ped','popt') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "popt")
+	    monitor_summary <- c(monitor_summary, "mean")
+	  }
+	  if(any(c('dic','ped') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "deviance")
+	    monitor_summary <- c(monitor_summary, "mean")
+	  }
+
+	  samples <- rjags::jags.samples(rjags, variable.names=monitor, n.iter=extra.options$sample, thin=extra.options$thin, type = monitor_summary, force.list=TRUE, progress.bar=extra.options$progress.bar, by=by)
+
+	  # Do this BEFORE our dummy call of 1 iteration
+	  end.state <- sapply(rjags$state(internal=TRUE),dump.format)
+
+	}else{
+
+	  # For JAGS 5 and later:
+
+	  if(rjags::jags.version() < "5.0.2"){
+	    if('full.pd' %in% extra.options$monitor){
+	      stop("The full.pd monitor requires JAGS 5.0.2 or later", call.=FALSE)
+	    }
+	    if(any(c('popt','ped','dic') %in% extra.options$monitor)){
+	      stop("The popt and dic/ped monitors require JAGS 5.0.2 or later", call.=FALSE)
+	    }
+	  }
+
+	  if(any(c('full.pd') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "_observed_")
+	    monitor_stat <- c(monitor_stat, "leverage_total")
+	    monitor_summary <- c(monitor_summary, "trace")
+	  }
+	  if(any(c('pd','dic') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "_observed_")
+	    monitor_stat <- c(monitor_stat, "leverage")
+	    monitor_summary <- c(monitor_summary, "mean")
+	  }
+	  if(any(c('ped','popt') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "_observed_")
+	    monitor_stat <- c(monitor_stat, "loo_leverage")
+	    monitor_summary <- c(monitor_summary, "mean")
+	  }
+	  if(any(c('dic','ped') %in% tolower(extra.options$monitor))){
+	    monitor <- c(monitor, "_observed_")
+	    monitor_stat <- c(monitor_stat, "deviance")
+	    monitor_summary <- c(monitor_summary, "mean")
+	  }
+
+	  jsamples <- rjags::jags.samples(rjags, variable.names=monitor, n.iter=extra.options$sample, thin=extra.options$thin, stat=monitor_stat, summary=monitor_summary, simplify=FALSE, progress.bar=extra.options$progress.bar, by=by)
+
+	  # Convert to JAGS 4 format:
+	  samples <- list(
+	    trace = c(jsamples$value$trace, if(any(c('full.pd') %in% tolower(extra.options$monitor))) list(pD = apply(jsamples$leverage_total$trace$`_observed_`,2,mean))),
+	    mean = list(
+	      pD = if(any(c('pd','dic') %in% tolower(extra.options$monitor))) apply(jsamples$leverage$mean$`_observed_`,1,mean),
+	      popt = if(any(c('ped','popt') %in% tolower(extra.options$monitor))) 2*apply(jsamples$loo_leverage$mean$`_observed_`,1,mean),
+	      deviance = if(any(c('dic','ped') %in% tolower(extra.options$monitor))) apply(jsamples$deviance$mean$`_observed_`,1,mean)
+	    )
+	  )
+
+	  end.state <- sapply(rjags$state(internal=TRUE),dump.format)
+
+	  # TODO: use the newly exported expand.name function (NOTE: extend.jags recompiles the model for repeatable.methods):
+	  # But we can't here as the following gives a warning with R CMD check against rjags 4 as the conditional branch isn't detected:
+	  # obsvarnames <- rjags::observed.stochastic.nodes(rjags)
+
+	}
+
+	# This is just a dummy call so that we can get the names of the variables (NOTE: extend.jags recompiles the model for repeatable.methods):
+	suppressWarnings(varnames <- varnames(rjags::coda.samples(rjags,variable.names=base_monitor[!base_monitor=="pD"],n.iter=2,progress.bar="none", thin=1)))
+	if(any(c("pd","popt","full.pd","dic","ped") %in% tolower(extra.options$monitor))){
+	  # We may not have any observed stochastic nodes:
+	  ss <- try(suppressWarnings(obsvarnames <- names(rjags::dic.samples(rjags, n.iter=1, progress.bar="none")$penalty)))
+	  if(inherits(ss, "try-error")){
+	    stop("Unable to set dic/ped/pD/popt/full.pd monitors as the model does not contain any observed stochastic variables", call.=FALSE)
+	  }
+	}else{
+	  obsvarnames <- NA
+	}
 	flush.console()
-	mcmcout <- lapply(samples[names(samples)!='pD'], as.mcmc.list)
+
+	mcmcout <- lapply(samples$trace[names(samples$trace)!='pD'], as.mcmc.list)
 	## Remove any elements of arrays that are not monitored:
 	mcmcout <- lapply(mcmcout, function(x){
 	  nonmiss <- unique(unlist(lapply(x, function(y) which(apply(!is.na(y),2,any)))))
@@ -905,129 +1000,43 @@ runjags.rjags <- function(jags, silent.jags, jags.refresh, batch.jags, os, libpa
 
 	mcmc <- vector('list',length=extra.options$n.chains)
 	for(i in 1:extra.options$n.chains){
-		mcmc[[i]] <- mcmc(do.call('cbind',lapply(mcmcout, function(x) return(x[[i]])))[,reindex,drop=FALSE], start=extra.options$burnin+1, thin=extra.options$thin)
-		dimnames(mcmc[[i]]) <- list(1:niter, varnames)
-	}
-	if('deviance'%in%varnames){
-	  sum.deviance <- mean(sapply(1:extra.options$n.chains, function(x) return(mean(mcmc[[x]][,'deviance']))))
-	}
-	if(!'deviance'%in%extra.options$monitor && any(varnames=='deviance')){
-		for(i in 1:extra.options$n.chains){
-		  mcmc[[i]] <- mcmc[[i]][,-which(varnames=='deviance'),drop=FALSE]
-		}
+		mcmc[[i]] <- mcmc(do.call('cbind',lapply(mcmcout, function(x) return(x[[i]])))[,reindex,drop=FALSE], start=burnedin+1, thin=extra.options$thin)
+		dimnames(mcmc[[i]]) <- list(NULL, varnames)
 	}
 	mcmc <- as.mcmc.list(mcmc)
 
 	fullsumpd <- NA
-	if(any(c("pD",'full.pd')%in%names(samples))){
-		fullsumpd <- mcmc(matrix(unlist(samples[names(samples)=='pD']),ncol=1,dimnames=list(NULL,"pD")), start=extra.options$burnin+1, thin=extra.options$thin)
-		dimnames(fullsumpd) <- list(1:niter(fullsumpd), dimnames(fullsumpd)[[2]])
-
-		# We want the mean of the sum pD monitor here:
-		sum.pd <- mean(fullsumpd)
-		if(!'full.pd'%in%extra.options$monitor)
-			fullsumpd <- NA
+	if(any(c('pD') %in% names(samples$trace))){
+	  ss <- try({
+    fullsumpd <- mcmc(matrix(unlist(samples$trace[names(samples$trace)=='pD']),ncol=1,dimnames=list(NULL,"pD")), start=start(mcmc), thin=thin(mcmc))
+	  dimnames(fullsumpd) <- list(NULL, dimnames(fullsumpd)[[2]])
+	  })
+	  if(inherits(ss, "try-error")){
+	    warning("An error occured while extracting full.pd", call.=FALSE)
+	    fullsumpd <- NA
+	  }
 	}
 
-	if(any(c('ped','popt')%in%extra.options$monitor)){
-		if(runjags.getOption('repeatable.methods')){
-		  	if(!silent.jags) swcat("  Re-compiling the model with original starting values...\n",sep="")
-
-			# Retrieve model, data and initial values with RNG states:
-			model <- paste(rjags$model(),collapse="\n")
-			data <- rjags$data()
-			# Prevents problems with data/inits reloading:
-			data <- data[names(data) %in% extra.options$origdatanames]
-
-			n.chains <- length(inits)
-			tmodel <- textConnection(model)
-
-			rjags <- rjags::jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=0, quiet=TRUE)
-			close(tmodel)
-
-			if(extra.options$adapt>0 && needsadapting){
-				if(!silent.jags) swcat("  Re-adapting the model for ", format(extra.options$adapt,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by
-				adaptdone <- rjags::adapt(rjags,n.iter=extra.options$adapt,end.adaptation=TRUE,progress.bar=extra.options$progress.bar, by=by)
-			}
-
-			if(extra.options$burnin>0){
-				if(!silent.jags) swcat("  Re-burning in the model for ", format(extra.options$burnin,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
-				update(rjags,n.iter=extra.options$burnin,progress.bar=extra.options$progress.bar, by=by)
-				flush.console()
-			}
-
-			flush.console()
-		}
-
-	  	if(!silent.jags) swcat("  Extending ", format(extra.options$sample,scientific=FALSE), " iterations for pOpt/PED estimates...\n",sep="")
-	  	flush.console()
-		by <- if(is.na(extra.options$by)) min(100, extra.options$sample/50) else extra.options$by
-
-	  	dics <- rjags::dic.samples(rjags, n.iter=extra.options$sample, thin=extra.options$thin, type='popt', progress.bar=extra.options$progress.bar, by=by)
-	  	flush.console()
-    	deviance <- as.matrix(dics$deviance)
-    	popt <- as.matrix(dics$penalty)
-		dn <- dimnames(as.matrix(dics$deviance))[[1]]
-
-		# Ensures mean pd is not replicated:
-		sum.deviance <- sum(deviance)
-		sum.popt <- sum(popt)
+	if(any(c('ped','popt') %in% tolower(extra.options$monitor))){
+	  stopifnot('popt' %in% names(samples$mean))
+	  popt <- matrix(samples$mean$popt, ncol=1, dimnames=list(obsvarnames, NULL))
+	  sum.popt <- sum(popt)
 	}
-	if(any(c('pd')%in%extra.options$monitor) || (runjags.getOption('repeatable.methods') && 'dic'%in%extra.options$monitor)){
-		if(runjags.getOption('repeatable.methods')){
-		  	if(!silent.jags) swcat("  Re-compiling the model with original starting values...\n",sep="")
-
-			# Retrieve model, data and initial values with RNG states:
-			model <- paste(rjags$model(),collapse="\n")
-			data <- rjags$data()
-			# Prevents problems with data/inits reloading:
-			data <- data[names(data) %in% extra.options$origdatanames]
-
-			n.chains <- length(inits)
-			tmodel <- textConnection(model)
-
-			rjags <- rjags::jags.model(file=tmodel, data=data, inits=inits, n.chains, n.adapt=0, quiet=TRUE)
-			close(tmodel)
-
-			if(extra.options$adapt>0 && needsadapting){
-				if(!silent.jags) swcat("  Re-adapting the model for ", format(extra.options$adapt,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$adapt/50) else extra.options$by
-				adaptdone <- rjags::adapt(rjags,n.iter=extra.options$adapt,end.adaptation=TRUE,progress.bar=extra.options$progress.bar,by=by)
-			}
-
-			if(extra.options$burnin>0){
-				if(!silent.jags) swcat("  Re-burning in the model for ", format(extra.options$burnin,scientific=FALSE), " iterations...\n",sep="")
-				flush.console()
-				by <- if(is.na(extra.options$by)) min(100, extra.options$burnin/50) else extra.options$by
-				update(rjags,n.iter=extra.options$burnin,progress.bar=extra.options$progress.bar, by=by)
-				flush.console()
-			}
-
-			flush.console()
-		}
-
-	  	if(!silent.jags) swcat("  Extending ", format(extra.options$sample,scientific=FALSE), " iterations for pD/DIC estimates...\n",sep="")
-	  	flush.console()
-		by <- if(is.na(extra.options$by)) min(100, extra.options$sample/50) else extra.options$by
-	  	dics <- rjags::dic.samples(rjags, n.iter=extra.options$sample, thin=extra.options$thin, type='pD', progress.bar=extra.options$progress.bar, by=by)
-	  	flush.console()
-    	deviance <- as.matrix(dics$deviance)
-    	pd <- as.matrix(dics$penalty)
-		dn <- dimnames(as.matrix(dics$deviance))[[1]]
-
-		sum.deviance <- sum(deviance)
-		sum.pd <- sum(pd)
+	if(any(c('dic','pD') %in% tolower(extra.options$monitor))){
+	  stopifnot('pD' %in% names(samples$mean))
+	  pd <- matrix(samples$mean$pD, ncol=1, dimnames=list(obsvarnames, NULL))
+	  sum.pd <- sum(pd)
+	}
+	if(any(c('dic','ped') %in% tolower(extra.options$monitor))){
+	  stopifnot('deviance' %in% names(samples$mean))
+	  deviance <- matrix(samples$mean$deviance, ncol=1, dimnames=list(obsvarnames, NULL))
+	  sum.deviance <- sum(deviance)
 	}
 
 	deviance.sum=deviance.table <- NA
 	if(any(!is.na(c(deviance, pd, popt)))){
 		deviance.table <- cbind(deviance, pd, popt)
-		dimnames(deviance.table) <- list(dn,c('mean.deviance','mean.pD','mean.pOpt'))
+		dimnames(deviance.table) <- list(obsvarnames,c('mean.deviance','mean.pD','mean.pOpt'))
 	}
 	if(any(!is.na(c(sum.deviance, sum.pd, sum.popt)))){
 		deviance.sum <- c(sum.deviance, sum.pd, sum.popt)
@@ -1395,6 +1404,16 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 	monitorcollapse <- paste(", thin(", thin, ")\nmonitor ", sep="")
 	monitors <- paste("monitor ", paste(realmonitor, collapse=monitorcollapse), ", thin(", thin, ")\n", sep="")
 
+	# Catch bug in JAGS 5.0.0 and 5.0.1:
+	if(jags.status$JAGS.major >= 5 && jags.status$JAGS.version %in% c("5.0.0","5.0.1")){
+	  if('full.pd' %in% monitor){
+	    stop("The full.pd monitor requires JAGS 5.0.2 or later", call.=FALSE)
+	  }
+	  if(any(c('popt','ped','dic') %in% monitor)){
+	    stop("The popt and dic/ped monitors require JAGS 5.0.2 or later", call.=FALSE)
+	  }
+	}
+
 	n.params <- length(monitor)
 	params.names <- monitor
 
@@ -1418,6 +1437,9 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 
 		setwd(temp.directory)
 
+	  version_info <- list(jags=numeric_version(jags.status[["JAGS.version"]]), runjags=numeric_version(runjagsprivate[["runjagsversion"]]), api=numeric_version("1.1"), testjags=jags.status)
+	  saveRDS(version_info, file="version_info.rds")
+
 		cat(model, file="model.txt",sep="")
 		close(file("model.txt"))
 		cat(data, file="data.txt",sep="")
@@ -1436,7 +1458,11 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 
 			if(!identical(modules,"")) for(i in 1:length(modules)){
 				if(modules[[i]][1]=="runjags") stop("The runjags module is only available using the rjags method; to use the functions provided with other methods install (and specify using the module argument) the 'paretoprior' standalone module")
-				scriptstring <- paste(scriptstring, if(modules[[i]][2]=='FALSE') "un", "load ", modules[[i]][1], "\n", sep="")
+
+			  # We don't need dic for JAGS 5:
+			  if(! (jags.status$JAGS.major >= 5 && modules[[i]][1]=="dic" )){
+  				scriptstring <- paste(scriptstring, if(modules[[i]][2]=='FALSE') "un", "load ", modules[[i]][1], "\n", sep="")
+			  }
 			}
 
 			if(!identical(factories,"")) for(i in 1:length(factories)){
@@ -1476,8 +1502,16 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 				scriptstring <- paste(scriptstring, "update ", ini.runs, "\n", sep="")
 			####
 
-			# trace monitor for deviance is just a standard monitor name (and not used to calculate DIC)
-			scriptstring <- paste(scriptstring, if(any(c("dic","ped")%in%monitor)) paste("monitor deviance, type(mean) thin(", thin, ")\n", "monitor pD, type(mean) thin(", thin, ")\n", "monitor popt, type(mean) thin(", thin, ")\n", sep=""), monitors, if(any(monitor=="full.pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), sep="")
+			# Behaviour depends on JAGS version 4 vs 5
+      if(jags.status$JAGS.major >= 5){
+
+        # pD is stat(leverage), popt is 2 * stat(loo_leverage)
+        scriptstring <- paste(scriptstring, if(any(c("dic","ped")%in%monitor)) paste("monitor _observations_, stat(deviance) summary(mean) thin(", thin, ")\n", "monitor _observations_, stat(leverage) summary(mean) thin(", thin, ")\n", "monitor _observations_, stat(loo_leverage) summary(mean) thin(", thin, ")\n", sep=""), monitors, if(any(monitor=="full.pd")) paste("monitor _observations_, stat(leverage_total) summary(trace) thin(", thin, ")\n", sep=""), sep="")
+
+      }else{
+        # trace monitor for deviance is just a standard monitor name (and not used to calculate DIC)
+        scriptstring <- paste(scriptstring, if(any(c("dic","ped")%in%monitor)) paste("monitor deviance, type(mean) thin(", thin, ")\n", "monitor pD, type(mean) thin(", thin, ")\n", "monitor popt, type(mean) thin(", thin, ")\n", sep=""), monitors, if(any(monitor=="full.pd")) paste("monitor pD, thin(", thin, ")\n", sep=""), sep="")
+      }
 
 			if(real.runs > 0) scriptstring <- paste(scriptstring, "update ", real.runs, "\n", sep="")
 
@@ -1486,9 +1520,14 @@ runjags.start <- function(model, monitor, data, inits, modules, factories, burni
 				scriptstring <- paste(scriptstring, "parameters to \"out", i, ".Rdump\", chain(", c, ")\n", sep="")
 			}
 
-			# Write out the mean pd, popt and deviances and then delete them so they dont get re-written by coda *
-			if(any(c("dic","ped")%in%monitor))
-				scriptstring <- paste(scriptstring, "coda deviance, stem(\"sim.", s, "/deviance\")\n", "coda pD, stem(\"sim.", s, "/pd\")\n", "coda popt, stem(\"sim.", s, "/popt\")\n", "monitor clear deviance, type(mean)\nmonitor clear pD, type(mean)\nmonitor clear popt, type(mean)\n", sep="")
+			# Behaviour depends on JAGS version 4 vs 5
+			if(jags.status$JAGS.major >= 5){
+			  if(any(c("dic","ped")%in%monitor)) scriptstring <- paste(scriptstring, "coda _observations_, stem(\"sim.", s, "/deviance\") stat(deviance) summary(mean)\n", "coda _observations_, stem(\"sim.", s, "/pd\") stat(leverage) summary(mean)\n", "coda _observations_, stem(\"sim.", s, "/popt\") stat(loo_leverage) summary(mean)\n", "monitor clear _observations_, stat(deviance) summary(mean)\nmonitor clear _observations_, stat(leverage) summary(mean)\nmonitor clear _observations_, stat(loo_leverage) summary(mean)\n", sep="")
+			  if("full.pd" %in% monitor) scriptstring <- paste(scriptstring, "coda _observations_, stem(\"sim.", s, "/pd_trace\") stat(leverage_total) summary(trace)\n", "monitor clear _observations_, stat(leverage_total) summary(trace)\n", sep="")
+			}else{
+			  # Write out the mean pd, popt and deviances and then delete them so they dont get re-written by coda *
+			  if(any(c("dic","ped")%in%monitor)) scriptstring <- paste(scriptstring, "coda deviance, stem(\"sim.", s, "/deviance\")\n", "coda pD, stem(\"sim.", s, "/pd\")\n", "coda popt, stem(\"sim.", s, "/popt\")\n", "monitor clear deviance, type(mean)\nmonitor clear pD, type(mean)\nmonitor clear popt, type(mean)\n", sep="")
+			}
 
 			scriptstring <- paste(scriptstring, "coda *, stem(sim.", s, "/CODA)\n", sep="")
 
